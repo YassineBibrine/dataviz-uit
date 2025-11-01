@@ -1,0 +1,36 @@
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj*
+*.user
+
+# Build directories
+build/
+out/
+cmake-build-*/
+
+# CMake
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+cmake_install.cmake
+
+# Compiler outputs
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.a
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+llvm-build/

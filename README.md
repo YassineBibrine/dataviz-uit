@@ -1,0 +1,290 @@
+# C++ Data Structure & Algorithm Visualization Application
+
+A native C++ desktop application for visualizing data structures and algorithms with high-fidelity memory representation and bidirectional code-visualization mapping.
+
+## Project Structure Overview
+
+This project is organized into **four main architectural engines** with clear separation of concerns for team development:
+
+### ?? Directory Organization
+
+```
+dataviz-uit/
+??? CMakeLists.txt            # Root CMake configuration
+??? README.md             # This file
+??? ARCHITECTURE.md  # Detailed architecture documentation
+??? SETUP.md # Installation and setup guide
+??? CONTRIBUTING.md  # Contribution guidelines
+?
+??? src/
+?   ??? main.cpp          # Application entry point
+?   ?
+?   ??? frontend/        # ?? UI TEAM - Frontend Engine
+?   ?   ??? CMakeLists.txt
+?   ?   ??? ui/
+?   ?       ??? main_window.h/.cpp          # Main application window
+?   ? ??? code_editor.h/.cpp    # C++ code editor with syntax highlighting
+?   ?       ??? visualization_pane.h/.cpp   # Main visualization canvas
+?   ?       ??? control_panel.h/.cpp        # Playback and algorithm controls
+?   ?       ??? diagnostic_output.h/.cpp    # Logs and performance metrics display
+?   ?       ??? memory_viewer.h/.cpp        # Low-level memory visualization
+?   ?
+?   ??? analysis/         # ?? C2V TEAM - Code-to-Visualization Engine
+?   ?   ??? CMakeLists.txt
+?   ? ??? clang_integration/
+?   ?   ?   ??? ast_parser.h/.cpp  # LLVM/Clang AST parsing
+?   ?   ?   ??? structure_extractor.h/.cpp  # Extract data structures via AST matching
+?   ?   ??? instrumentation/
+?   ?   ?   ??? llvm_instrumentation.h/.cpp # LLVM pass for runtime instrumentation
+?   ?   ??? state_mapping/
+?   ?       ??? execution_logger.h/.cpp     # Capture runtime execution events
+?   ?       ??? state_mapper.h/.cpp  # Map events to visualization states
+?   ?
+?   ??? synthesis/ # ?? V2C TEAM - Visualization-to-Code Engine
+?   ?   ??? CMakeLists.txt
+?   ?   ??? code_generation/
+?   ?   ?   ??? clang_rewriter.h/.cpp   # Clang-based source code rewriting
+?   ?   ?   ??? ast_generator.h/.cpp    # Generate AST nodes for new code
+?   ?   ?   ??? code_formatter.h/.cpp  # Format generated code (clang-format)
+?   ?   ??? api_mapping/
+?   ?       ??? api_mapper.h/.cpp         # Map user APIs for code generation
+?   ?
+?   ??? core/      # ?? SHARED - Core Library
+?   ?   ??? CMakeLists.txt
+?   ?   ??? data_structures/
+?   ?   ?   ??? graph.h/.cpp   # Generic graph data structure
+?   ?   ?   ??? tree.h/.cpp           # Generic tree data structure
+?   ?   ??? serialization/
+?   ?   ?   ??? dot_serializer.h/.cpp       # Convert to Graphviz DOT format
+?   ?   ?   ??? json_serializer.h/.cpp      # JSON serialization for logs/states
+?   ?   ??? utilities/
+?   ?    ??? logger.h/.cpp         # Application-wide logging
+?   ?     ??? timer.h/.cpp   # Performance timing utility
+?   ?
+?   ??? visualization/       # ?? VISUALIZATION - Rendering Engine
+?       ??? CMakeLists.txt
+?       ??? graphviz/
+?       ?   ??? graphviz_layout_engine.h/.cpp  # Graphviz layout execution
+?       ??? rendering/
+?     ?   ??? dot_renderer.h/.cpp        # DOT to graphic elements
+?    ?   ??? visualization_builder.h/.cpp # Orchestrate visualization pipeline
+?       ??? animation/
+?  ??? animation_controller.h/.cpp    # Animation playback control
+?
+??? docs/
+?   ??? ARCHITECTURE.md     # Detailed system architecture
+?   ??? C2V_GUIDE.md   # Guide for C2V team
+?   ??? V2C_GUIDE.md    # Guide for V2C team
+?   ??? UI_GUIDE.md        # Guide for UI team
+?
+??? examples/
+    ??? sample_graphs.cpp            # Example algorithms for testing
+```
+
+## Team Organization
+
+### ?? **UI Team** (`src/frontend/`)
+**Responsibility**: Desktop GUI, code editor, visualization rendering
+- **Primary File**: `src/frontend/`
+- **Dependencies**: Qt 6, Boost (filesystem)
+- **Key Components**:
+  - Code editor with syntax highlighting (C++)
+  - Visualization canvas with zoom/pan
+  - Playback controls (play, pause, step, speed)
+  - Diagnostic output panel
+  - Low-level memory viewer
+
+**Starting Points**:
+- `ui/main_window.h` - Integrate all UI components
+- `ui/visualization_pane.h` - Render graph/tree visualizations
+- `ui/code_editor.h` - Implement full C++ editor features
+
+---
+
+### ?? **C2V Team** (`src/analysis/`)
+**Responsibility**: Code analysis, AST parsing, runtime execution capture
+- **Primary File**: `src/analysis/`
+- **Dependencies**: LLVM/Clang LibTooling, Boost
+- **Key Components**:
+  - Parse C++ code using Clang AST
+  - Identify data structures (linked lists, trees, graphs)
+  - Inject instrumentation for runtime state capture
+  - Map execution events to visualization states
+
+**Starting Points**:
+- `clang_integration/ast_parser.h` - Implement Clang AST parsing
+- `instrumentation/llvm_instrumentation.h` - Create LLVM instrumentation pass
+- `state_mapping/state_mapper.h` - Convert events to visualization states
+
+---
+
+### ?? **V2C Team** (`src/synthesis/`)
+**Responsibility**: Code generation, AST manipulation, bidirectional sync
+- **Primary File**: `src/synthesis/`
+- **Dependencies**: LLVM/Clang LibTooling
+- **Key Components**:
+  - Generate C++ code from visual interactions
+  - Rewrite source code using Clang Rewriter
+  - Maintain API fidelity with user structures
+  - Format generated code
+
+**Starting Points**:
+- `code_generation/clang_rewriter.h` - Implement source code rewriting
+- `code_generation/ast_generator.h` - Generate AST nodes
+- `api_mapping/api_mapper.h` - Map user-defined APIs
+
+---
+
+## Key Technologies
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| GUI Framework | **Qt 6** | Cross-platform desktop UI |
+| Code Analysis | **LLVM/Clang LibTooling** | C++ AST parsing & rewriting |
+| Graph Layout | **Graphviz** | Algorithmic layout generation |
+| Data Structures | **Boost Graph Library** | Graph/tree manipulation |
+| Serialization | **RapidJSON** | Fast JSON parsing |
+| Build System | **CMake 3.21+** | Cross-platform building |
+
+## Getting Started
+
+### Prerequisites
+- C++17 compatible compiler (MSVC, GCC, Clang)
+- CMake 3.21+
+- Qt 6 development libraries
+- LLVM/Clang 14+ with development headers
+- Boost 1.70+
+- Graphviz binary
+
+### Installation
+See [SETUP.md](SETUP.md) for detailed setup instructions.
+
+### Building
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . --config Release
+```
+
+### Running
+```bash
+./dataviz-app  # or dataviz-app.exe on Windows
+```
+
+## Architecture Overview
+
+### The Three-Engine Model
+
+```
+???????????????????????????????????????????????????????????
+? Frontend Engine (Qt GUI) ?
+?  ????????????????  ????????????????  ????????????????  ?
+?  ? Code Editor  ?  ? Visualization?  ? Control Panel?  ?
+?  ?          ?  ?    Pane      ?  ?              ?  ?
+?  ????????????????  ????????????????  ????????????????  ?
+???????????????????????????????????????????????????????????
+         ?          ?
+       ?      ?
+    C2V  ?             ?  V2C
+  ?    ?
+         ?         ?
+???????????????????????????   ???????????????????????????
+?  Analysis Engine (C2V)  ?   ? Synthesis Engine (V2C)  ?
+? ??????????????????????  ?   ? ??????????????????????  ?
+? ? AST Parser         ?  ?   ? ? Code Generator     ?  ?
+? ? Structure Extract. ?  ?   ? ? Clang Rewriter     ?  ?
+? ? Instrumentation    ?  ?   ? ? API Mapper         ?  ?
+? ? State Mapper       ?  ?? ? Code Formatter     ?  ?
+? ??????????????????????  ?   ? ??????????????????????  ?
+???????????????????????????   ???????????????????????????
+         ?        ?
+ ??????????????????????????????????
+          ?
+         ?????????????????????????????
+         ?  Visualization Engine     ?
+         ? ????????????????????????  ?
+     ? ? Graphviz Layout      ?  ?
+   ? ? DOT Renderer         ?  ?
+         ? ? Animation Controller ?  ?
+         ? ????????????????????????  ?
+  ????????????????????????????
+          ?
+         ?????????????????????????????
+         ?  Core Library             ?
+         ? ?? Graph/Tree structures  ?
+         ? ?? Serialization (DOT/JSON)
+         ? ?? Logging & Timing       ?
+    ? ?? Utilities   ?
+         ????????????????????????????
+```
+
+## Data Flow
+
+### C2V Flow (Code ? Visualization)
+1. User loads C++ source file
+2. **C2V Team**: Parse AST, extract data structures
+3. **C2V Team**: Instrument code for runtime capture
+4. Execute instrumented code, capture execution log
+5. **Visualization Team**: Convert log to visualization states
+6. **Visualization Team**: Generate Graphviz DOT code
+7. Execute Graphviz for layout
+8. **UI Team**: Render visualization with animation
+
+### V2C Flow (Visualization ? Code)
+1. User modifies visualization (drag node, add edge, etc.)
+2. **UI Team**: Capture interaction event
+3. **V2C Team**: Map to high-level operation (add_node, add_edge)
+4. **V2C Team**: Query API mapper for user's method signature
+5. **V2C Team**: Generate AST for C++ code
+6. **V2C Team**: Insert code using Clang Rewriter
+7. **V2C Team**: Format using clang-format
+8. **UI Team**: Update code editor and visualization
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and best practices.
+
+## Documentation
+
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Deep dive into system design
+- [C2V_GUIDE.md](docs/C2V_GUIDE.md) - C2V team implementation guide
+- [V2C_GUIDE.md](docs/V2C_GUIDE.md) - V2C team implementation guide
+- [UI_GUIDE.md](docs/UI_GUIDE.md) - UI team implementation guide
+
+## Roadmap
+
+### Phase 1: Foundation (Current)
+- [x] Project structure setup
+- [ ] Qt GUI framework integration
+- [ ] Code editor with syntax highlighting
+- [ ] Basic visualization pane
+- [ ] Graphviz integration
+
+### Phase 2: C2V Engine
+- [ ] Clang AST parsing
+- [ ] Data structure identification
+- [ ] LLVM instrumentation pass
+- [ ] State logging and capture
+
+### Phase 3: V2C Engine
+- [ ] Code generation foundation
+- [ ] Clang Rewriter integration
+- [ ] API mapping system
+- [ ] Code formatting
+
+### Phase 4: Advanced Features
+- [ ] Memory visualization
+- [ ] Performance metrics
+- [ ] Advanced tree balancing visualization
+- [ ] Multi-algorithm comparison
+
+## License
+
+[To be determined by project leadership]
+
+## Contact & Support
+
+For questions or issues:
+1. Check existing documentation
+2. Create an issue in the repository
+3. Contact your team lead
