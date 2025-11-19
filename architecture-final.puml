@@ -1,0 +1,443 @@
+@startuml FinalFullProjectStructure
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 10
+
+' ================== Core Services ==================
+package "Core Services" #LightSkyBlue {
+
+interface DataStructure {
+  +getNodes(): std::vector<DSNode>
+  +getEdges(): std::vector<DSEdge>
+  +serializeToDOT(): std::string
+  +getDataForRunner(): void*
+}
+
+class DSNode {
+  +id: std::string 
+}
+
+class DSEdge {
+  +from: std::string
+  +to: std::string 
+}
+
+class AlgorithmInfo {
+  -name: std::string
+  -description: std::string
+  -timeComplexity: std::string
+  -spaceComplexity: std::string
+  +AlgorithmInfo()
+  +AlgorithmInfo(n: std::string, d: std::string, t: std::string, s: std::string)
+  +getName(): std::string
+  +getDescription(): std::string
+  +getComplexity(): std::string
+}
+
+class AlgorithmFactory {
+  +~AlgorithmFactory()
+  +create(ds: DataStructure*): AlgorithmRunner*
+}
+
+class AlgorithmManager {
+  -factories: std::map<std::string,AlgorithmFactory*>
+-infos: std::map<std::string,AlgorithmInfo>
+  -AlgorithmManager()
+  +getInstance(): AlgorithmManager&
+  +registerAlgorithm(name: std::string, factory: AlgorithmFactory*, info: AlgorithmInfo): void
+  +getAlgorithmInfo(name: std::string): AlgorithmInfo
+  +listAlgorithms(): std::vector<AlgorithmInfo>
+  +getFactory(name: std::string): AlgorithmFactory*
+}
+
+class DataModelManager {
+  -currentStructure: std::unique_ptr<DataStructure>
+  +createDataStructure(type: std::string, size: int): DataStructure*
+  +getCurrentStructure(): DataStructure*
+}
+
+class ArrayStructure {
+  -data: std::vector<int>
+  +ArrayStructure(size: int)
+  +fillRandom(size: int): void
+  +getNodes(): std::vector<DSNode>
+  +getEdges(): std::vector<DSEdge>
+  +serializeToDOT(): std::string
+  +getDataForRunner(): void*
+}
+
+class GraphStructure {
+  -graph: std::unique_ptr<Graph>
+  +GraphStructure()
+  +getGraph(): Graph*
+  +generateRandom(nodeCount: int, edgeAttempts: int): void
+  +getNodes(): std::vector<DSNode>
+  +getEdges(): std::vector<DSEdge>
+  +serializeToDOT(): std::string
+  +getDataForRunner(): void*
+}
+
+class ListStructure {
+  -head: ListNode*
+  +~ListStructure()
+  +generateSequential(size: int): void
++getNodes(): std::vector<DSNode>
+  +getEdges(): std::vector<DSEdge>
+  +serializeToDOT(): std::string
+  +getDataForRunner(): void*
+}
+
+class TreeStructure {
+  -root: TreeNode*
+  +~TreeStructure()
+  +insert(value: int): void
+  +generateRandom(count: int): void
+  +getNodes(): std::vector<DSNode>
+  +getEdges(): std::vector<DSEdge>
+  +serializeToDOT(): std::string
+  +getDataForRunner(): void*
+  -clear(n: TreeNode*): void
+  -insertNode(n: TreeNode*&, value: int, parent: TreeNode*): void
+}
+
+}
+
+' ================== Raw Structures ==================
+package "Raw Structures" #AliceBlue {
+
+class Graph {
+  -directed: bool
+  -nodes: std::map<std::string,Graph::Node>
+  -edges: std::vector<Graph::Edge>
+  -adjacencyList: std::map<std::string,std::vector<std::string>>
+  +Graph(directed: bool)
+  +~Graph()
+  +addNode(id: std::string, props: std::map<std::string,std::string>)
+  +addEdge(from: std::string, to: std::string, weight: double, props: std::map<std::string,std::string>)
+  +removeNode(id: std::string)
+  +removeEdge(from: std::string, to: std::string)
+  +hasNode(id: std::string) const: bool
+  +hasEdge(from: std::string, to: std::string) const: bool
+  +getNodeCount() const: int
+  +getEdgeCount() const: int
++getNeighbors(id: std::string) const: std::vector<std::string>
+  +getNode(id: std::string): Node*
+  +getEdge(from: std::string, to: std::string): Edge*
+  +clear(): void
+  +clone() const: Graph*
+  +isDirected() const: bool
+  +getAllNodeIds() const: std::vector<std::string>
+  +getAllEdges() const: std::vector<Edge>
+  -updateAdjacencyList(): void
+}
+
+class "Graph::Node" as GraphNode {
+  +id: std::string
+  +properties: std::map<std::string,std::string>
+  +inDegree: int
+  +outDegree: int
+  +Node()
+  +Node(id: std::string)
+}
+
+class "Graph::Edge" as GraphEdge {
+  +from: std::string
+  +to: std::string
++weight: double
+  +properties: std::map<std::string,std::string>
+  +Edge()
+  +Edge(from: std::string, to: std::string, weight: double)
+}
+
+class ListNode {
+  +value: int
+  +next: ListNode*
+  +prev: ListNode*
+  +ListNode(val: int)
+  +~ListNode()
+}
+
+class TreeNode {
+  +value: int
+  +left: TreeNode*
+  +right: TreeNode*
+  +parent: TreeNode*
+  +height: int
+  +balanceFactor: int
+  +TreeNode(val: int)
+  +~TreeNode()
+  +isLeaf() const: bool
+  +hasLeftChild() const: bool
+  +hasRightChild() const: bool
+}
+
+}
+
+' ================== Execution ==================
+package "Execution" #LightPink {
+
+class ExecutionSnapshot {
+  +step: int
+  +metrics: std::map<std::string,int>
+}
+
+class ExecutionState {
+  -currentStep: int
+  -totalSteps: int
+  -comparisonCount: int
+  -swapCount: int
+  -history: std::vector<ExecutionSnapshot>
+  +advanceStep(): void
+  +recordComparison(a: std::string, b: std::string): void
+  +recordSwap(a: std::string, b: std::string): void
+  +recordAccess(a: std::string): void
+  +saveState(): void
+  +getMetrics() const: std::map<std::string,int>
+  +restoreState(step: int): void
+  +reset(): void
+  +getHistory() const: std::vector<ExecutionSnapshot>
+}
+
+class AnimationFrame {
+  +frameNumber: int
+  +operationType: std::string
+  +highlightedNodes: std::vector<std::string>
+  +highlightedEdges: std::vector<std::pair<std::string,std::string>>
+  +nodePositions: std::map<std::string,std::pair<double,double>>
+  +nodeColors: std::map<std::string,std::string>
+  +edgeColors: std::map<std::string,std::string>
+  +nodeLabels: std::map<std::string,std::string>
+  +edgeLabels: std::map<std::string,std::string>
+  +annotations: std::vector<std::string>
+  +dotCode: std::string
+  +duration: int
+  +timestamp: long long
+  +AnimationFrame()
+  +addHighlightedNode(nodeId: std::string, color: std::string): void
+  +addHighlightedEdge(from: std::string, to: std::string, color: std::string): void
+  +setNodePosition(nodeId: std::string, x: double, y: double): void
+  +setNodeColor(nodeId: std::string, color: std::string): void
+  +addAnnotation(text: std::string): void
+  +setDuration(ms: int): void
+}
+
+class FrameRecorder {
+  -frames: std::vector<AnimationFrame>
+  -interpolationEnabled: bool
+  -defaultDurationMs: int
+  +enableInterpolation(enabled: bool): void
+  +defaultDuration() const: int
+  +generateComparisonFrame(a: std::string, b: std::string, result: bool): AnimationFrame
+  +generateSwapFrame(a: std::string, b: std::string): AnimationFrame
+  +generateHighlightFrame(elems: std::vector<std::string>, color: std::string): AnimationFrame
+  +generateTraversalFrame(node: std::string, visited: std::vector<std::string>): AnimationFrame
+  +generateInsertionFrame(n: std::string, pos: std::string): AnimationFrame
+  +getAllFrames() const: std::vector<AnimationFrame>
+  +clear(): void
+}
+
+abstract class AlgorithmRunner {
+  #ds: DataStructure*
+  #executionState: ExecutionState
+  #frameRecorder: FrameRecorder
+  +~AlgorithmRunner()
+  +initialize(structure: DataStructure*): void
+  +execute(): void
+  +stepForward(): void
+  +reset(): void
+  +getState(): ExecutionState&
+  +getFrames() const: std::vector<AnimationFrame>
+}
+
+class BFSRunner {
+  -startNodeId: std::string
+  -visited: std::unordered_set<std::string>
+  -q: std::queue<std::string>
+  -initialized: bool
+  +BFSRunner(start: std::string)
+  +execute(): void
+  +stepForward(): void
+  +reset(): void
+}
+
+}
+
+' ================== Visualization ==================
+package "Visualization" #LimeGreen {
+
+class LayoutData {
+  +positions: std::map<std::string,std::pair<double,double>> 
+}
+
+class GraphvizLayoutEngine {
+  +calculateLayout(dotCode: std::string): LayoutData 
+}
+
+class VisualizationRenderer {
+  -layoutEngine: std::unique_ptr<GraphvizLayoutEngine>
+  +VisualizationRenderer()
+  +applyLayoutData(data: LayoutData): void
+  +renderFrame(frame: AnimationFrame): void
+}
+
+class PlaybackController {
+  -frames: std::vector<AnimationFrame>
+  -index: size_t
+  -playing: bool
+  +loadFrames(f: std::vector<AnimationFrame>): void
+  +play(): void
+  +pause(): void
+  +step(): bool
+  +current() const: AnimationFrame*
+}
+
+class InteractionManager {
+  -overriddenPositions: std::map<std::string,std::pair<double,double>>
+  +handleMousePress(x: double, y: double): void
+  +updateNodePosition(nodeId: std::string, x: double, y: double): void
+}
+
+}
+
+' ================== Presentation ==================
+package "Presentation" #LightBlue {
+
+class MainWindow {
+  -manager: AlgorithmManager*
+  -dataModelManager: DataModelManager
+  -renderer: VisualizationRenderer
+  -playback: PlaybackController
+  +executeAlgorithm(info: AlgorithmInfo): void
+}
+
+class VisualizationPane {
+  -renderer: VisualizationRenderer*
+  +VisualizationPane(r: VisualizationRenderer*)
+  +draw(): void
+}
+
+class ControlPanel {
+  +populateAlgorithms(infos: std::vector<AlgorithmInfo>): void
+}
+
+class MetricsPanel {
+  +updateMetrics(metrics: std::map<std::string,int>): void
+}
+
+}
+
+' ================== Factories ==================
+package "Factories" #MistyRose {
+
+class BFSFactory {
+  -start: std::string
+  +BFSFactory(s: std::string)
+  +create(ds: DataStructure*): AlgorithmRunner*
+}
+
+}
+
+' ================== Relationships ==================
+
+' Core Services relationships
+ArrayStructure ..|> DataStructure
+GraphStructure ..|> DataStructure
+ListStructure ..|> DataStructure
+TreeStructure ..|> DataStructure
+
+DataStructure ..> DSNode : returns
+DataStructure ..> DSEdge : returns
+
+DataModelManager --> DataStructure : creates & manages
+DataModelManager --> ArrayStructure : creates
+DataModelManager --> GraphStructure : creates
+DataModelManager --> ListStructure : creates
+DataModelManager --> TreeStructure : creates
+
+AlgorithmManager *-- AlgorithmFactory : owns
+AlgorithmManager *-- AlgorithmInfo : stores
+AlgorithmManager --> BFSFactory : registers
+
+AlgorithmFactory ..> AlgorithmRunner : creates
+AlgorithmFactory ..> DataStructure : uses
+
+' Structure compositions
+GraphStructure *-- Graph : owns
+TreeStructure *-- TreeNode : owns
+ListStructure *-- ListNode : owns
+ArrayStructure *-- "vector<int>" : owns
+
+Graph *-- "many" GraphNode : contains
+Graph *-- "many" GraphEdge : contains
+
+TreeNode --> TreeNode : left
+TreeNode --> TreeNode : right
+TreeNode --> TreeNode : parent
+
+ListNode --> ListNode : next
+ListNode --> ListNode : prev
+
+' Execution relationships
+AlgorithmRunner --> DataStructure : operates on
+AlgorithmRunner *-- ExecutionState : owns
+AlgorithmRunner *-- FrameRecorder : owns
+
+BFSRunner --|> AlgorithmRunner : extends
+BFSFactory --|> AlgorithmFactory : extends
+
+ExecutionState *-- ExecutionSnapshot : stores
+FrameRecorder *-- AnimationFrame : creates & stores
+FrameRecorder --> AnimationFrame : generates
+
+BFSRunner ..> Graph : traverses
+BFSRunner ..> GraphStructure : uses
+
+' Visualization relationships
+VisualizationRenderer *-- GraphvizLayoutEngine : owns
+VisualizationRenderer ..> AnimationFrame : renders
+VisualizationRenderer ..> LayoutData : uses
+
+GraphvizLayoutEngine --> LayoutData : produces
+
+PlaybackController *-- AnimationFrame : stores
+PlaybackController ..> AnimationFrame : provides current
+
+InteractionManager ..> DataStructure : queries
+InteractionManager ..> LayoutData : modifies
+
+' Presentation relationships
+MainWindow --> AlgorithmManager : uses
+MainWindow *-- DataModelManager : owns
+MainWindow *-- VisualizationRenderer : owns
+MainWindow *-- PlaybackController : owns
+
+MainWindow --> AlgorithmRunner : executes
+MainWindow --> AlgorithmFactory : uses via manager
+MainWindow --> DataStructure : creates via manager
+
+VisualizationPane --> VisualizationRenderer : delegates to
+VisualizationPane ..> AnimationFrame : displays
+
+ControlPanel ..> AlgorithmManager : queries
+ControlPanel ..> AlgorithmInfo : displays
+
+MetricsPanel ..> ExecutionState : reads from
+MetricsPanel ..> ExecutionSnapshot : displays
+
+' Cross-layer relationships
+AlgorithmRunner --> ExecutionState : updates
+AlgorithmRunner --> FrameRecorder : records to
+FrameRecorder --> ExecutionState : coordinates with
+
+MainWindow --> ExecutionState : monitors
+MainWindow --> FrameRecorder : retrieves frames from
+
+VisualizationRenderer --> GraphvizLayoutEngine : delegates layout to
+PlaybackController --> VisualizationRenderer : triggers render
+
+DataStructure ..> Graph : exposes (via GraphStructure)
+DataStructure ..> TreeNode : exposes (via TreeStructure)
+DataStructure ..> ListNode : exposes (via ListStructure)
+
+@enduml
