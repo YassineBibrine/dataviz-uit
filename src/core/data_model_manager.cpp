@@ -1,24 +1,31 @@
 #include "data_model_manager.h"
-#include <sstream>
-#include <cstdlib>
+#include <stdexcept>
 
-void* DataModelManager::createDataStructure(const std::string& type, int size) {
- return generateRandomData(type, size);
-}
-
-void* DataModelManager::generateRandomData(const std::string& type, int size) {
- if (type == "Array") {
- auto* arr = new std::vector<int>(); arr->reserve(size);
- for (int i=0;i<size;++i) arr->push_back(rand()%100);
- return arr;
- }
- if (type == "LinkedList") {
- head = new ListNode(0); ListNode* cur=head; for (int i=1;i<size;++i){ cur->next = new ListNode(i); cur=cur->next; }
- return head;
- }
- return nullptr;
-}
-
-std::string DataModelManager::serializeToDOT(void* data) {
- (void)data; std::ostringstream os; os << "digraph G {\n // TODO\n}\n"; return os.str();
+DataStructure* DataModelManager::createDataStructure(const std::string& type, int size) {
+    if (type == "Array") {
+        auto arrayStruct = std::make_unique<ArrayStructure>(size);
+        currentStructure = std::move(arrayStruct);
+        return currentStructure.get();
+    }
+    else if (type == "Graph") {
+ auto graphStruct = std::make_unique<GraphStructure>(false);
+        // Size is interpreted as node count, edges = size * 1.5
+        graphStruct->generateRandom(size, static_cast<int>(size * 1.5));
+        currentStructure = std::move(graphStruct);
+        return currentStructure.get();
+    }
+    else if (type == "LinkedList") {
+        auto listStruct = std::make_unique<ListStructure>();
+        listStruct->generateRandom(size);
+        currentStructure = std::move(listStruct);
+        return currentStructure.get();
+    }
+  else if (type == "Tree") {
+        auto treeStruct = std::make_unique<TreeStructure>();
+     treeStruct->generateRandom(size);
+        currentStructure = std::move(treeStruct);
+      return currentStructure.get();
+    }
+    
+    throw std::invalid_argument("Unknown data structure type: " + type);
 }
