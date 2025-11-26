@@ -1,4 +1,4 @@
-#include "animation_frame.h"
+﻿#include "animation_frame.h"
 #include <chrono>
 
 AnimationFrame::AnimationFrame()
