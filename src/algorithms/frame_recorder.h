@@ -1,23 +1,24 @@
-#pragma once
+#ifndef FRAME_RECORDER_H
+#define FRAME_RECORDER_H
 
 #include <vector>
-#include "../visualization/animation_frame.h"
+#include <string>
+#include "animation_frame.h"
 
 class FrameRecorder {
- std::vector<AnimationFrame> frames;
- bool interpolationEnabled{false};
- int defaultDuration{16};
+private:
+    std::vector<AnimationFrame> frameBuffer;
+
 public:
- AnimationFrame generateComparisonFrame(const std::string& a, const std::string& b, bool result) {
- (void)a; (void)b; (void)result; return AnimationFrame(); }
- AnimationFrame generateSwapFrame(const std::string& a, const std::string& b) {
- (void)a; (void)b; return AnimationFrame(); }
- AnimationFrame generateHighlightFrame(const std::vector<std::string>& elems, const std::string& color) {
- (void)elems; (void)color; return AnimationFrame(); }
- AnimationFrame generateTraversalFrame(const std::string& node, const std::vector<std::string>& visited) {
- (void)node; (void)visited; return AnimationFrame(); }
- AnimationFrame generateInsertionFrame(const std::string& n, const std::string& pos) {
- (void)n; (void)pos; return AnimationFrame(); }
- std::vector<AnimationFrame> getAllFrames() const { return frames; }
- void clear() { frames.clear(); }
+    bool interpolationEnabled = false;
+    int defaultDuration = 5;
+
+    AnimationFrame generateComparisonFrame(const std::string& elem1, const std::string& elem2, bool result);
+    AnimationFrame generateSwapFrame(const std::string& elem1, const std::string& elem2);
+    AnimationFrame generateHighlightFrame(const std::vector<std::string>& elements, const std::string& color);
+    AnimationFrame generateTraversalFrame(const std::string& currentNode, const std::vector<std::string>& visitedNodes);
+    AnimationFrame generateInsertionFrame(const std::string& newNode, const std::string& position);
+    std::vector<AnimationFrame> getAllFrames() const;
 };
+
+#endif // FRAME_RECORDER_H
