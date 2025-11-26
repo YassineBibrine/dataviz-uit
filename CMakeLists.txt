@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt6
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+#find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
 # === Graphviz Configuration (Windows) ===
 set(GRAPHVIZ_FOUND FALSE)
@@ -44,7 +44,11 @@ set(SOURCES
     src/core/graph.cpp
     src/core/list_node.cpp
     src/core/tree_node.cpp
-    src/core/DataModelManager.cpp
+    src/core/data_model_manager.cpp
+    src/core/array_structure.cpp
+    src/core/graph_structure.cpp
+    src/core/list_structure.cpp
+    src/core/tree_structure.cpp
     
     # Orchestration
     src/orchestration/algorithm_manager.cpp
@@ -54,11 +58,11 @@ set(SOURCES
     src/algorithms/execution_state.cpp
     
     # Visualization
-    src/visualization/GraphvizLayoutEngine.cpp
     src/visualization/animation_frame.cpp
     src/visualization/visualization_renderer.cpp
     src/visualization/interaction_manager.cpp
-    
+    src/visualization/playback_controller.cpp
+
     # UI
     src/ui/main_window.cpp
     src/ui/visualization_pane.cpp
@@ -68,31 +72,17 @@ set(SOURCES
 
 # Header files
 set(HEADERS
-    # Include headers
-    include/core/DataStructure.h
-    include/core/AlgorithmInfo.h
-    include/core/AlgorithmFactory.h
-    include/core/AlgorithmManager.h
-    include/core/DataModelManager.h
-    include/execution/AlgorithmRunner.h
-    include/execution/ExecutionState.h
-    include/execution/FrameRecorder.h
-    include/execution/algorithms/BFSRunner.h
-    include/core/factories/BFSFactory.h
-    include/visualization/GraphvizLayoutEngine.h
-    include/visualization/VisualizationRenderer.h
-    include/visualization/PlaybackController.h
-    include/visualization/InteractionManager.h
-    include/visualization/AnimationFrame.h
-    include/ui/MainWindow.h
-    include/ui/VisualizationPane.h
-    include/ui/ControlPanel.h
-    include/ui/MetricsPanel.h
-    
     # Src headers
     src/core/graph.h
     src/core/list_node.h
     src/core/tree_node.h
+    src/core/data_model_manager.h
+    src/core/data_structure.h
+    src/core/algorithm_info.h
+    src/core/array_structure.h
+    src/core/graph_structure.h
+    src/core/list_structure.h
+    src/core/tree_structure.h
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
     src/algorithms/algorithm_runner.h
@@ -101,6 +91,7 @@ set(HEADERS
     src/visualization/animation_frame.h
     src/visualization/visualization_renderer.h
     src/visualization/interaction_manager.h
+    src/visualization/playback_controller.h
     src/ui/main_window.h
     src/ui/visualization_pane.h
     src/ui/control_panel.h

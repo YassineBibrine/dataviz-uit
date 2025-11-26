@@ -1,21 +1,37 @@
 #pragma once
 
 #include <string>
-#include <utility>
-#include <vector>
-#include "graph.h"
-#include "list_node.h"
-#include "tree_node.h"
+#include <memory>
+#include "data_structure.h"
+#include "array_structure.h"
+#include "graph_structure.h"
+#include "list_structure.h"
+#include "tree_structure.h"
 
+/**
+ * @class DataModelManager
+ * @brief Manages creation and lifecycle of data structures
+ */
 class DataModelManager {
- Graph graph;
- TreeNode* rootNode{nullptr};
- ListNode* head{nullptr};
+private:
+    std::unique_ptr<DataStructure> currentStructure;
+    
 public:
- DataModelManager() = default;
- ~DataModelManager() = default;
-
- void* createDataStructure(const std::string& type, int size);
- void* generateRandomData(const std::string& type, int size);
- std::string serializeToDOT(void* data);
+    DataModelManager() = default;
+    ~DataModelManager() = default;
+    
+    /**
+     * @brief Create a data structure of the specified type
+     * @param type Type of data structure ("Array", "Graph", "LinkedList", "Tree")
+     * @param size Size parameter (interpretation depends on type)
+  * @return Pointer to the created data structure
+     */
+    DataStructure* createDataStructure(const std::string& type, int size);
+    
+    /**
+     * @brief Get the current data structure
+     * @return Pointer to current structure, or nullptr if none exists
+     */
+    DataStructure* getCurrentStructure() { return currentStructure.get(); }
+    const DataStructure* getCurrentStructure() const { return currentStructure.get(); }
 };
