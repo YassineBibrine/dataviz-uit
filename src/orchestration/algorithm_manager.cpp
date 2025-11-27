@@ -1,28 +1,49 @@
-#include "algorithm_manager.h"
+#include "AlgorithmManager.h"
 #include <stdexcept>
+#include <algorithm>
 
-AlgorithmManager::AlgorithmManager() {}
+AlgorithmManager& AlgorithmManager::getInstance() {
+    static AlgorithmManager instance;
+    return instance;
+}
 
-AlgorithmManager& AlgorithmManager::getInstance() { static AlgorithmManager inst; return inst; }
+void AlgorithmManager::registerAlgorithm(const std::string& name, AlgorithmFactory* factory) {
+    if (!factory) {
+        throw std::invalid_argument("Factory cannot be null");
+    }
 
-void AlgorithmManager::registerAlgorithm(const std::string& name, std::shared_ptr<AlgorithmFactory> factory) {
- if (algorithms.count(name)) throw std::runtime_error("Algorithm already registered: "+name);
- algorithms[name]=factory;
- categories[factory->getCategory()].push_back(name);
+    m_factories[name] = factory;
+
+    // Ajout à la catégorie (par défaut "General" si non spécifié)
+    std::string category = "General"; // On pourrait ajouter une méthode getCategory() plus tard
+    m_categories[category].push_back(name);
 }
 
 AlgorithmInfo AlgorithmManager::getAlgorithmInfo(const std::string& name) const {
- auto it = algorithms.find(name);
- if (it==algorithms.end()) throw std::runtime_error("Algorithm not found: "+name);
- AlgorithmInfo info; info.name = it->second->getName(); info.description = it->second->getDescription(); info.category = it->second->getCategory(); return info;
+    auto it = m_factories.find(name);
+    if (it == m_factories.end()) {
+        throw std::runtime_error("Algorithm not found: " + name);
+    }
+
+    AlgorithmInfo info;
+    info.name = name;
+    info.description = it->second->getDescription();
+    info.category = "General"; // À modifier si tu ajoutes getCategory() plus tard
+    return info;
 }
 
-std::vector<std::string> AlgorithmManager::listAlgorithmsByCategory(const std::string& cat) const {
- auto it = categories.find(cat);
- if (it==categories.end()) return {}; return it->second;
+std::vector<std::string> AlgorithmManager::listAlgorithmsByCategory(const std::string& category) const {
+    auto it = m_categories.find(category);
+    if (it == m_categories.end()) {
+        return {};
+    }
+    return it->second;
 }
 
 std::vector<std::string> AlgorithmManager::getCategories() const {
- std::vector<std::string> out; out.reserve(categories.size());
- for (auto& kv : categories) out.push_back(kv.first); return out;
+    std::vector<std::string> categories;
+    for (const auto& pair : m_categories) {
+        categories.push_back(pair.first);
+    }
+    return categories;
 }

@@ -1,20 +1,24 @@
 #pragma once
 
-#include <map>
+#include "AlgorithmFactory.h"
 #include <string>
 #include <vector>
-#include <memory>
-#include "algorithm_factory.h"
+#include <map>
 
 class AlgorithmManager {
- std::map<std::string, std::shared_ptr<AlgorithmFactory>> algorithms;
- std::map<std::string, std::vector<std::string>> categories;
- AlgorithmManager();
 public:
- static AlgorithmManager& getInstance();
- void registerAlgorithm(const std::string& name, std::shared_ptr<AlgorithmFactory> factory);
- AlgorithmInfo getAlgorithmInfo(const std::string& name) const;
- std::vector<std::string> listAlgorithmsByCategory(const std::string& cat) const;
- std::vector<std::string> getCategories() const;
- bool hasAlgorithm(const std::string& name) const { return algorithms.count(name)>0; }
+    static AlgorithmManager& getInstance();
+    AlgorithmManager(const AlgorithmManager&) = delete;
+    AlgorithmManager& operator=(const AlgorithmManager&) = delete;
+
+    void registerAlgorithm(const std::string& name, AlgorithmFactory* factory);
+    AlgorithmInfo getAlgorithmInfo(const std::string& name) const;
+    std::vector<std::string> listAlgorithmsByCategory(const std::string& category) const;
+    std::vector<std::string> getCategories() const;
+
+private:
+    AlgorithmManager() = default;
+
+    std::map<std::string, AlgorithmFactory*> m_factories;
+    std::map<std::string, std::vector<std::string>> m_categories;
 };

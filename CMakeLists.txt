@@ -10,9 +10,25 @@ set(CMAKE_AUTOUIC ON)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
-set(GRAPHVIZ_DIR "C:/Program Files/Graphviz") 
-include_directories(${GRAPHVIZ_DIR}/include)
-link_directories(${GRAPHVIZ_DIR}/lib)
+# === Graphviz Configuration (Windows) ===
+set(GRAPHVIZ_FOUND FALSE)
+if(WIN32)
+    set(GRAPHVIZ_ROOT "C:/Program Files/Graphviz")
+    if(EXISTS "${GRAPHVIZ_ROOT}/include/graphviz/gvc.h")
+  set(GRAPHVIZ_FOUND TRUE)
+        message(STATUS "Graphviz found at: ${GRAPHVIZ_ROOT}")
+        
+   # Include headers
+        include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
+        
+   # Define DLL paths
+  set(GRAPHVIZ_GVC_DLL "${GRAPHVIZ_ROOT}/bin/gvc.dll")
+        set(GRAPHVIZ_CGRAPH_DLL "${GRAPHVIZ_ROOT}/bin/cgraph.dll")
+        set(GRAPHVIZ_CDT_DLL "${GRAPHVIZ_ROOT}/bin/cdt.dll")
+    else()
+   message(WARNING "Graphviz not found at ${GRAPHVIZ_ROOT}. Graphviz features will be disabled.")
+    endif()
+endif()
 
 # Include directories
 include_directories(
@@ -66,7 +82,7 @@ set(HEADERS
     src/core/array_structure.h
     src/core/graph_structure.h
     src/core/list_structure.h
-    src/core/tree_structure.h
+src/core/tree_structure.h
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
     src/algorithms/algorithm_runner.h
@@ -103,12 +119,23 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Platform-specific settings
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES
-      WIN32_EXECUTABLE TRUE
-    )
+        WIN32_EXECUTABLE TRUE
+ )
+    
+    # === Copy Graphviz DLLs to output directory (if found) ===
+    if(GRAPHVIZ_FOUND)
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+ "${GRAPHVIZ_GVC_DLL}"
+"${GRAPHVIZ_CGRAPH_DLL}"
+        "${GRAPHVIZ_CDT_DLL}"
+     $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      COMMENT "Copying Graphviz DLLs to output directory"
+   )
+    endif()
 endif()
 
 # Install target
 install(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION bin
+    RUNTIME DESTINATION bin
 )
-
