@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AlgorithmFactory.h"
+#include "algorithm_factory.h"
 #include <string>
 #include <vector>
 #include <map>

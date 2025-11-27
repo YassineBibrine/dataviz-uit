@@ -1,4 +1,4 @@
-#include "AlgorithmManager.h"
+#include "algorithm_manager.h"
 #include <stdexcept>
 #include <algorithm>
 
