@@ -17,10 +17,13 @@ if(WIN32)
     if(EXISTS "${GRAPHVIZ_ROOT}/include/graphviz/gvc.h")
   set(GRAPHVIZ_FOUND TRUE)
         message(STATUS "Graphviz found at: ${GRAPHVIZ_ROOT}")
-        
+      
    # Include headers
-        include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
+include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
         
+   # Link library directory
+        link_directories("${GRAPHVIZ_ROOT}/lib")
+    
    # Define DLL paths
   set(GRAPHVIZ_GVC_DLL "${GRAPHVIZ_ROOT}/bin/gvc.dll")
         set(GRAPHVIZ_CGRAPH_DLL "${GRAPHVIZ_ROOT}/bin/cgraph.dll")
