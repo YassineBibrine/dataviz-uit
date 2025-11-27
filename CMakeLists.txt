@@ -10,6 +10,10 @@ set(CMAKE_AUTOUIC ON)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
+set(GRAPHVIZ_DIR "C:/Program Files/Graphviz") 
+include_directories(${GRAPHVIZ_DIR}/include)
+link_directories(${GRAPHVIZ_DIR}/lib)
+
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
@@ -79,13 +83,16 @@ set(HEADERS
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp")
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     Qt6::Core 
     Qt6::Gui 
     Qt6::Widgets
+    gvc
+    cgraph
+    cdt
 )
 
 # Set output directory
@@ -104,3 +111,4 @@ endif()
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
 )
+
