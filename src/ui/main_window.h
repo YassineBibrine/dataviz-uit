@@ -19,7 +19,11 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
+<<<<<<< HEAD
 
+=======
+     
+>>>>>>> ede87d8 (WIP: sauvegarde avant merge)
     void executeAlgorithm(const std::string& algorithm);
     void loadDataStructure(const std::string& type, int size);
 
@@ -38,12 +42,19 @@ private:
     std::unique_ptr<MetricsPanel> metricsPanel;
 
     // Core components
+<<<<<<< HEAD
     AlgorithmRunner* currentAlgorithm{ nullptr };
     AlgorithmManager& algoManager;
 
+=======
+    AlgorithmRunner* currentAlgorithm{nullptr};
+    AlgorithmManager& algoManager = AlgorithmManager::getInstance();
+    
+>>>>>>> ede87d8 (WIP: sauvegarde avant merge)
 private slots:
     // --- AJOUTS POUR LE CONTROL PANEL ---
     void onPlayClicked();
+<<<<<<< HEAD
     void onPauseClicked();
     void onResetClicked();
     void onStepForwardClicked();
@@ -53,3 +64,22 @@ private slots:
     void onDataStructureSelected(QString structure);
     void onDataSizeChanged(int size);
 };
+=======
+    
+private:
+    std::string selectedAlgorithm;
+};
+
+MainWindow::MainWindow(QWidget* parent)
+    : QMainWindow(parent),
+      algoManager(AlgorithmManager::getInstance()) // Ajoute cette initialisation
+{
+    setWindowTitle("DataViz-UIT: Algorithm Visualization");
+    setGeometry(100, 100, 1200, 800);
+    setMinimumSize(1000, 600);
+
+    setupUI();
+    connectSignals();
+    createMenuBar();
+}
+>>>>>>> ede87d8 (WIP: sauvegarde avant merge)

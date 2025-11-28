@@ -1,21 +1,15 @@
-#pragma once
+// src/orchestration/algorithm_factory.h
+#ifndef ALGORITHM_FACTORY_H
+#define ALGORITHM_FACTORY_H
 
+#include "algorithm.h"
+#include <memory>
 #include <string>
-#include <map>
-
-class AlgorithmRunner; // fwd
-
-struct AlgorithmInfo {
-    std::string name;
-    std::string description;
-    std::string category; // Utile pour AlgorithmManager, même si non dans l'interface
-};
 
 class AlgorithmFactory {
 public:
     virtual ~AlgorithmFactory() = default;
-
-    virtual AlgorithmRunner* create(const std::map<std::string, std::string>& params) = 0;
-    virtual std::string getName() const = 0;
-    virtual std::string getDescription() const = 0;
+    virtual std::unique_ptr<Algorithm> createAlgorithm(const std::string& type) = 0;
 };
+
+#endif // ALGORITHM_FACTORY_H

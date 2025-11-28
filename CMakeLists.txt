@@ -35,7 +35,6 @@ endif()
 
 # Include directories
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
 )
 
@@ -55,10 +54,12 @@ set(SOURCES
     
     # Orchestration
     src/orchestration/algorithm_manager.cpp
+    src/orchestration/sorting_algorithm_factory.cpp  # ? Ajouté
     
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
+    src/algorithms/bubble_sort.cpp  # ? Ajouté
     
     # Visualization
     src/visualization/animation_frame.cpp
@@ -75,7 +76,7 @@ set(SOURCES
 
 # Header files
 set(HEADERS
-    # Src headers
+    # Core
     src/core/graph.h
     src/core/list_node.h
     src/core/tree_node.h
@@ -85,16 +86,31 @@ set(HEADERS
     src/core/array_structure.h
     src/core/graph_structure.h
     src/core/list_structure.h
+<<<<<<< HEAD
 src/core/tree_structure.h
+=======
+    src/core/tree_structure.h
+    
+    # Orchestration
+>>>>>>> ede87d8 (WIP: sauvegarde avant merge)
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
+    src/orchestration/sorting_algorithm_factory.h  # ? Ajouté
+    src/orchestration/algorithm.h  # ? Ajouté (essentiel)
+    
+    # Algorithms
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
+    src/algorithms/bubble_sort.h  # ? Ajouté
+    
+    # Visualization
     src/visualization/animation_frame.h
     src/visualization/visualization_renderer.h
     src/visualization/interaction_manager.h
     src/visualization/playback_controller.h
+    
+    # UI
     src/ui/main_window.h
     src/ui/visualization_pane.h
     src/ui/control_panel.h
