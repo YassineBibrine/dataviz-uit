@@ -3,7 +3,8 @@
 
 #include <vector>
 #include <string>
-#include "animation_frame.h"
+#include "../visualization/animation_frame.h"
+
 
 class FrameRecorder {
 private:
