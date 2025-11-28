@@ -86,13 +86,9 @@ set(HEADERS
     src/core/array_structure.h
     src/core/graph_structure.h
     src/core/list_structure.h
-<<<<<<< HEAD
-src/core/tree_structure.h
-=======
     src/core/tree_structure.h
     
     # Orchestration
->>>>>>> ede87d8 (WIP: sauvegarde avant merge)
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
     src/orchestration/sorting_algorithm_factory.h  # ? Ajouté

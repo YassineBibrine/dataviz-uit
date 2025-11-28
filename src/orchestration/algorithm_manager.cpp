@@ -1,9 +1,7 @@
 #include "algorithm_manager.h"
-<<<<<<< HEAD
-=======
-#include "sorting_algorithm_factory.h" // ton factory concret
->>>>>>> ede87d8 (WIP: sauvegarde avant merge)
+#include "sorting_algorithm_factory.h"
 #include <stdexcept>
+#include <memory>
 
 // Implémentation du singleton
 AlgorithmManager& AlgorithmManager::getInstance() {
