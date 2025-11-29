@@ -1,8 +1,5 @@
 #include "algorithm_manager.h"
-<<<<<<< HEAD
-=======
 #include "sorting_algorithm_factory.h" // ton factory concret
->>>>>>> ede87d8 (WIP: sauvegarde avant merge)
 #include <stdexcept>
 
 // Implémentation du singleton

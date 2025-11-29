@@ -86,13 +86,9 @@ set(HEADERS
     src/core/array_structure.h
     src/core/graph_structure.h
     src/core/list_structure.h
-<<<<<<< HEAD
-src/core/tree_structure.h
-=======
     src/core/tree_structure.h
     
     # Orchestration
->>>>>>> ede87d8 (WIP: sauvegarde avant merge)
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
     src/orchestration/sorting_algorithm_factory.h  # ? Ajouté
@@ -118,7 +114,7 @@ src/core/tree_structure.h
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp")
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp" "src/orchestration/filtering_algorithm_factory.h" "src/orchestration/filtering_algorithm_factory.cpp" "src/orchestration/transform_algorithm_factory.h" "src/orchestration/transform_algorithm_factory.cpp" "src/algorithms/range_filter.h" "src/algorithms/range_filter.cpp" "src/algorithms/normalize.h" "src/algorithms/normalize.cpp")
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
