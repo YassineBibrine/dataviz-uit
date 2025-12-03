@@ -8,7 +8,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QCloseEvent>
-#include <QDebug> // Indispensable pour voir si ça marche
+#include <QDebug>
 #include "../algorithms/algorithm_runner.h"
 #include "toolbox_panel.h"
 
@@ -31,7 +31,6 @@ MainWindow::MainWindow(QWidget* parent)
 
 MainWindow::~MainWindow() = default;
 
-<<<<<<< HEAD
 void MainWindow::setupUI() {
     QWidget* central = new QWidget(this);
     setCentralWidget(central);
@@ -43,7 +42,6 @@ void MainWindow::setupUI() {
     layout->addWidget(toolboxPanel, 0); // Ratio 0 = taille fixe (ne s'étire pas)
 
     // --- 2. CENTRE : Visualization Pane (Zone de dessin) ---
-    visualizationPane = std::make_unique<VisualizationPane>(this);
     layout->addWidget(visualizationPane.get(), 4); // Ratio 4 (prend le plus de place)
 
     // --- 3. DROITE : Sidebar (Contrôles + Métriques) ---
@@ -95,19 +93,11 @@ void MainWindow::createMenuBar() {
 // --- LOGIQUE METIER (Backend hooks) ---
 
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
-    (void)algorithm; // Sera relié à AlgorithmManager plus tard
-}
-
-void MainWindow::loadDataStructure(const std::string& type, int size) {
-    (void)type; (void)size; // Sera relié au DataModelManager
-=======
-void MainWindow::executeAlgorithm(const std::string& algorithm) {
-    // ? Utilise le manager local pour cr�er un algorithme
-    // Pour l'instant, on suppose que tous les algorithmes de tri sont sous "Sorting"
     auto algo = algoManager.createAlgorithm("Sorting", algorithm);
     if (algo) {
-        qDebug() << "Executing algorithm:" << QString::fromStdString(algo->name());
-        algo->execute(); // Affiche dans la console pour l'instant
+        // If Algorithm has name() method; otherwise skip
+        // qDebug() << "Executing algorithm:" << QString::fromStdString(algo->name());
+        algo->execute();
     }
     else {
         qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
@@ -115,55 +105,36 @@ void MainWindow::executeAlgorithm(const std::string& algorithm) {
 }
 
 void MainWindow::loadDataStructure(const std::string& type, int size) {
-    (void)type; (void)size; // TODO: use DataModelManager
+    (void)type; (void)size;
 }
 
-void MainWindow::onAlgorithmSelected(const QString& algorithm) {
-    // TODO: stocker le choix ou appeler executeAlgorithm
-    // Exemple :
-    // selectedAlgorithm = algorithm.toStdString();
+void MainWindow::onAlgorithmSelected(QString algorithm) {
+    selectedAlgorithm = algorithm.toStdString();
 }
 
 void MainWindow::onPlayClicked() {
-    // Si tu utilises AlgorithmRunner, il faudra le recr��r ici
-    // Mais pour l'instant, on peut ex�cuter directement via executeAlgorithm
-    // Exemple temporaire :
+    qDebug() << ">>> PLAY clicked";
+    controlPanel->setPlayingState(true);
+
     if (!selectedAlgorithm.empty()) {
         executeAlgorithm(selectedAlgorithm);
     }
->>>>>>> ede87d8 (WIP: sauvegarde avant merge)
-}
-
-void MainWindow::closeEvent(QCloseEvent* e) {
-    e->accept();
-<<<<<<< HEAD
-}
-
-// --- NOS SLOTS D'ACTIONS (Pour tester) ---
-
-void MainWindow::onPlayClicked() {
-    qDebug() << ">>> PLAY cliqué !";
-    controlPanel->setPlayingState(true); // Grise le bouton play
-
-    // Code existant de ton collègue (je le laisse, mais sécurisé)
-    if (currentAlgorithm) {
-        // currentAlgorithm->execute(); 
-        qDebug() << "Lancement de l'algo via le backend...";
+    else if (currentAlgorithm) {
+        qDebug() << "Launching algorithm via backend...";
     }
     else {
-        qDebug() << "Aucun algorithme chargé pour l'instant.";
+        qDebug() << "No algorithm loaded yet.";
     }
 }
 
 void MainWindow::onPauseClicked() {
-    qDebug() << ">>> PAUSE cliqué !";
-    controlPanel->setPlayingState(false); // Réactive le bouton play
+    qDebug() << ">>> PAUSE clicked";
+    controlPanel->setPlayingState(false);
 }
 
 void MainWindow::onResetClicked() {
-    qDebug() << ">>> RESET cliqué !";
+    qDebug() << ">>> RESET clicked";
     controlPanel->setPlayingState(false);
-    // Ici on ajoutera plus tard : visualizationPane->clear();
 }
 
 void MainWindow::onStepForwardClicked() {
@@ -175,30 +146,23 @@ void MainWindow::onStepBackwardClicked() {
 }
 
 void MainWindow::onSpeedChanged(int speed) {
-    qDebug() << "Vitesse :" << speed;
+    qDebug() << "Speed:" << speed;
 }
-
-void MainWindow::onAlgorithmSelected(QString algorithm) {
-    qDebug() << "Algo choisi :" << algorithm;
-}
-
 
 void MainWindow::onDataStructureSelected(QString structure) {
-    qDebug() << "Structure choisie :" << structure;
-
-
+    qDebug() << "Structure selected:" << structure;
     if (toolboxPanel) {
         toolboxPanel->updateTools(structure);
     }
 }
 
 void MainWindow::onDataSizeChanged(int size) {
-    qDebug() << "Taille :" << size;
-
-    // On envoie l'ordre au VisualizationPane
+    qDebug() << "Size:" << size;
     if (visualizationPane) {
         visualizationPane->setRenderSize(size);
     }
-=======
->>>>>>> ede87d8 (WIP: sauvegarde avant merge)
+}
+
+void MainWindow::closeEvent(QCloseEvent* e) {
+    e->accept();
 }
