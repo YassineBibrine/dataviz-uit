@@ -1,16 +1,17 @@
 #include "algorithm_manager.h"
-#include "sorting_algorithm_factory.h" // ton factory concret
+#include "sorting_algorithm_factory.h"
 #include <stdexcept>
+#include <memory>
 
-// Implémentation du singleton
+// ImplÃ©mentation du singleton
 AlgorithmManager& AlgorithmManager::getInstance() {
     static AlgorithmManager instance;
     return instance;
 }
 
-// Constructeur privé — UNIQUE définition
+// Constructeur privÃ© â€” UNIQUE dÃ©finition
 AlgorithmManager::AlgorithmManager() {
-    // Enregistre les factories concrètes au démarrage
+    // Enregistre les factories concrÃ¨tes au dÃ©marrage
     registerFactory("Sorting", std::make_unique<SortingAlgorithmFactory>());
 }
 
@@ -28,8 +29,8 @@ std::unique_ptr<Algorithm> AlgorithmManager::createAlgorithm(const std::string& 
 }
 
 std::vector<std::string> AlgorithmManager::listAlgorithmsByCategory(const std::string& category) const {
-    // Tu peux étendre ça si tu stockes la liste des types par catégorie
-    // Pour l'instant, retour vide ou logique spécifique
+    // Tu peux Ã©tendre Ã§a si tu stockes la liste des types par catÃ©gorie
+    // Pour l'instant, retour vide ou logique spÃ©cifique
     return {};
 }
 

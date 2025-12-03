@@ -15,18 +15,21 @@ set(GRAPHVIZ_FOUND FALSE)
 if(WIN32)
     set(GRAPHVIZ_ROOT "C:/Program Files/Graphviz")
     if(EXISTS "${GRAPHVIZ_ROOT}/include/graphviz/gvc.h")
-        set(GRAPHVIZ_FOUND TRUE)
+  set(GRAPHVIZ_FOUND TRUE)
         message(STATUS "Graphviz found at: ${GRAPHVIZ_ROOT}")
+      
+   # Include headers
+include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
         
-        # Include headers
-        include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
-        
-        # Define DLL paths
-        set(GRAPHVIZ_GVC_DLL "${GRAPHVIZ_ROOT}/bin/gvc.dll")
+   # Link library directory
+        link_directories("${GRAPHVIZ_ROOT}/lib")
+    
+   # Define DLL paths
+  set(GRAPHVIZ_GVC_DLL "${GRAPHVIZ_ROOT}/bin/gvc.dll")
         set(GRAPHVIZ_CGRAPH_DLL "${GRAPHVIZ_ROOT}/bin/cgraph.dll")
         set(GRAPHVIZ_CDT_DLL "${GRAPHVIZ_ROOT}/bin/cdt.dll")
     else()
-        message(WARNING "Graphviz not found at ${GRAPHVIZ_ROOT}. Graphviz features will be disabled.")
+   message(WARNING "Graphviz not found at ${GRAPHVIZ_ROOT}. Graphviz features will be disabled.")
     endif()
 endif()
 
@@ -51,12 +54,12 @@ set(SOURCES
     
     # Orchestration
     src/orchestration/algorithm_manager.cpp
-    src/orchestration/sorting_algorithm_factory.cpp  # ? Ajouté
+    src/orchestration/sorting_algorithm_factory.cpp  # ? AjoutÃ©
     
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
-    src/algorithms/bubble_sort.cpp  # ? Ajouté
+    src/algorithms/bubble_sort.cpp  # ? AjoutÃ©
     
     # Visualization
     src/visualization/animation_frame.cpp
@@ -88,14 +91,14 @@ set(HEADERS
     # Orchestration
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
-    src/orchestration/sorting_algorithm_factory.h  # ? Ajouté
-    src/orchestration/algorithm.h  # ? Ajouté (essentiel)
+    src/orchestration/sorting_algorithm_factory.h  # ? AjoutÃ©
+    src/orchestration/algorithm.h  # ? AjoutÃ© (essentiel)
     
     # Algorithms
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
-    src/algorithms/bubble_sort.h  # ? Ajouté
+    src/algorithms/bubble_sort.h  # ? AjoutÃ©
     
     # Visualization
     src/visualization/animation_frame.h
@@ -111,13 +114,16 @@ set(HEADERS
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp")
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     Qt6::Core 
     Qt6::Gui 
     Qt6::Widgets
+    gvc
+    cgraph
+    cdt
 )
 
 # Set output directory
@@ -129,18 +135,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         WIN32_EXECUTABLE TRUE
-    )
+ )
     
     # === Copy Graphviz DLLs to output directory (if found) ===
     if(GRAPHVIZ_FOUND)
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${GRAPHVIZ_GVC_DLL}"
-                "${GRAPHVIZ_CGRAPH_DLL}"
-                "${GRAPHVIZ_CDT_DLL}"
-                $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            COMMENT "Copying Graphviz DLLs to output directory"
-        )
+ "${GRAPHVIZ_GVC_DLL}"
+"${GRAPHVIZ_CGRAPH_DLL}"
+        "${GRAPHVIZ_CDT_DLL}"
+     $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      COMMENT "Copying Graphviz DLLs to output directory"
+   )
     endif()
 endif()
 
