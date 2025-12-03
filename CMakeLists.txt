@@ -54,12 +54,12 @@ set(SOURCES
     
     # Orchestration
     src/orchestration/algorithm_manager.cpp
-    src/orchestration/sorting_algorithm_factory.cpp  # ? Ajouté
+    src/orchestration/sorting_algorithm_factory.cpp  # ? AjoutÃ©
     
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
-    src/algorithms/bubble_sort.cpp  # ? Ajouté
+    src/algorithms/bubble_sort.cpp  # ? AjoutÃ©
     
     # Visualization
     src/visualization/animation_frame.cpp
@@ -91,14 +91,14 @@ set(HEADERS
     # Orchestration
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
-    src/orchestration/sorting_algorithm_factory.h  # ? Ajouté
-    src/orchestration/algorithm.h  # ? Ajouté (essentiel)
+    src/orchestration/sorting_algorithm_factory.h  # ? AjoutÃ©
+    src/orchestration/algorithm.h  # ? AjoutÃ© (essentiel)
     
     # Algorithms
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
-    src/algorithms/bubble_sort.h  # ? Ajouté
+    src/algorithms/bubble_sort.h  # ? AjoutÃ©
     
     # Visualization
     src/visualization/animation_frame.h

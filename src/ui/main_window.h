@@ -58,3 +58,16 @@ private slots:
     void onDataStructureSelected(QString structure);
     void onDataSizeChanged(int size);
 };
+
+MainWindow::MainWindow(QWidget* parent)
+    : QMainWindow(parent),
+      algoManager(AlgorithmManager::getInstance()) // Ajoute cette initialisation
+{
+    setWindowTitle("DataViz-UIT: Algorithm Visualization");
+    setGeometry(100, 100, 1200, 800);
+    setMinimumSize(1000, 600);
+
+    setupUI();
+    connectSignals();
+    createMenuBar();
+}
