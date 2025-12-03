@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include <memory>
+#include <string>
 #include "../orchestration/algorithm_manager.h"
 
 class VisualizationPane;
@@ -9,6 +10,7 @@ class ControlPanel;
 class MetricsPanel;
 class AlgorithmRunner;
 class ToolboxPanel;
+
 /**
  * @class MainWindow
  * @brief Main application window
@@ -38,8 +40,11 @@ private:
     std::unique_ptr<MetricsPanel> metricsPanel;
 
     // Core components
-    AlgorithmRunner* currentAlgorithm{ nullptr };
-    AlgorithmManager& algoManager;
+    AlgorithmRunner* currentAlgorithm{nullptr};
+    AlgorithmManager& algoManager = AlgorithmManager::getInstance();
+
+    // Selected algorithm name
+    std::string selectedAlgorithm;
 
 private slots:
     // --- AJOUTS POUR LE CONTROL PANEL ---
