@@ -54,12 +54,12 @@ set(SOURCES
     
     # Orchestration
     src/orchestration/algorithm_manager.cpp
-    src/orchestration/sorting_algorithm_factory.cpp  # ? Ajouté
+    src/orchestration/sorting_algorithm_factory.cpp
     
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
-    src/algorithms/bubble_sort.cpp  # ? Ajouté
+    src/algorithms/bubble_sort.cpp
     
     # Visualization
     src/visualization/animation_frame.cpp
@@ -72,6 +72,7 @@ set(SOURCES
     src/ui/visualization_pane.cpp
     src/ui/control_panel.cpp
     src/ui/metrics_panel.cpp
+    src/ui/toolbox_panel.cpp
 )
 
 # Header files
@@ -91,14 +92,14 @@ set(HEADERS
     # Orchestration
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
-    src/orchestration/sorting_algorithm_factory.h  # ? Ajouté
-    src/orchestration/algorithm.h  # ? Ajouté (essentiel)
+    src/orchestration/sorting_algorithm_factory.h
+    src/orchestration/algorithm.h
     
     # Algorithms
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
-    src/algorithms/bubble_sort.h  # ? Ajouté
+    src/algorithms/bubble_sort.h
     
     # Visualization
     src/visualization/animation_frame.h
@@ -108,13 +109,14 @@ set(HEADERS
     
     # UI
     src/ui/main_window.h
-    src/ui/visualization_pane.h
+ src/ui/visualization_pane.h
     src/ui/control_panel.h
-    src/ui/metrics_panel.h
+  src/ui/metrics_panel.h
+    src/ui/toolbox_panel.h
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp" "src/orchestration/filtering_algorithm_factory.h" "src/orchestration/filtering_algorithm_factory.cpp" "src/orchestration/transform_algorithm_factory.h" "src/orchestration/transform_algorithm_factory.cpp" "src/algorithms/range_filter.h" "src/algorithms/range_filter.cpp" "src/algorithms/normalize.h" "src/algorithms/normalize.cpp")
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 

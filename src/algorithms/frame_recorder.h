@@ -20,6 +20,9 @@ public:
     AnimationFrame generateTraversalFrame(const std::string& currentNode, const std::vector<std::string>& visitedNodes);
     AnimationFrame generateInsertionFrame(const std::string& newNode, const std::string& position);
     std::vector<AnimationFrame> getAllFrames() const;
+
+    // Clear all recorded frames
+    void clear() { frameBuffer.clear(); }
 };
 
 #endif // FRAME_RECORDER_H
