@@ -114,7 +114,7 @@ set(HEADERS
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp")
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp" "src/orchestration/filtering_algorithm_factory.h" "src/orchestration/filtering_algorithm_factory.cpp" "src/orchestration/transform_algorithm_factory.h" "src/orchestration/transform_algorithm_factory.cpp" "src/algorithms/range_filter.h" "src/algorithms/range_filter.cpp" "src/algorithms/normalize.h" "src/algorithms/normalize.cpp")
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
