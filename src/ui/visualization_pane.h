@@ -9,19 +9,33 @@
 
 class VisualizationPane : public QWidget {
     Q_OBJECT
-    std::unique_ptr<VisualizationRenderer> renderer;
+        std::unique_ptr<VisualizationRenderer> renderer;
     std::unique_ptr<InteractionManager> interaction;
     std::vector<std::string> currentHighlights;
-    
+
 public:
     explicit VisualizationPane(QWidget* parent = nullptr);
     ~VisualizationPane() override;
-    
+
     void highlightNodes(const std::vector<std::string>& ids, const std::string& color);
-    
-signals:
-    void nodeDragged(const std::string& nodeId, double newX, double newY);
-    
+
+    // --- AJOUT POUR LA TAILLE ---
+    void setRenderSize(int size);
+    // ----------------------------
+
+    void setInteractionMode(const QString& mode);
+
 protected:
     void paintEvent(QPaintEvent* e) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+private:
+    void updateDisplay();
+    bool isLinkingMode = false;
+    bool isEraserMode = false;
+    std::string tempSourceNodeId = "";
 };

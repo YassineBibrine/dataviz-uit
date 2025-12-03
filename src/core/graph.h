@@ -58,7 +58,11 @@ public:
     
     std::vector<std::string> getNeighbors(const std::string& id) const;
     Node* getNode(const std::string& id);
+    const Node* getNode(const std::string& id) const;
     Edge* getEdge(const std::string& from, const std::string& to);
+    
+  std::vector<std::string> getAllNodeIds() const;
+    const std::vector<Edge>& getAllEdges() const;
     
     void clear();
     Graph* clone() const;

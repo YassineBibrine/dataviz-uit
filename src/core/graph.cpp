@@ -98,20 +98,43 @@ std::vector<std::string> Graph::getNeighbors(const std::string& id) const {
 
 Graph::Node* Graph::getNode(const std::string& id) {
     auto it = nodes.find(id);
+  if (it != nodes.end()) {
+  return &it->second;
+    }
+    return nullptr;
+}
+
+const Graph::Node* Graph::getNode(const std::string& id) const {
+    auto it = nodes.find(id);
     if (it != nodes.end()) {
-      return &it->second;
+        return &it->second;
     }
     return nullptr;
 }
 
 Graph::Edge* Graph::getEdge(const std::string& from, const std::string& to) {
     auto it = std::find_if(edges.begin(), edges.end(),
-        [&from, &to](Edge& e) { return e.from == from && e.to == to; });
+      [&from, &to](Edge& e) { return e.from == from && e.to == to; });
     
     if (it != edges.end()) {
-   return &(*it);
+        return &(*it);
     }
     return nullptr;
+}
+
+std::vector<std::string> Graph::getAllNodeIds() const {
+    std::vector<std::string> ids;
+    ids.reserve(nodes.size());
+    
+    for (const auto& pair : nodes) {
+    ids.push_back(pair.first);
+    }
+    
+    return ids;
+}
+
+const std::vector<Graph::Edge>& Graph::getAllEdges() const {
+    return edges;
 }
 
 void Graph::clear() {

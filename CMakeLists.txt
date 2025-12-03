@@ -10,9 +10,31 @@ set(CMAKE_AUTOUIC ON)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
+# === Graphviz Configuration (Windows) ===
+set(GRAPHVIZ_FOUND FALSE)
+if(WIN32)
+    set(GRAPHVIZ_ROOT "C:/Program Files/Graphviz")
+    if(EXISTS "${GRAPHVIZ_ROOT}/include/graphviz/gvc.h")
+  set(GRAPHVIZ_FOUND TRUE)
+        message(STATUS "Graphviz found at: ${GRAPHVIZ_ROOT}")
+      
+   # Include headers
+include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
+        
+   # Link library directory
+        link_directories("${GRAPHVIZ_ROOT}/lib")
+    
+   # Define DLL paths
+  set(GRAPHVIZ_GVC_DLL "${GRAPHVIZ_ROOT}/bin/gvc.dll")
+        set(GRAPHVIZ_CGRAPH_DLL "${GRAPHVIZ_ROOT}/bin/cgraph.dll")
+        set(GRAPHVIZ_CDT_DLL "${GRAPHVIZ_ROOT}/bin/cdt.dll")
+    else()
+   message(WARNING "Graphviz not found at ${GRAPHVIZ_ROOT}. Graphviz features will be disabled.")
+    endif()
+endif()
+
 # Include directories
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
 )
 
@@ -24,21 +46,27 @@ set(SOURCES
     src/core/graph.cpp
     src/core/list_node.cpp
     src/core/tree_node.cpp
-    src/core/DataModelManager.cpp
+    src/core/data_model_manager.cpp
+    src/core/array_structure.cpp
+    src/core/graph_structure.cpp
+    src/core/list_structure.cpp
+    src/core/tree_structure.cpp
     
-  # Orchestration
+    # Orchestration
     src/orchestration/algorithm_manager.cpp
+    src/orchestration/sorting_algorithm_factory.cpp  # ? Ajouté
     
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
+    src/algorithms/bubble_sort.cpp  # ? Ajouté
     
     # Visualization
-    src/visualization/GraphvizLayoutEngine.cpp
     src/visualization/animation_frame.cpp
     src/visualization/visualization_renderer.cpp
     src/visualization/interaction_manager.cpp
-    
+    src/visualization/playback_controller.cpp
+
     # UI
     src/ui/main_window.cpp
     src/ui/visualization_pane.cpp
@@ -48,39 +76,37 @@ set(SOURCES
 
 # Header files
 set(HEADERS
-    # Include headers
-    include/core/DataStructure.h
-    include/core/AlgorithmInfo.h
-    include/core/AlgorithmFactory.h
-    include/core/AlgorithmManager.h
-    include/core/DataModelManager.h
-    include/execution/AlgorithmRunner.h
-    include/execution/ExecutionState.h
-    include/execution/FrameRecorder.h
-    include/execution/algorithms/BFSRunner.h
-    include/core/factories/BFSFactory.h
-    include/visualization/GraphvizLayoutEngine.h
-    include/visualization/VisualizationRenderer.h
-    include/visualization/PlaybackController.h
-    include/visualization/InteractionManager.h
-    include/visualization/AnimationFrame.h
-    include/ui/MainWindow.h
-    include/ui/VisualizationPane.h
-    include/ui/ControlPanel.h
-    include/ui/MetricsPanel.h
-    
-    # Src headers
+    # Core
     src/core/graph.h
     src/core/list_node.h
     src/core/tree_node.h
+    src/core/data_model_manager.h
+    src/core/data_structure.h
+    src/core/algorithm_info.h
+    src/core/array_structure.h
+    src/core/graph_structure.h
+    src/core/list_structure.h
+    src/core/tree_structure.h
+    
+    # Orchestration
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
+    src/orchestration/sorting_algorithm_factory.h  # ? Ajouté
+    src/orchestration/algorithm.h  # ? Ajouté (essentiel)
+    
+    # Algorithms
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
- src/visualization/animation_frame.h
+    src/algorithms/bubble_sort.h  # ? Ajouté
+    
+    # Visualization
+    src/visualization/animation_frame.h
     src/visualization/visualization_renderer.h
     src/visualization/interaction_manager.h
+    src/visualization/playback_controller.h
+    
+    # UI
     src/ui/main_window.h
     src/ui/visualization_pane.h
     src/ui/control_panel.h
@@ -88,13 +114,16 @@ set(HEADERS
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp" "src/orchestration/filtering_algorithm_factory.h" "src/orchestration/filtering_algorithm_factory.cpp" "src/orchestration/transform_algorithm_factory.h" "src/orchestration/transform_algorithm_factory.cpp" "src/algorithms/range_filter.h" "src/algorithms/range_filter.cpp" "src/algorithms/normalize.h" "src/algorithms/normalize.cpp")
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     Qt6::Core 
     Qt6::Gui 
     Qt6::Widgets
+    gvc
+    cgraph
+    cdt
 )
 
 # Set output directory
@@ -105,11 +134,23 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Platform-specific settings
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES
-      WIN32_EXECUTABLE TRUE
-    )
+        WIN32_EXECUTABLE TRUE
+ )
+    
+    # === Copy Graphviz DLLs to output directory (if found) ===
+    if(GRAPHVIZ_FOUND)
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+ "${GRAPHVIZ_GVC_DLL}"
+"${GRAPHVIZ_CGRAPH_DLL}"
+        "${GRAPHVIZ_CDT_DLL}"
+     $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      COMMENT "Copying Graphviz DLLs to output directory"
+   )
+    endif()
 endif()
 
 # Install target
 install(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION bin
+    RUNTIME DESTINATION bin
 )
