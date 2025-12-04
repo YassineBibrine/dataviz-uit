@@ -31,7 +31,6 @@ signals:
     // Les signaux que ce panneau envoie au reste de l'app
     void playClicked();
     void pauseClicked();
-    void stopClicked();
     void stepForwardClicked();
     void stepBackwardClicked();
     void resetClicked();
@@ -44,17 +43,16 @@ private:
     // --- LES VARIABLES (Ce qui manquait et causait les erreurs) ---
 
     // Boutons
-    QPushButton* playButton;
-    QPushButton* pauseButton;
-    QPushButton* stopButton;
-    QPushButton* stepForwardButton;
-    QPushButton* stepBackwardButton;
-    QPushButton* resetButton;
+    QPushButton* playButton{nullptr};
+    QPushButton* pauseButton{nullptr};
+    QPushButton* stepForwardButton{nullptr};
+    QPushButton* stepBackwardButton{nullptr};
+    QPushButton* resetButton{nullptr};
 
-    // Sliders et Menus
-    QSlider* speedSlider;
-    QComboBox* algorithmCombo;
-    QComboBox* dataStructureCombo;
-    QSpinBox* dataSizeSpinBox;
-    QLabel* currentFrameLabel;
+    // Sliders und Menus
+    QSlider* speedSlider{nullptr};
+    QComboBox* algorithmCombo{nullptr};
+    QComboBox* dataStructureCombo{nullptr};
+    QSpinBox* dataSizeSpinBox{nullptr};
+    QLabel* currentFrameLabel{nullptr};
 };

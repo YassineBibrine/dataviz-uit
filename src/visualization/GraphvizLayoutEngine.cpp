@@ -64,22 +64,25 @@ return computeFallbackLayout(dotString);
         for (Agnode_t* n = agfstnode(g); n; n = agnxtnode(g, n)) {
             char* pos = agget(n, (char*)"pos");
  
-     if (pos) {
-        // Parse position string (format: "x,y")
-          std::string posStr(pos);
-        size_t commaPos = posStr.find(',');
-       
-     if (commaPos != std::string::npos) {
-              try {
-           double x = std::stod(posStr.substr(0, commaPos));
-    double y = std::stod(posStr.substr(commaPos + 1));
-   positions[std::string(n->name)] = {x, y};
-  } catch (...) {
- // If parsing fails, use fallback
-          }
-         }
-            }
+            if (pos) {
+   // Parse position string (format: "x,y")
+         std::string posStr(pos);
+                size_t commaPos = posStr.find(',');
+
+             if (commaPos != std::string::npos) {
+        try {
+    double x = std::stod(posStr.substr(0, commaPos));
+         double y = std::stod(posStr.substr(commaPos + 1));
+   const char* nodeName = agnameof(n);
+             if (nodeName) {
+        positions[std::string(nodeName)] = {x, y};
       }
+              } catch (...) {
+      // If parsing fails, use fallback
+}
+      }
+    }
+        }
 
         // If we got some positions, return them
     if (!positions.empty()) {
