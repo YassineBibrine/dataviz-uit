@@ -60,6 +60,11 @@ set(SOURCES
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
     src/algorithms/bubble_sort.cpp
+    src/algorithms/quick_sort.cpp
+    src/algorithms/merge_sort.cpp
+    src/algorithms/bfs_runner.cpp
+    src/algorithms/dfs_runner.cpp
+    src/algorithms/dijkstra_runner.cpp
     
     # Visualization
     src/visualization/animation_frame.cpp
@@ -100,6 +105,11 @@ set(HEADERS
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
     src/algorithms/bubble_sort.h
+    src/algorithms/quick_sort.h
+    src/algorithms/merge_sort.h
+    src/algorithms/bfs_runner.h
+    src/algorithms/dfs_runner.h
+    src/algorithms/dijkstra_runner.h
     
     # Visualization
     src/visualization/animation_frame.h

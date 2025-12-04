@@ -2,7 +2,7 @@
 #include <algorithm> // std::max
 
 // ===============================
-// Comparaisons
+// Comparisons
 // ===============================
 void ExecutionState::recordComparison(const std::string& a, const std::string& b)
 {
@@ -13,7 +13,7 @@ void ExecutionState::recordComparison(const std::string& a, const std::string& b
 }
 
 // ===============================
-// Échanges (swap)
+// Swaps
 // ===============================
 void ExecutionState::recordSwap(const std::string& a, const std::string& b)
 {
@@ -24,7 +24,7 @@ void ExecutionState::recordSwap(const std::string& a, const std::string& b)
 }
 
 // ===============================
-// Accès simple (lecture/écriture)
+// Simple Access (read/write)
 // ===============================
 void ExecutionState::recordAccess(const std::string& a)
 {
@@ -33,27 +33,27 @@ void ExecutionState::recordAccess(const std::string& a)
 }
 
 // ===============================
-// Enregistrement générique d'une opération
+// Generic Operation Recording
 // ===============================
 void ExecutionState::recordOperation(const std::string& operation, const std::map<std::string,std::string>& details)
 {
-    // compteur dynamique pour l'opération
+    // dynamic counter for the operation
     metricsMap[operation]++;
 
-    // mettre à jour les compteurs dédiés si présents
+    // update dedicated counters if present
     if (operation == "comparisons") {
         comparisonCount = metricsMap[operation];
     } else if (operation == "swaps") {
         swapCount = metricsMap[operation];
     }
 
-    // sauvegarder directement un snapshot avec les détails (optionnel)
+    // save snapshot directly with details (optional)
     history.push_back({ currentStep, metricsMap, details });
     totalSteps = std::max(totalSteps, currentStep);
 }
 
 // ===============================
-// Sauvegarde d’un snapshot complet
+// Save Complete Snapshot
 // ===============================
 void ExecutionState::saveState()
 {
@@ -62,7 +62,7 @@ void ExecutionState::saveState()
 }
 
 // ===============================
-// Restauration d’un état antérieur
+// Restore Previous State
 // ===============================
 void ExecutionState::restoreState(int step)
 {
@@ -71,10 +71,10 @@ void ExecutionState::restoreState(int step)
 
     currentStep = step;
 
-    // restaurer les métriques depuis l'historique
+    // restore metrics from history
     metricsMap = history[step].metrics;
 
-    // remettre à jour champs rapides
+    // update quick access fields
     auto itComp = metricsMap.find("comparisons");
     comparisonCount = (itComp != metricsMap.end()) ? itComp->second : 0;
 
@@ -83,7 +83,7 @@ void ExecutionState::restoreState(int step)
 }
 
 // ===============================
-// Retourne toutes les métriques importantes
+// Return All Important Metrics
 // ===============================
 std::map<std::string,int> ExecutionState::getMetrics() const
 {
@@ -104,7 +104,7 @@ int ExecutionState::getTotalSteps() const
 }
 
 // ===============================
-// Avancer d'une étape
+// Advance One Step
 // ===============================
 void ExecutionState::advanceStep()
 {
@@ -113,7 +113,7 @@ void ExecutionState::advanceStep()
 }
 
 // ===============================
-// Réinitialisation totale
+// Total Reset
 // ===============================
 void ExecutionState::reset()
 {
