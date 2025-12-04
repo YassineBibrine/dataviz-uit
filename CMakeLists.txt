@@ -59,6 +59,7 @@ set(SOURCES
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
+    src/algorithms/frame_recorder.cpp
     src/algorithms/bubble_sort.cpp
     src/algorithms/quick_sort.cpp
     src/algorithms/merge_sort.cpp
@@ -71,6 +72,7 @@ set(SOURCES
     src/visualization/visualization_renderer.cpp
     src/visualization/interaction_manager.cpp
     src/visualization/playback_controller.cpp
+    src/visualization/GraphvizLayoutEngine.cpp
 
     # UI
     src/ui/main_window.cpp
@@ -116,6 +118,7 @@ set(HEADERS
     src/visualization/visualization_renderer.h
     src/visualization/interaction_manager.h
     src/visualization/playback_controller.h
+    src/visualization/GraphvizLayoutEngine.h
     
     # UI
     src/ui/main_window.h
