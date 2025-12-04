@@ -6,42 +6,43 @@
 #include <memory>
 
 /**
- * @class BubbleSort
- * @brief Bubble Sort algorithm runner
+ * @class MergeSort
+ * @brief MergeSort algorithm runner
  * Inherits from AlgorithmRunner to track execution state and generate animation frames
  */
-class BubbleSort : public AlgorithmRunner {
+class MergeSort : public AlgorithmRunner {
 private:
     std::vector<int> data;
     std::vector<int> originalData;
+    std::vector<int> tempData;
     bool isSorted{false};
 
 public:
     /**
      * @brief Default constructor with sample data
      */
-    BubbleSort();
+    MergeSort();
 
     /**
      * @brief Constructor with ArrayStructure
      * @param arrayStructure The array data structure to sort
      */
-    explicit BubbleSort(ArrayStructure* arrayStructure);
+    explicit MergeSort(ArrayStructure* arrayStructure);
 
-    ~BubbleSort() override = default;
+    ~MergeSort() override = default;
 
     /**
-     * @brief Execute full bubble sort algorithm
+     * @brief Execute full MergeSort algorithm
      */
     void execute() override;
 
     /**
-     * @brief Step forward one comparison/swap
+     * @brief Step forward one merge operation
      */
     void stepForward() override;
 
     /**
-     * @brief Step backward one comparison/swap
+     * @brief Step backward one merge operation
      */
     void stepBackward() override;
 
@@ -62,12 +63,19 @@ public:
 
 private:
     /**
-     * @brief Process one comparison and potential swap
-     * @param i Outer loop index
-     * @param j Inner loop index
-     * @return true if a swap occurred
+     * @brief Merge two sorted subarrays
+     * @param left Starting index of left subarray
+     * @param mid Ending index of left subarray
+     * @param right Ending index of right subarray
      */
-    bool processComparison(size_t i, size_t j);
+    void merge(int left, int mid, int right);
+
+    /**
+     * @brief MergeSort recursive implementation
+     * @param left Starting index
+     * @param right Ending index
+     */
+    void mergeSortHelper(int left, int right);
 
     /**
      * @brief Load data from ArrayStructure
