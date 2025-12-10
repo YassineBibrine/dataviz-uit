@@ -1,34 +1,50 @@
-﻿#pragma once
+﻿#include "visualization_renderer.h"
 
-#include <QWidget>
-#include <QPointF>
-#include <vector>
-#include <map>
-#include <string>
-#include "animation_frame.h" // Indispensable pour la structure de données
+VisualizationRenderer::VisualizationRenderer(QObject* parent)
+    : QObject(parent),
+    zoomLevel(1.0f),
+    panOffset(0.0, 0.0)
+{
+}
 
-class VisualizationRenderer : public QWidget {
-    Q_OBJECT
+VisualizationRenderer::~VisualizationRenderer() = default;
 
-public:
-    explicit VisualizationRenderer(QWidget* parent = nullptr);
+void VisualizationRenderer::renderFrame(const AnimationFrame& frame)
+{
+    // Mettre à jour les nodes à partir de la frame
+    nodes = frame.getRenderableNodes(); // Supposons que AnimationFrame ait cette méthode
+}
 
-    // La signature reste la même, mais on utilise la frame complète
-    void renderFrame(const AnimationFrame& frame);
-    void renderVisualization(const QString& dot);
+void VisualizationRenderer::renderVisualization(const QString& dotCode)
+{
+    GraphvizLayout layout = generateLayout(dotCode.toStdString());
+    nodes = layout.getNodes(); // Supposons que GraphvizLayout ait getNodes()
+}
 
-    void zoomIn();
-    void zoomOut();
-    void setNodeRadius(int radius);
+void VisualizationRenderer::renderNodes(QPainter& painter)
+{
+    painter.save();
+    painter.translate(panOffset);
+    painter.scale(zoomLevel, zoomLevel);
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
+    for (auto& node : nodes) {
+        node.render(painter); // Supposons que RenderableNode a render(QPainter&)
+    }
 
-private:
-    float zoomLevel{ 1.0f };
-    int nodeRadius = 20;
-    QPointF panOffset{ 0,0 };
+    painter.restore();
+}
 
-    // --- NOUVEAU : On stocke la frame complète (positions, formes, couleurs) ---
-    AnimationFrame currentFrame;
-};
+void VisualizationRenderer::zoomIn()
+{
+    zoomLevel *= 1.2f;
+}
+
+void VisualizationRenderer::zoomOut()
+{
+    zoomLevel /= 1.2f;
+}
+
+GraphvizLayout VisualizationRenderer::generateLayout(const std::string& dotCode)
+{
+    return layoutEngine.generate(dotCode); // GraphvizLayoutEngine génère le layout à partir du DOT
+}
