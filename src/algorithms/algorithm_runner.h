@@ -7,8 +7,9 @@
 #include "execution_state.h"
 #include "frame_recorder.h"
 #include "../visualization/animation_frame.h"
+#include "../orchestration/algorithm.h"
 
-class AlgorithmRunner {
+class AlgorithmRunner : public Algorithm {
 protected:
  ExecutionState executionState;
  FrameRecorder frameRecorder;

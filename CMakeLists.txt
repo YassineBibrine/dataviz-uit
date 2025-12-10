@@ -10,9 +10,31 @@ set(CMAKE_AUTOUIC ON)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
+# === Graphviz Configuration (Windows) ===
+set(GRAPHVIZ_FOUND FALSE)
+if(WIN32)
+    set(GRAPHVIZ_ROOT "C:/Program Files/Graphviz")
+    if(EXISTS "${GRAPHVIZ_ROOT}/include/graphviz/gvc.h")
+  set(GRAPHVIZ_FOUND TRUE)
+        message(STATUS "Graphviz found at: ${GRAPHVIZ_ROOT}")
+      
+   # Include headers
+include_directories("${GRAPHVIZ_ROOT}/include/graphviz")
+        
+   # Link library directory
+        link_directories("${GRAPHVIZ_ROOT}/lib")
+    
+   # Define DLL paths
+  set(GRAPHVIZ_GVC_DLL "${GRAPHVIZ_ROOT}/bin/gvc.dll")
+        set(GRAPHVIZ_CGRAPH_DLL "${GRAPHVIZ_ROOT}/bin/cgraph.dll")
+        set(GRAPHVIZ_CDT_DLL "${GRAPHVIZ_ROOT}/bin/cdt.dll")
+    else()
+   message(WARNING "Graphviz not found at ${GRAPHVIZ_ROOT}. Graphviz features will be disabled.")
+    endif()
+endif()
+
 # Include directories
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
 )
 
@@ -32,27 +54,37 @@ set(SOURCES
     
     # Orchestration
     src/orchestration/algorithm_manager.cpp
+    src/orchestration/sorting_algorithm_factory.cpp
     
     # Algorithms
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
+    src/algorithms/frame_recorder.cpp
+    src/algorithms/bubble_sort.cpp
+    src/algorithms/quick_sort.cpp
+    src/algorithms/merge_sort.cpp
+    src/algorithms/bfs_runner.cpp
+    src/algorithms/dfs_runner.cpp
+    src/algorithms/dijkstra_runner.cpp
     
     # Visualization
     src/visualization/animation_frame.cpp
     src/visualization/visualization_renderer.cpp
     src/visualization/interaction_manager.cpp
     src/visualization/playback_controller.cpp
+    src/visualization/GraphvizLayoutEngine.cpp
 
     # UI
     src/ui/main_window.cpp
     src/ui/visualization_pane.cpp
     src/ui/control_panel.cpp
     src/ui/metrics_panel.cpp
+    src/ui/toolbox_panel.cpp
 )
 
 # Header files
 set(HEADERS
-    # Src headers
+    # Core
     src/core/graph.h
     src/core/list_node.h
     src/core/tree_node.h
@@ -63,19 +95,37 @@ set(HEADERS
     src/core/graph_structure.h
     src/core/list_structure.h
     src/core/tree_structure.h
+    
+    # Orchestration
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
+    src/orchestration/sorting_algorithm_factory.h
+    src/orchestration/algorithm.h
+    
+    # Algorithms
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
+    src/algorithms/bubble_sort.h
+    src/algorithms/quick_sort.h
+    src/algorithms/merge_sort.h
+    src/algorithms/bfs_runner.h
+    src/algorithms/dfs_runner.h
+    src/algorithms/dijkstra_runner.h
+    
+    # Visualization
     src/visualization/animation_frame.h
     src/visualization/visualization_renderer.h
     src/visualization/interaction_manager.h
     src/visualization/playback_controller.h
+    src/visualization/GraphvizLayoutEngine.h
+    
+    # UI
     src/ui/main_window.h
-    src/ui/visualization_pane.h
+ src/ui/visualization_pane.h
     src/ui/control_panel.h
-    src/ui/metrics_panel.h
+  src/ui/metrics_panel.h
+    src/ui/toolbox_panel.h
 )
 
 # Create executable
@@ -86,6 +136,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core 
     Qt6::Gui 
     Qt6::Widgets
+    gvc
+    cgraph
+    cdt
 )
 
 # Set output directory
@@ -96,11 +149,23 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Platform-specific settings
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES
-      WIN32_EXECUTABLE TRUE
-    )
+        WIN32_EXECUTABLE TRUE
+ )
+    
+    # === Copy Graphviz DLLs to output directory (if found) ===
+    if(GRAPHVIZ_FOUND)
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+ "${GRAPHVIZ_GVC_DLL}"
+"${GRAPHVIZ_CGRAPH_DLL}"
+        "${GRAPHVIZ_CDT_DLL}"
+     $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      COMMENT "Copying Graphviz DLLs to output directory"
+   )
+    endif()
 endif()
 
 # Install target
 install(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION bin
+    RUNTIME DESTINATION bin
 )
