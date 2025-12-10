@@ -16,15 +16,28 @@ void AnimationFrame::addHighlightedEdge(const std::string& from, const std::stri
     edgeColors[from + "-" + to] = color;
 }
 
-// D�finit la position d�un n�ud dans le cadre d�animation
 void AnimationFrame::setNodePosition(const std::string& nodeId, double x, double y) {
     nodePositions[nodeId] = { x, y };
 }
 
-// Ajoute une annotation au cadre d�animation
 void AnimationFrame::addAnnotation(const std::string& text) {
-    // Le diagramme UML indique addAnnotation(text: string)
-    // mais ne pr�cise pas o� stocker l�annotation.
-    // On utilise highlightedNodes comme support temporaire.
-    highlightedNodes.push_back(text);
+    // ✅ utiliser le vecteur annotations prévu pour ça
+    annotations.push_back(text);
+}
+
+void AnimationFrame::generateNodes(int count) {
+    highlightedNodes.clear();   // vider les anciens nœuds
+    nodePositions.clear();      // positions seront gérées par l’UI
+    nodeColors.clear();
+
+    for (int i = 1; i <= count; ++i) {
+        std::string nodeId = "N" + std::to_string(i);
+        highlightedNodes.push_back(nodeId);
+        nodeColors[nodeId] = "blue"; // couleur par défaut
+    }
+
+    operationType = "GenerateNodes";
+
+    // ✅ tu peux aussi ajouter une annotation explicative
+    annotations.push_back("Generated " + std::to_string(count) + " nodes");
 }

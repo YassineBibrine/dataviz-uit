@@ -19,6 +19,7 @@ public:
     AnimationFrame generateHighlightFrame(const std::vector<std::string>& elements, const std::string& color);
     AnimationFrame generateTraversalFrame(const std::string& currentNode, const std::vector<std::string>& visitedNodes);
     AnimationFrame generateInsertionFrame(const std::string& newNode, const std::string& position);
+    AnimationFrame generateNodesFrame(int count);
     std::vector<AnimationFrame> getAllFrames() const;
 
     // Clear all recorded frames

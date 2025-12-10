@@ -35,4 +35,6 @@ struct AnimationFrame {
     void setNodePosition(const std::string& nodeId, double x, double y);
     void addAnnotation(const std::string& text);
     void setDuration(int ms);
+    void generateNodes(int count);
+
 };

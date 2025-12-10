@@ -1,4 +1,4 @@
-#include "frame_recorder.h"
+﻿#include "frame_recorder.h"
 
 AnimationFrame FrameRecorder::generateComparisonFrame(const std::string& elem1, const std::string& elem2, bool result) {
     AnimationFrame frame;
@@ -48,6 +48,25 @@ AnimationFrame FrameRecorder::generateInsertionFrame(const std::string& newNode,
     frame.highlightedNodes = { newNode };
     frame.duration = defaultDuration;
     frame.nodeColors[newNode] = "yellow";
+    frameBuffer.push_back(frame);
+    return frame;
+}
+AnimationFrame FrameRecorder::generateNodesFrame(int count) {
+    AnimationFrame frame;
+    frame.operationType = "generateNodes";
+    frame.duration = defaultDuration;
+
+    // Créer les identifiants des nœuds
+    for (int i = 1; i <= count; ++i) {
+        std::string nodeId = "N" + std::to_string(i);
+        frame.highlightedNodes.push_back(nodeId);
+        frame.nodeColors[nodeId] = "blue"; // couleur par défaut
+    }
+
+    // 👉 Ajouter une annotation explicative
+    frame.annotations.push_back("Generated " + std::to_string(count) + " nodes");
+
+    // Ajouter au buffer
     frameBuffer.push_back(frame);
     return frame;
 }
