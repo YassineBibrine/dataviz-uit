@@ -3,16 +3,15 @@
 #include <QObject>
 #include <QTimer>
 #include <vector>
-#include "AnimationFrame.h"
-#include "FrameInterpolator.h"
+#include "animation_frame.h"
+#include "frame_interpolator.h"
 
-class PlaybackController : public QObject
-{
+class PlaybackController : public QObject {
     Q_OBJECT
 
 public:
     explicit PlaybackController(QObject* parent = nullptr);
-    ~PlaybackController();
+    ~PlaybackController() override;
 
     void loadFrames(const std::vector<AnimationFrame>& frames_);
     void play();
@@ -32,8 +31,8 @@ private slots:
 
 private:
     std::vector<AnimationFrame> frames;
-    int currentFrame;
-    float playbackSpeed;
-    QTimer* timer;
+    int currentFrame{0};
+    float playbackSpeed{1.0f};
+    QTimer* timer{nullptr};
     FrameInterpolator interpolator;
 };
