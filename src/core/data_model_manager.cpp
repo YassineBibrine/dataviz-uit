@@ -8,7 +8,7 @@ DataStructure* DataModelManager::createDataStructure(const std::string& type, in
         return currentStructure.get();
     }
     else if (type == "Graph") {
- auto graphStruct = std::make_unique<GraphStructure>(false);
+        auto graphStruct = std::make_unique<GraphStructure>(false);
         // Size is interpreted as node count, edges = size * 1.5
         graphStruct->generateRandom(size, static_cast<int>(size * 1.5));
         currentStructure = std::move(graphStruct);
@@ -20,12 +20,14 @@ DataStructure* DataModelManager::createDataStructure(const std::string& type, in
         currentStructure = std::move(listStruct);
         return currentStructure.get();
     }
-  else if (type == "Tree") {
+    // --- CORRECTION ICI ---
+    // On accepte "Tree" (ancien nom) OU "BinaryTree" (nouveau nom envoyé par l'UI)
+    else if (type == "Tree" || type == "BinaryTree") {
         auto treeStruct = std::make_unique<TreeStructure>();
-     treeStruct->generateRandom(size);
+        treeStruct->generateRandom(size);
         currentStructure = std::move(treeStruct);
-      return currentStructure.get();
+        return currentStructure.get();
     }
-    
+
     throw std::invalid_argument("Unknown data structure type: " + type);
 }
