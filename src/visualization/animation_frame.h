@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <string>
-#include <vector>
 #include <map>
+#include <vector>
+#include <utility>
 
 struct AnimationFrame {
     int frameNumber;
@@ -32,7 +33,6 @@ struct AnimationFrame {
     void addHighlightedNode(const std::string& nodeId, const std::string& color);
     void addHighlightedEdge(const std::string& from, const std::string& to, const std::string& color);
     void setNodePosition(const std::string& nodeId, double x, double y);
-    void setNodeColor(const std::string& nodeId, const std::string& color);
     void addAnnotation(const std::string& text);
     void setDuration(int ms);
 };

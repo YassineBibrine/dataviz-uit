@@ -1,4 +1,4 @@
-﻿#include "main_window.h"
+#include "main_window.h"
 #include "visualization_pane.h"
 #include "control_panel.h"
 #include "metrics_panel.h"
@@ -13,19 +13,23 @@
 #include <QLabel>
 #include <QDebug>
 #include <QMessageBox> 
+#include <QCloseEvent> 
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
-    dataModelManager(std::make_unique<DataModelManager>()),
+    // On garde l'initialisation du DataModelManager (Crucial pour ton backend !)
+    dataModelManager(std::make_unique<DataModelManager>()), 
     visualizationPane(std::make_unique<VisualizationPane>(this)),
     controlPanel(std::make_unique<ControlPanel>(this)),
     metricsPanel(std::make_unique<MetricsPanel>(this)),
     algoManager(AlgorithmManager::getInstance())
 {
+    // On garde ton titre et ta taille (plus confortables)
     setWindowTitle("DataViz UIT - Visualisation de Structures de Données");
     resize(1300, 850);
     setMinimumSize(1150, 750);
 
+    // Connexion vitale : Lier l'interface graphique au cerveau (Backend)
     if (visualizationPane && visualizationPane->getInteractionManager()) {
         visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
     }
@@ -45,28 +49,28 @@ void MainWindow::setupUI() {
     mainLayout->setContentsMargins(10, 5, 10, 10);
     mainLayout->setSpacing(10);
 
-    // --- EN-TÊTE ---
+    // --- EN-TÊTE (Ton Design) ---
     QHBoxLayout* headerLayout = new QHBoxLayout();
     headerLayout->addStretch();
     QLabel* titleLabel = new QLabel("DataViz UIT", this);
-    titleLabel->setObjectName("appTitle");
+    titleLabel->setObjectName("appTitle"); // Pour le CSS
     titleLabel->setAlignment(Qt::AlignCenter);
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
 
     mainLayout->addLayout(headerLayout, 0);
 
-    // --- CONTENU ---
+    // --- CONTENU PRINCIPAL ---
     QHBoxLayout* contentLayout = new QHBoxLayout();
     contentLayout->setSpacing(15);
 
-    // 1. Outils
+    // 1. Outils (Gauche)
     toolboxPanel = new ToolboxPanel(this);
     toolboxPanel->setObjectName("borderedPanel");
     toolboxPanel->setFixedWidth(110);
     contentLayout->addWidget(toolboxPanel);
 
-    // 2. Visualisation
+    // 2. Visualisation (Centre)
     visualizationPane->setObjectName("borderedPanel");
     contentLayout->addWidget(visualizationPane.get(), 1);
 
@@ -87,6 +91,7 @@ void MainWindow::setupUI() {
 
     mainLayout->addLayout(contentLayout, 1);
 
+    // Connexion Outils -> Visualisation
     connect(toolboxPanel, &ToolboxPanel::toolSelected,
         visualizationPane.get(), &VisualizationPane::setInteractionMode);
 }
@@ -114,10 +119,17 @@ void MainWindow::createMenuBar() {
 
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
     auto algo = algoManager.createAlgorithm("Sorting", algorithm);
-    if (algo) qDebug() << "Algo launched:" << QString::fromStdString(algorithm);
+    if (algo) {
+        qDebug() << "Algo created:" << QString::fromStdString(algorithm);
+        // Ici on pourra ajouter algo->execute() plus tard si besoin
+    }
+    else {
+        qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
+    }
 }
 
 void MainWindow::loadDataStructure(const std::string& type, int size) {
+    // C'est ici que la magie opère : On demande au Backend de créer la structure
     if (dataModelManager) {
         dataModelManager->createDataStructure(type, size);
     }
@@ -136,7 +148,7 @@ void MainWindow::onPauseClicked() { controlPanel->setPlayingState(false); }
 void MainWindow::onResetClicked() { controlPanel->setPlayingState(false); }
 void MainWindow::onStepForwardClicked() {}
 void MainWindow::onStepBackwardClicked() {}
-void MainWindow::onSpeedChanged(int speed) {}
+void MainWindow::onSpeedChanged(int speed) { qDebug() << "Speed:" << speed; }
 
 void MainWindow::onDataStructureSelected(QString structure) {
     qDebug() << "Structure selected (UI):" << structure;
@@ -174,4 +186,9 @@ void MainWindow::onDataStructureSelected(QString structure) {
 
 void MainWindow::onDataSizeChanged(int size) {
     if (visualizationPane) visualizationPane->setRenderSize(size);
+}
+
+
+void MainWindow::closeEvent(QCloseEvent* e) {
+    e->accept();
 }

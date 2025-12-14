@@ -27,7 +27,6 @@ public:
 signals:
     void playClicked();
     void pauseClicked();
-    void stopClicked();
     void stepForwardClicked();
     void stepBackwardClicked();
     void resetClicked();

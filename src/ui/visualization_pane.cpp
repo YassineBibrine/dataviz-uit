@@ -20,6 +20,9 @@ VisualizationPane::VisualizationPane(QWidget* parent)
     renderer = std::make_unique<VisualizationRenderer>(this);
     layout->addWidget(renderer.get());
 
+    // Set minimum size for the rendering area
+    setMinimumSize(600, 400);
+
     interaction = std::make_unique<InteractionManager>();
 
     updateDisplay();

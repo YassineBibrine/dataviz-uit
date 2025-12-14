@@ -1,25 +1,33 @@
-﻿#pragma once
+#pragma once
 
 #include <QMainWindow>
 #include <memory>
 #include <string>
 
-// On inclut les managers (Indispensable pour que ça marche)
+// On inclut les managers 
 #include "../core/data_model_manager.h"
-#include "../orchestration/algorithm_manager.h" 
+#include "../orchestration/algorithm_manager.h"
 
 class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
-class Algorithm; // On utilise Algorithm générique pour l'instant
+class Algorithm; // Forward declaration générique
 
+/**
+ * @class MainWindow
+ * @brief Main application window
+ */
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
+
+protected:
+    //  On déclare la fonction de fermeture qu'on a ajoutée dans le CPP
+    void closeEvent(QCloseEvent *event) override;
 
 private slots:
     // Slots pour les signaux du ControlPanel
@@ -50,6 +58,7 @@ private:
     std::unique_ptr<MetricsPanel> metricsPanel;
 
     // --- COEUR DU SYSTEME (BACKEND) ---
+    // C'est la ligne la plus importante pour ton projet :
     std::unique_ptr<DataModelManager> dataModelManager;
 
     // --- ALGORITHMES ---
