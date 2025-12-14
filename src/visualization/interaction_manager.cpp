@@ -1,109 +1,215 @@
 ﻿#include "interaction_manager.h"
 #include <cmath>
 #include <algorithm>
+#include <string>
 
-static double dist(double x1, double y1, double x2, double y2) {
-    double dx = x2 - x1;
-    double dy = y2 - y1;
-    return std::sqrt(dx * dx + dy * dy);
+// On inclut les fichiers du backend
+#include "../core/data_model_manager.h"
+#include "../core/graph_structure.h"
+#include "../core/graph.h"
+
+InteractionManager::InteractionManager() : backend(nullptr) {}
+InteractionManager::~InteractionManager() {}
+
+void InteractionManager::setBackend(DataModelManager* manager) {
+    this->backend = manager;
 }
 
-static double distToSegment(double px, double py, double x1, double y1, double x2, double y2) {
-    double l2 = dist(x1, y1, x2, y2); l2 *= l2;
-    if (l2 == 0) return dist(px, py, x1, y1);
-    double t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
-    t = std::max(0.0, std::min(1.0, t));
-    return dist(px, py, x1 + t * (x2 - x1), y1 + t * (y2 - y1));
-}
+std::string InteractionManager::addNode(double x, double y, const std::string& type) {
+    std::string id = "n" + std::to_string(nextId++);
+    nodes.push_back({ id, x, y, type });
 
-InteractionManager::InteractionManager() {}
-
-void InteractionManager::addNode(double x, double y, const std::string& type) {
-    std::string newId = "n" + std::to_string(positions.size() + 1);
-    while (positions.count(newId)) newId += "_new";
-    positions[newId] = { newId, x, y, type };
-}
-
-void InteractionManager::updateNodePosition(const std::string& id, double x, double y) {
-    if (positions.count(id)) {
-        positions[id].x = x;
-        positions[id].y = y;
-    }
-}
-
-void InteractionManager::removeNode(const std::string& nodeId) {
-    positions.erase(nodeId);
-    auto newEnd = std::remove_if(edges.begin(), edges.end(),
-        [&](const Edge& e) { return e.source == nodeId || e.target == nodeId; });
-    edges.erase(newEnd, edges.end());
-}
-
-void InteractionManager::removeEdge(const std::string& src, const std::string& dest) {
-    auto newEnd = std::remove_if(edges.begin(), edges.end(),
-        [&](const Edge& e) { return e.source == src && e.target == dest; });
-    edges.erase(newEnd, edges.end());
-}
-
-NodePosition InteractionManager::getNodePosition(const std::string& nodeId) const {
-    if (positions.count(nodeId)) return positions.at(nodeId);
-    return {};
-}
-
-std::vector<NodePosition> InteractionManager::getAllNodePositions() const {
-    std::vector<NodePosition> out;
-    for (auto const& [key, val] : positions) out.push_back(val);
-    return out;
-}
-
-std::string InteractionManager::getNodeAtPosition(double x, double y, double radius) const {
-    for (auto const& [key, val] : positions) {
-        if (dist(x, y, val.x, val.y) < radius) return key;
-    }
-    return "";
-}
-
-std::pair<std::string, std::string> InteractionManager::getEdgeAtPosition(double x, double y, double threshold) const {
-    for (const auto& edge : edges) {
-        if (positions.count(edge.source) && positions.count(edge.target)) {
-            auto p1 = positions.at(edge.source);
-            auto p2 = positions.at(edge.target);
-            if (distToSegment(x, y, p1.x, p1.y, p2.x, p2.y) < threshold) {
-                return { edge.source, edge.target };
+    // ENVOI AU BACKEND
+    if (backend) {
+        if (auto* ds = backend->getCurrentStructure()) {
+            if (auto* gs = dynamic_cast<GraphStructure*>(ds)) {
+                if (auto* graph = gs->getGraph()) {
+                    graph->addNode(id);
+                }
             }
         }
     }
-    return { "", "" };
+    return id;
 }
 
-void InteractionManager::addEdge(const std::string& src, const std::string& target) {
-    if (src != target) edges.push_back({ src, target });
+void InteractionManager::removeNode(const std::string& nodeId) {
+    nodes.erase(std::remove_if(nodes.begin(), nodes.end(),
+        [&](const MockNode& n) { return n.id == nodeId; }), nodes.end());
+
+    edges.erase(std::remove_if(edges.begin(), edges.end(),
+        [&](const MockEdge& e) { return e.source == nodeId || e.target == nodeId; }), edges.end());
+
+    // ENVOI AU BACKEND
+    if (backend) {
+        if (auto* ds = backend->getCurrentStructure()) {
+            if (auto* gs = dynamic_cast<GraphStructure*>(ds)) {
+                if (auto* graph = gs->getGraph()) {
+                    graph->removeNode(nodeId);
+                }
+            }
+        }
+    }
 }
 
-std::vector<Edge> InteractionManager::getAllEdges() const {
-    return edges;
+void InteractionManager::updateNodeValue(const std::string& nodeId, int value) {
+    if (backend) {
+        if (auto* ds = backend->getCurrentStructure()) {
+            if (auto* gs = dynamic_cast<GraphStructure*>(ds)) {
+                if (auto* graph = gs->getGraph()) {
+                    if (auto* node = graph->getNode(nodeId)) {
+                        node->properties["value"] = std::to_string(value);
+                    }
+                }
+            }
+        }
+    }
 }
 
-bool InteractionManager::startDragging(double mouseX, double mouseY) {
-    std::string id = getNodeAtPosition(mouseX, mouseY);
+void InteractionManager::addEdge(const std::string& sourceId, const std::string& targetId) {
+    edges.push_back({ sourceId, targetId });
+
+    // ENVOI AU BACKEND
+    if (backend) {
+        if (auto* ds = backend->getCurrentStructure()) {
+            if (auto* gs = dynamic_cast<GraphStructure*>(ds)) {
+                if (auto* graph = gs->getGraph()) {
+                    graph->addEdge(sourceId, targetId);
+                }
+            }
+        }
+    }
+}
+
+void InteractionManager::removeEdge(const std::string& sourceId, const std::string& targetId) {
+    edges.erase(std::remove_if(edges.begin(), edges.end(),
+        [&](const MockEdge& e) {
+            return (e.source == sourceId && e.target == targetId) ||
+                (e.source == targetId && e.source == sourceId); // Petite correction ici aussi (inversion)
+        }), edges.end());
+
+    // ENVOI AU BACKEND
+    if (backend) {
+        if (auto* ds = backend->getCurrentStructure()) {
+            if (auto* gs = dynamic_cast<GraphStructure*>(ds)) {
+                if (auto* graph = gs->getGraph()) {
+                    graph->removeEdge(sourceId, targetId);
+                }
+            }
+        }
+    }
+}
+
+bool InteractionManager::startDragging(double x, double y) {
+    std::string id = getNodeAtPosition(x, y);
     if (!id.empty()) {
         draggedNodeId = id;
-        isDragging = true;
         return true;
     }
     return false;
 }
 
-void InteractionManager::updateDragging(double mouseX, double mouseY) {
-    if (isDragging && !draggedNodeId.empty()) {
-        updateNodePosition(draggedNodeId, mouseX, mouseY);
+void InteractionManager::updateDragging(double x, double y) {
+    if (!draggedNodeId.empty()) {
+        for (auto& n : nodes) {
+            if (n.id == draggedNodeId) {
+                n.x = x;
+                n.y = y;
+                break;
+            }
+        }
     }
 }
 
-void InteractionManager::endDragging() {
-    isDragging = false;
-    draggedNodeId.clear();
+void InteractionManager::endDrag() {
+    draggedNodeId = "";
 }
 
-void InteractionManager::endDrag() {
-    endDragging();
+std::vector<NodePosition> InteractionManager::getAllNodePositions() {
+    std::vector<NodePosition> result;
+    for (const auto& n : nodes) {
+        result.push_back({ n.id, n.x, n.y, n.type });
+    }
+    return result;
+}
+
+std::vector<EdgeDisplay> InteractionManager::getAllEdges() {
+    std::vector<EdgeDisplay> result;
+    for (const auto& e : edges) {
+        result.push_back({ e.source, e.target });
+    }
+    return result;
+}
+
+std::string InteractionManager::getNodeAtPosition(double x, double y) {
+    for (auto it = nodes.rbegin(); it != nodes.rend(); ++it) {
+        double dx = x - it->x;
+        double dy = y - it->y;
+        if (std::sqrt(dx * dx + dy * dy) <= 20.0) {
+            return it->id;
+        }
+    }
+    return "";
+}
+
+
+std::pair<std::string, std::string> InteractionManager::getEdgeAtPosition(double mouseX, double mouseY) {
+    const double threshold = 10.0; // Distance tolérée en pixels
+
+    for (const auto& edge : edges) {
+        // 1. Trouver les coordonnées des deux points
+        double x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        bool foundSource = false, foundTarget = false;
+
+        // On cherche les nœuds correspondants dans la liste
+        for (const auto& node : nodes) {
+            if (node.id == edge.source) {
+                x1 = node.x; y1 = node.y; foundSource = true;
+            }
+            else if (node.id == edge.target) {
+                x2 = node.x; y2 = node.y; foundTarget = true;
+            }
+            if (foundSource && foundTarget) break;
+        }
+
+        if (!foundSource || !foundTarget) continue;
+
+        // 2. Calcul de la distance point-segment
+        double A = mouseX - x1;
+        double B = mouseY - y1;
+        double C = x2 - x1;
+        double D = y2 - y1;
+
+        double dot = A * C + B * D;
+        double len_sq = C * C + D * D;
+        double param = -1.0;
+
+        if (len_sq != 0) // Éviter division par zéro
+            param = dot / len_sq;
+
+        double xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        }
+        else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        }
+        else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        double dx = mouseX - xx;
+        double dy = mouseY - yy;
+        double distance = std::sqrt(dx * dx + dy * dy);
+
+        // 3. Si on est assez proche, on retourne l'arête
+        if (distance < threshold) {
+            return { edge.source, edge.target };
+        }
+    }
+
+    return { "", "" };
 }

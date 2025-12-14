@@ -1,11 +1,10 @@
 ﻿#pragma once
 
 #include <QWidget>
-#include <QPointF>
 #include <vector>
 #include <map>
 #include <string>
-#include "animation_frame.h" // Indispensable pour la structure de données
+#include "animation_frame.h" 
 
 class VisualizationRenderer : public QWidget {
     Q_OBJECT
@@ -13,12 +12,15 @@ class VisualizationRenderer : public QWidget {
 public:
     explicit VisualizationRenderer(QWidget* parent = nullptr);
 
-    // La signature reste la même, mais on utilise la frame complète
     void renderFrame(const AnimationFrame& frame);
     void renderVisualization(const QString& dot);
 
-    void zoomIn();
-    void zoomOut();
+    // --- ZOOM ---
+    // Ces méthodes sont appelées par la VisualizationPane lors du scroll souris
+    void setZoomFactor(float scale);
+    float getZoomFactor() const { return zoomLevel; }
+
+    // Gardé pour compatibilité
     void setNodeRadius(int radius);
 
 protected:
@@ -26,9 +28,7 @@ protected:
 
 private:
     float zoomLevel{ 1.0f };
-    int nodeRadius = 20;
-    QPointF panOffset{ 0,0 };
+    int baseNodeRadius = 20; // Taille de base fixe (le zoom s'occupe de l'agrandir)
 
-    // --- NOUVEAU : On stocke la frame complète (positions, formes, couleurs) ---
     AnimationFrame currentFrame;
 };

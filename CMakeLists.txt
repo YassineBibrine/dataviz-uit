@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+﻿cmake_minimum_required(VERSION 3.16)
 project(dataviz-uit VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -7,9 +7,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# Optionnel : Supprime les warnings C4530 (Exceptions)
+if(MSVC)
+    add_compile_options(/EHsc)
+endif()
+
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
+# Configuration Graphviz
 set(GRAPHVIZ_DIR "C:/Program Files/Graphviz") 
 include_directories(${GRAPHVIZ_DIR}/include)
 link_directories(${GRAPHVIZ_DIR}/lib)
@@ -20,11 +26,13 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src
 )
 
-# Source files
+# ==========================================
+# LISTE COMPLÈTE DES SOURCES (.cpp)
+# ==========================================
 set(SOURCES
     src/main.cpp
     
-    # Core
+    # --- CORE ---
     src/core/graph.cpp
     src/core/list_node.cpp
     src/core/tree_node.cpp
@@ -34,29 +42,43 @@ set(SOURCES
     src/core/list_structure.cpp
     src/core/tree_structure.cpp
     
-    # Orchestration
+    # --- ORCHESTRATION ---
     src/orchestration/algorithm_manager.cpp
+    src/orchestration/sorting_algorithm_factory.cpp
+    src/orchestration/filtering_algorithm_factory.cpp
+    src/orchestration/transform_algorithm_factory.cpp
     
-    # Algorithms
+    # --- ALGORITHMS ---
     src/algorithms/algorithm_runner.cpp
     src/algorithms/execution_state.cpp
+    src/algorithms/frame_recorder.cpp
+    src/algorithms/bubble_sort.cpp
+    src/algorithms/quick_sort.cpp
+    src/algorithms/merge_sort.cpp
+    src/algorithms/bfs_runner.cpp
+    src/algorithms/dfs_runner.cpp
+    src/algorithms/dijkstra_runner.cpp
+    src/algorithms/range_filter.cpp
+    src/algorithms/normalize.cpp
     
-    # Visualization
+    # --- VISUALIZATION ---
     src/visualization/animation_frame.cpp
     src/visualization/visualization_renderer.cpp
     src/visualization/interaction_manager.cpp
     src/visualization/playback_controller.cpp
 
-    # UI
+    # --- UI ---
     src/ui/main_window.cpp
     src/ui/visualization_pane.cpp
     src/ui/control_panel.cpp
     src/ui/metrics_panel.cpp
+    src/ui/toolbox_panel.cpp
 )
 
-# Header files
+# ==========================================
+# LISTE COMPLÈTE DES HEADERS (.h)
+# ==========================================
 set(HEADERS
-    # Src headers
     src/core/graph.h
     src/core/list_node.h
     src/core/tree_node.h
@@ -67,23 +89,40 @@ set(HEADERS
     src/core/graph_structure.h
     src/core/list_structure.h
     src/core/tree_structure.h
+    
+    src/orchestration/algorithm.h
     src/orchestration/algorithm_factory.h
     src/orchestration/algorithm_manager.h
+    src/orchestration/sorting_algorithm_factory.h
+    src/orchestration/filtering_algorithm_factory.h
+    src/orchestration/transform_algorithm_factory.h
+    
     src/algorithms/algorithm_runner.h
     src/algorithms/execution_state.h
     src/algorithms/frame_recorder.h
+    src/algorithms/bubble_sort.h
+    src/algorithms/quick_sort.h
+    src/algorithms/merge_sort.h
+    src/algorithms/bfs_runner.h
+    src/algorithms/dfs_runner.h
+    src/algorithms/dijkstra_runner.h
+    src/algorithms/range_filter.h
+    src/algorithms/normalize.h
+    
     src/visualization/animation_frame.h
     src/visualization/visualization_renderer.h
     src/visualization/interaction_manager.h
     src/visualization/playback_controller.h
+    
     src/ui/main_window.h
     src/ui/visualization_pane.h
     src/ui/control_panel.h
     src/ui/metrics_panel.h
+    src/ui/toolbox_panel.h
 )
 
-# Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} "src/ui/toolbox_panel.h" "src/ui/toolbox_panel.cpp")
+# Create executable (J'ai retiré ${RESOURCES} ici)
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 # Link Qt libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
@@ -111,4 +150,3 @@ endif()
 install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
 )
-
