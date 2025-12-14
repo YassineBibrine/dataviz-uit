@@ -18,7 +18,8 @@ MainWindow::MainWindow(QWidget* parent)
       controlPanel(std::make_unique<ControlPanel>(this)),
       metricsPanel(std::make_unique<MetricsPanel>(this)),
       currentAlgorithm(nullptr),
-      algoManager(AlgorithmManager::getInstance())
+      algoManager(AlgorithmManager::getInstance()),
+      frameRecorder(this)
 {
     setWindowTitle("DataViz-UIT: Algorithm Visualization");
     setGeometry(100, 100, 1200, 800);
@@ -79,6 +80,11 @@ void MainWindow::connectSignals() {
     connect(controlPanel.get(), &ControlPanel::dataStructureSelected, this, &MainWindow::onDataStructureSelected);
     connect(controlPanel.get(), &ControlPanel::speedChanged, this, &MainWindow::onSpeedChanged);
     connect(controlPanel.get(), &ControlPanel::dataSizeChanged, this, &MainWindow::onDataSizeChanged);
+    // --- NOUVEAU : génération de nœuds ---
+    connect(controlPanel.get(), &ControlPanel::generateNodesRequested,
+        this, [this](int count) {
+            frameRecorder.generateNodesFrame(count);
+        });
 }
 
 void MainWindow::createMenuBar() {

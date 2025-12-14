@@ -38,6 +38,7 @@ signals:
     void algorithmSelected(QString algorithm);
     void dataStructureSelected(QString structure);
     void dataSizeChanged(int size);
+    void generateNodesRequested(int count);
 
 private:
     // --- LES VARIABLES (Ce qui manquait et causait les erreurs) ---
@@ -48,7 +49,7 @@ private:
     QPushButton* stepForwardButton{nullptr};
     QPushButton* stepBackwardButton{nullptr};
     QPushButton* resetButton{nullptr};
-
+    QPushButton* generateNodesButton{ nullptr };
     // Sliders und Menus
     QSlider* speedSlider{nullptr};
     QComboBox* algorithmCombo{nullptr};

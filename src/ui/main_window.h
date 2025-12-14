@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include "../orchestration/algorithm_manager.h"
+#include "../algorithms/frame_recorder.h"   //  le chemin si nécessaire
+
 
 class VisualizationPane;
 class ControlPanel;

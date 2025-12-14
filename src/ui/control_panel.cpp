@@ -36,10 +36,19 @@ void ControlPanel::setupUI()
 
     // Taille des données
     configLayout->addWidget(new QLabel("Taille (Nœuds):"));
+
+    QHBoxLayout* nodeLayout = new QHBoxLayout();
+
     dataSizeSpinBox = new QSpinBox();
     dataSizeSpinBox->setRange(1, 100);
     dataSizeSpinBox->setValue(20);
-    configLayout->addWidget(dataSizeSpinBox);
+
+    generateNodesButton = new QPushButton("Generate Nodes");
+
+    nodeLayout->addWidget(dataSizeSpinBox);
+    nodeLayout->addWidget(generateNodesButton);
+
+    configLayout->addLayout(nodeLayout);
 
     mainLayout->addWidget(configGroup);
 
@@ -100,6 +109,11 @@ void ControlPanel::connectSignals()
     // Pour la vitesse et la taille
     connect(speedSlider, &QSlider::valueChanged, this, &ControlPanel::speedChanged);
     connect(dataSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ControlPanel::dataSizeChanged);
+
+    // Ajoute la connexion ici
+    connect(generateNodesButton, &QPushButton::clicked, this, [this]() {
+        emit generateNodesRequested(dataSizeSpinBox->value());
+        });
 }
 
 // --- Implémentation des méthodes publiques ---
