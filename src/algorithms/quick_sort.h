@@ -6,42 +6,50 @@
 #include <memory>
 
 /**
- * @class BubbleSort
- * @brief Bubble Sort algorithm runner
+ * @class QuickSort
+ * @brief QuickSort algorithm runner
  * Inherits from AlgorithmRunner to track execution state and generate animation frames
  */
-class BubbleSort : public AlgorithmRunner {
+class QuickSort : public AlgorithmRunner {
 private:
     std::vector<int> data;
     std::vector<int> originalData;
     bool isSorted{false};
+    
+    // For step-by-step execution
+    struct PartitionState {
+        int low;
+        int high;
+        int pivotIndex;
+    };
+    std::vector<PartitionState> partitionStack;
 
 public:
     /**
      * @brief Default constructor with sample data
      */
-    BubbleSort();
+    QuickSort();
 
     /**
      * @brief Constructor with ArrayStructure
      * @param arrayStructure The array data structure to sort
      */
-    explicit BubbleSort(ArrayStructure* arrayStructure);
+    explicit QuickSort(ArrayStructure* arrayStructure);
 
-    ~BubbleSort() override = default;
+    ~QuickSort() override = default;
 
     /**
-     * @brief Execute full bubble sort algorithm
+     * @brief Execute full QuickSort algorithm
      */
     void execute() override;
 
     /**
-     * @brief Step forward one comparison/swap
+     * @brief Step forward one partition operation
      */
     void stepForward() override;
 
     /**
-     * @brief Step backward one comparison/swap
+     * @brief Step backward one partition operation
      */
     void stepBackward() override;
 
@@ -62,12 +70,19 @@ public:
 
 private:
     /**
-     * @brief Process one comparison and potential swap
-     * @param i Outer loop index
-     * @param j Inner loop index
-     * @return true if a swap occurred
+     * @brief Partition array and return pivot index
+     * @param low Starting index
+     * @param high Ending index
+     * @return Pivot index after partition
      */
-    bool processComparison(size_t i, size_t j);
+    int partition(int low, int high);
+
+    /**
+     * @brief QuickSort recursive implementation
+     * @param low Starting index
+     * @param high Ending index
+     */
+    void quickSortHelper(int low, int high);
 
     /**
      * @brief Load data from ArrayStructure
