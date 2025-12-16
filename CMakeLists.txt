@@ -5,6 +5,22 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Set Qt6 path hints for Windows
+if(WIN32 AND NOT DEFINED CMAKE_PREFIX_PATH)
+    if(EXISTS "C:/Qt/6.10.0/msvc2022_64")
+        list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.10.0/msvc2022_64")
+    elseif(EXISTS "C:/Qt/6.8.0/msvc2022_64")
+   list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.8.0/msvc2022_64")
+    elseif(EXISTS "C:/Qt/6.7.0/msvc2022_64")
+  list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.0/msvc2022_64")
+    endif()
+endif()
+
+# Bypass Qt license check if needed
+if(NOT DEFINED ENV{QTFRAMEWORK_BYPASS_LICENSE_CHECK})
+    set(ENV{QTFRAMEWORK_BYPASS_LICENSE_CHECK} "1")
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)

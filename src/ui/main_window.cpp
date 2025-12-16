@@ -17,18 +17,13 @@
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
+      dataModelManager(std::make_unique<DataModelManager>()),
       visualizationPane(std::make_unique<VisualizationPane>(this)),
       controlPanel(std::make_unique<ControlPanel>(this)),
       metricsPanel(std::make_unique<MetricsPanel>(this)),
-      currentAlgorithm(nullptr),
       algoManager(AlgorithmManager::getInstance()),
-      frameRecorder(this)
-    // On garde l'initialisation du DataModelManager (Crucial pour ton backend !)
-    dataModelManager(std::make_unique<DataModelManager>()), 
-    visualizationPane(std::make_unique<VisualizationPane>(this)),
-    controlPanel(std::make_unique<ControlPanel>(this)),
-    metricsPanel(std::make_unique<MetricsPanel>(this)),
-    algoManager(AlgorithmManager::getInstance())
+      frameRecorder(),
+  currentAlgorithm(nullptr)
 {
     // On garde ton titre et ta taille (plus confortables)
     setWindowTitle("DataViz UIT - Visualisation de Structures de Données");
@@ -37,7 +32,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Connexion vitale : Lier l'interface graphique au cerveau (Backend)
     if (visualizationPane && visualizationPane->getInteractionManager()) {
-        visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
+      visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
     }
 
     setupUI();
