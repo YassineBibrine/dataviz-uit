@@ -44,6 +44,7 @@ private:
     // Core components
     AlgorithmRunner* currentAlgorithm{nullptr};
     AlgorithmManager& algoManager = AlgorithmManager::getInstance();
+    FrameRecorder frameRecorder;   // 👉 nouveau membre
 
     // Selected algorithm name
     std::string selectedAlgorithm;
