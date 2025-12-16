@@ -6,6 +6,7 @@
 #include <map>
 #include "../visualization/visualization_renderer.h"
 #include "../visualization/interaction_manager.h"
+#include "../visualization/GraphvizLayoutEngine.h"
 
 class VisualizationPane : public QWidget {
     Q_OBJECT
