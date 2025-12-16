@@ -18,11 +18,11 @@ public:
     std::unique_ptr<Algorithm> createAlgorithm(const std::string& category, const std::string& type);
 
     // Methodes optionnelles
-  std::vector<std::string> listAlgorithmsByCategory(const std::string& category) const;
+    std::vector<std::string> listAlgorithmsByCategory(const std::string& category) const;
     std::vector<std::string> getCategories() const;
 
 private:
-  AlgorithmManager(); // declaration seulement
+    AlgorithmManager(); // declaration seulement
 
     std::map<std::string, std::unique_ptr<AlgorithmFactory>> factories_;
     std::map<std::string, std::vector<std::string>> m_categories; // si tu en as besoin

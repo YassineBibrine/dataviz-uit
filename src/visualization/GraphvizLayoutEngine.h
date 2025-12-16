@@ -37,4 +37,11 @@ private:
     bool graphvizAvailable;
     
     void* gvc; // Graphviz context (opaque pointer to avoid including gvc.h in header)
+    
+    /**
+     * @brief Compute fallback circular layout when Graphviz is unavailable
+     * @param dotString DOT format graph description
+     * @return Map of node ID to (x, y) position in circular arrangement
+     */
+    std::map<std::string, std::pair<double, double>> computeFallbackLayout(const std::string& dotString);
 };
