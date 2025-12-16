@@ -1,4 +1,4 @@
-﻿#include "control_panel.h"
+#include "control_panel.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -24,7 +24,6 @@ void ControlPanel::setupUI()
     QGroupBox* configGroup = new QGroupBox("Configuration", this);
     QVBoxLayout* configLayout = new QVBoxLayout(configGroup);
 
-    
     configLayout->setContentsMargins(10, 20, 10, 10);
     configLayout->setSpacing(8);
 
@@ -36,15 +35,27 @@ void ControlPanel::setupUI()
     algorithmCombo = new QComboBox();
     configLayout->addWidget(algorithmCombo);
 
+    // Taille des données
+    configLayout->addWidget(new QLabel("Taille (Nœuds):"));
+    QHBoxLayout* nodeLayout = new QHBoxLayout();
+
+    dataSizeSpinBox = new QSpinBox();
+    dataSizeSpinBox->setRange(1, 100);
+    dataSizeSpinBox->setValue(20);
+
+    generateNodesButton = new QPushButton("Generate Nodes");
+
+    nodeLayout->addWidget(dataSizeSpinBox);
+    nodeLayout->addWidget(generateNodesButton);
+
+    configLayout->addLayout(nodeLayout);
+
     mainLayout->addWidget(configGroup);
 
     // --- CONTRÔLES ---
     QGroupBox* controlGroup = new QGroupBox("Contrôles", this);
-    
-
     QVBoxLayout* controlLayout = new QVBoxLayout(controlGroup);
 
-    
     controlLayout->setContentsMargins(10, 10, 10, 10);
     controlLayout->setSpacing(0);
 
@@ -52,7 +63,6 @@ void ControlPanel::setupUI()
     QHBoxLayout* playLayout = new QHBoxLayout();
     playLayout->setSpacing(14);
 
-    
     int btnH = 23;       
     int btnW_Small = 57; 
     int btnW_Large = 85;  
@@ -77,10 +87,7 @@ void ControlPanel::setupUI()
     playLayout->addStretch();
 
     controlLayout->addLayout(playLayout);
-
-    
     controlLayout->addSpacing(20); 
- 
 
     // 2. RESET
     resetButton = new QPushButton("⟲ Reset");
@@ -109,7 +116,6 @@ void ControlPanel::setupUI()
     controlLayout->addWidget(currentFrameLabel);
 
     mainLayout->addWidget(controlGroup);
-
     mainLayout->addStretch();
 }
 
@@ -123,14 +129,44 @@ void ControlPanel::connectSignals()
     connect(dataStructureCombo, &QComboBox::currentTextChanged, this, &ControlPanel::dataStructureSelected);
     connect(algorithmCombo, &QComboBox::currentTextChanged, this, &ControlPanel::algorithmSelected);
     connect(speedSlider, &QSlider::valueChanged, this, &ControlPanel::speedChanged);
+
+    connect(dataSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ControlPanel::dataSizeChanged);
+
+    connect(generateNodesButton, &QPushButton::clicked, this, [this]() {
+        emit generateNodesRequested(dataSizeSpinBox->value());
+    });
 }
 
-void ControlPanel::populateAlgorithms(const std::vector<QString>& algorithms) {
-    algorithmCombo->clear(); for (const auto& a : algorithms) algorithmCombo->addItem(a);
+// --- Implémentation des méthodes publiques ---
+
+void ControlPanel::populateAlgorithms(const std::vector<QString>& algorithms)
+{
+    algorithmCombo->clear();
+    for (const auto& algo : algorithms) {
+        algorithmCombo->addItem(algo);
+    }
 }
-void ControlPanel::populateDataStructures(const std::vector<QString>& structures) {
-    dataStructureCombo->clear(); for (const auto& s : structures) dataStructureCombo->addItem(s);
+
+void ControlPanel::populateDataStructures(const std::vector<QString>& structures)
+{
+    dataStructureCombo->clear();
+    for (const auto& s : structures) {
+        dataStructureCombo->addItem(s);
+    }
 }
-QString ControlPanel::getSelectedDataStructure() const { return dataStructureCombo->currentText(); }
-void ControlPanel::setPlayingState(bool playing) { playButton->setEnabled(!playing); pauseButton->setEnabled(playing); }
-void ControlPanel::enableControls(bool enabled) { this->setEnabled(enabled); }
+
+QString ControlPanel::getSelectedDataStructure() const 
+{ 
+    return dataStructureCombo->currentText(); 
+}
+
+void ControlPanel::setPlayingState(bool playing) 
+{ 
+    playButton->setEnabled(!playing); 
+    pauseButton->setEnabled(playing); 
+}
+
+void ControlPanel::enableControls(bool enabled) 
+{ 
+    this->setEnabled(enabled); 
+}

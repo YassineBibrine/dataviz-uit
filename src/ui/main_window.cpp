@@ -17,6 +17,12 @@
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
+      visualizationPane(std::make_unique<VisualizationPane>(this)),
+      controlPanel(std::make_unique<ControlPanel>(this)),
+      metricsPanel(std::make_unique<MetricsPanel>(this)),
+      currentAlgorithm(nullptr),
+      algoManager(AlgorithmManager::getInstance()),
+      frameRecorder(this)
     // On garde l'initialisation du DataModelManager (Crucial pour ton backend !)
     dataModelManager(std::make_unique<DataModelManager>()), 
     visualizationPane(std::make_unique<VisualizationPane>(this)),
@@ -107,6 +113,11 @@ void MainWindow::connectSignals() {
     connect(controlPanel.get(), &ControlPanel::dataStructureSelected, this, &MainWindow::onDataStructureSelected);
     connect(controlPanel.get(), &ControlPanel::speedChanged, this, &MainWindow::onSpeedChanged);
     connect(controlPanel.get(), &ControlPanel::dataSizeChanged, this, &MainWindow::onDataSizeChanged);
+    // --- NOUVEAU : génération de nœuds ---
+    connect(controlPanel.get(), &ControlPanel::generateNodesRequested,
+        this, [this](int count) {
+            frameRecorder.generateNodesFrame(count);
+        });
 }
 
 void MainWindow::createMenuBar() {
