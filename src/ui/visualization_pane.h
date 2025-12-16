@@ -45,6 +45,7 @@ private:
 
     std::unique_ptr<VisualizationRenderer> renderer;
     std::unique_ptr<InteractionManager> interaction;
+    std::unique_ptr<GraphvizLayoutEngine> layoutEngine;
 
     std::vector<std::string> currentHighlights;
 

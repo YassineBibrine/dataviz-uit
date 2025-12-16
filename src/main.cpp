@@ -7,6 +7,7 @@
 int main(int argc, char* argv[]) {
     try {
         std::cout << "Initializing QApplication..." << std::endl;
+        qputenv("QTFRAMEWORK_BYPASS_LICENSE_CHECK", "1");
         QApplication app(argc, argv);
 
         
