@@ -7,6 +7,8 @@
 // On inclut les managers 
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
+#include "../algorithms/frame_recorder.h"   //  le chemin si nécessaire
+
 
 class VisualizationPane;
 class ControlPanel;
@@ -57,6 +59,10 @@ private:
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
 
+    // Core components
+    AlgorithmRunner* currentAlgorithm{nullptr};
+    AlgorithmManager& algoManager = AlgorithmManager::getInstance();
+    FrameRecorder frameRecorder;   // 👉 nouveau membre
     // --- COEUR DU SYSTEME (BACKEND) ---
     // C'est la ligne la plus importante pour ton projet :
     std::unique_ptr<DataModelManager> dataModelManager;

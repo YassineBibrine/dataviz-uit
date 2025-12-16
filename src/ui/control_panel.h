@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QWidget>
 #include <QPushButton>
@@ -6,6 +6,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QGroupBox>
+#include <QSpinBox>
 #include <vector>
 
 class ControlPanel : public QWidget
@@ -33,24 +34,24 @@ signals:
     void speedChanged(int speed);
     void algorithmSelected(QString algorithm);
     void dataStructureSelected(QString structure);
-    // On garde ce signal au cas où, mais il ne sera plus déclenché par l'UI
     void dataSizeChanged(int size);
+    void generateNodesRequested(int count);
 
 private:
     // Boutons
-    QPushButton* playButton;
-    QPushButton* pauseButton;
-    QPushButton* stopButton;
-    QPushButton* stepForwardButton;
-    QPushButton* stepBackwardButton;
-    QPushButton* resetButton;
+    QPushButton* playButton{nullptr};
+    QPushButton* pauseButton{nullptr};
+    QPushButton* stopButton{nullptr};            // gardé depuis main
+    QPushButton* stepForwardButton{nullptr};
+    QPushButton* stepBackwardButton{nullptr};
+    QPushButton* resetButton{nullptr};
+    QPushButton* generateNodesButton{nullptr};   // ajouté depuis membre4
 
     // Sliders et Menus
-    QSlider* speedSlider;
-    QComboBox* algorithmCombo;
-    QComboBox* dataStructureCombo;
+    QSlider* speedSlider{nullptr};
+    QComboBox* algorithmCombo{nullptr};
+    QComboBox* dataStructureCombo{nullptr};
+    QSpinBox* dataSizeSpinBox{nullptr};
 
-    // (J'ai supprimé le ZoomSlider ici)
-
-    QLabel* currentFrameLabel;
+    QLabel* currentFrameLabel{nullptr};
 };
