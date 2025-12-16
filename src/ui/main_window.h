@@ -14,6 +14,7 @@ class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
+class StructureSelector;
 class Algorithm; // Forward declaration générique
 
 /**
@@ -41,8 +42,12 @@ private slots:
 
     void onSpeedChanged(int speed);
     void onAlgorithmSelected(QString algorithm);
-    void onDataStructureSelected(QString structure);
-    void onDataSizeChanged(int size);
+    
+    // --- Structure Selector slots ---
+    void onStructureSelected(QString structureId);
+    void onStructureRemoved(QString structureId);
+    void onFinalizeInteractive(QString type, QString name);
+    void onClearInteractive();
 
 private:
     void setupUI();
@@ -51,10 +56,11 @@ private:
 
     // Fonctions métier
     void executeAlgorithm(const std::string& algorithm);
-    void loadDataStructure(const std::string& type, int size);
+    void updateVisualizationForStructure(const std::string& structureId);
 
     // --- COMPOSANTS UI ---
     ToolboxPanel* toolboxPanel = nullptr;
+    StructureSelector* structureSelector = nullptr;  // NEW
     std::unique_ptr<VisualizationPane> visualizationPane;
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;

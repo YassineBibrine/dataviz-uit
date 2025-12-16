@@ -52,16 +52,20 @@ void InteractionManager::removeNode(const std::string& nodeId) {
 }
 
 void InteractionManager::updateNodeValue(const std::string& nodeId, int value) {
+    // Store locally for finalization
+    nodeValues[nodeId] = value;
+    
+    // Also update in backend if structure already exists
     if (backend) {
         if (auto* ds = backend->getCurrentStructure()) {
             if (auto* gs = dynamic_cast<GraphStructure*>(ds)) {
-                if (auto* graph = gs->getGraph()) {
-                    if (auto* node = graph->getNode(nodeId)) {
-                        node->properties["value"] = std::to_string(value);
-                    }
-                }
+    if (auto* graph = gs->getGraph()) {
+   if (auto* node = graph->getNode(nodeId)) {
+    node->properties["value"] = std::to_string(value);
+             }
             }
-        }
+            }
+     }
     }
 }
 
@@ -212,4 +216,47 @@ std::pair<std::string, std::string> InteractionManager::getEdgeAtPosition(double
     }
 
     return { "", "" };
+}
+
+std::string InteractionManager::finalizeStructure(const std::string& type, const std::string& name) {
+  if (!backend) {
+     return ""; // No backend connected
+    }
+    
+    if (nodes.empty()) {
+        return ""; // No nodes to finalize
+    }
+    
+    // Convert mock data to structure format
+ std::map<std::string, int> nodeData;
+    for (const auto& node : nodes) {
+        // Use stored value or default to 0
+ int value = (nodeValues.find(node.id) != nodeValues.end()) 
+           ? nodeValues[node.id] : 0;
+        nodeData[node.id] = value;
+    }
+    
+    std::vector<std::pair<std::string, std::string>> edgeData;
+    for (const auto& edge : edges) {
+        edgeData.emplace_back(edge.source, edge.target);
+    }
+    
+    // Build structure in backend
+    std::string structId = backend->buildStructureFromNodes(type, nodeData, edgeData, name);
+    
+  // Don't clear interactive data yet - let user decide when to clear
+    // They might want to keep visualizing it
+    
+ return structId;
+}
+
+void InteractionManager::clearInteractive() {
+    nodes.clear();
+    edges.clear();
+    nodeValues.clear();
+    nextId = 1; // Reset ID counter
+}
+
+std::map<std::string, int> InteractionManager::getNodeValues() const {
+    return nodeValues;
 }

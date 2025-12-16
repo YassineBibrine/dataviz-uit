@@ -87,25 +87,40 @@ void ToolboxPanel::setupUI() {
 
 void ToolboxPanel::updateTools(const QString& mode) {
     listWidget->clear();
-    if (mode == "Linked List" || mode == "LinkedList") {
-        auto itemRect = new QListWidgetItem(createIcon("RECT", QColor("#e67e22")), "Noeud"); // "Noeud" court pour centrage
+    
+    // For LinkedList, use rectangular nodes
+    if (mode == "Linked List" || mode == "LinkedList" || mode == "List") {
+        auto itemRect = new QListWidgetItem(createIcon("RECT", QColor("#e67e22")), "Noeud");
+      itemRect->setData(Qt::UserRole, "CREATE_NODE_RECT");
+     itemRect->setTextAlignment(Qt::AlignCenter);
+        listWidget->addItem(itemRect);
+    }
+    // For Array, use rectangular nodes as well (but different color)
+    else if (mode == "Array") {
+ auto itemRect = new QListWidgetItem(createIcon("RECT", QColor("#9b59b6")), "Cell");
         itemRect->setData(Qt::UserRole, "CREATE_NODE_RECT");
         itemRect->setTextAlignment(Qt::AlignCenter);
         listWidget->addItem(itemRect);
     }
+    // For Tree and Graph, use circular nodes
     else {
         auto itemCircle = new QListWidgetItem(createIcon("CIRCLE", QColor("#3498db")), "Noeud");
         itemCircle->setData(Qt::UserRole, "CREATE_NODE_CIRCLE");
-        itemCircle->setTextAlignment(Qt::AlignCenter);
+   itemCircle->setTextAlignment(Qt::AlignCenter);
         listWidget->addItem(itemCircle);
     }
+    
+    // Link tool (not needed for Array)
+    if (mode != "Array") {
     auto itemLink = new QListWidgetItem(createIcon("LINE", QColor("#34495e")), "Lier");
-    itemLink->setData(Qt::UserRole, "ACTIVATE_LINK_MODE");
-    itemLink->setTextAlignment(Qt::AlignCenter);
-    itemLink->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    listWidget->addItem(itemLink);
+        itemLink->setData(Qt::UserRole, "ACTIVATE_LINK_MODE");
+      itemLink->setTextAlignment(Qt::AlignCenter);
+        itemLink->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        listWidget->addItem(itemLink);
+    }
 
-    auto itemEraser = new QListWidgetItem(createIcon("ERASER", Qt::transparent), "Gomme");
+    // Eraser tool (always available)
+ auto itemEraser = new QListWidgetItem(createIcon("ERASER", Qt::transparent), "Gomme");
     itemEraser->setData(Qt::UserRole, "ACTIVATE_ERASER_MODE");
     itemEraser->setTextAlignment(Qt::AlignCenter);
     itemEraser->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);

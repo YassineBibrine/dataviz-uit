@@ -11,61 +11,39 @@ ControlPanel::ControlPanel(QWidget* parent)
     setupUI();
     connectSignals();
     populateAlgorithms({ "BFS", "DFS", "Dijkstra" });
-    populateDataStructures({ "Graph", "Binary Tree", "Linked List" });
 }
 
 void ControlPanel::setupUI()
 {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(10, 10, 10, 10);
-    mainLayout->setSpacing(15);
+    mainLayout->setSpacing(12);
 
-    // --- CONFIGURATION ---
-    QGroupBox* configGroup = new QGroupBox("Configuration", this);
-    QVBoxLayout* configLayout = new QVBoxLayout(configGroup);
+    // --- ALGORITHM SELECTION ---
+    QGroupBox* algoGroup = new QGroupBox("Algorithm", this);
+    QVBoxLayout* algoLayout = new QVBoxLayout(algoGroup);
+    algoLayout->setContentsMargins(10, 15, 10, 10);
+    algoLayout->setSpacing(8);
 
-    configLayout->setContentsMargins(10, 20, 10, 10);
-    configLayout->setSpacing(8);
-
-    configLayout->addWidget(new QLabel("Structure de données:"));
-    dataStructureCombo = new QComboBox();
-    configLayout->addWidget(dataStructureCombo);
-
-    configLayout->addWidget(new QLabel("Algorithme:"));
+    algoLayout->addWidget(new QLabel("Select algorithm:"));
     algorithmCombo = new QComboBox();
-    configLayout->addWidget(algorithmCombo);
+    algoLayout->addWidget(algorithmCombo);
 
-    // Taille des données
-    configLayout->addWidget(new QLabel("Taille (Nœuds):"));
-    QHBoxLayout* nodeLayout = new QHBoxLayout();
+    mainLayout->addWidget(algoGroup);
 
-    dataSizeSpinBox = new QSpinBox();
-    dataSizeSpinBox->setRange(1, 100);
-    dataSizeSpinBox->setValue(20);
-
-    generateNodesButton = new QPushButton("Generate Nodes");
-
-    nodeLayout->addWidget(dataSizeSpinBox);
-    nodeLayout->addWidget(generateNodesButton);
-
-    configLayout->addLayout(nodeLayout);
-
-    mainLayout->addWidget(configGroup);
-
-    // --- CONTRÔLES ---
-    QGroupBox* controlGroup = new QGroupBox("Contrôles", this);
+    // --- PLAYBACK CONTROLS ---
+    QGroupBox* controlGroup = new QGroupBox("Playback Controls", this);
     QVBoxLayout* controlLayout = new QVBoxLayout(controlGroup);
+    controlLayout->setContentsMargins(10, 12, 10, 10);
+    controlLayout->setSpacing(8);
 
-    controlLayout->setContentsMargins(10, 10, 10, 10);
-    controlLayout->setSpacing(0);
-
-    // 1. PLAY / PAUSE
+    // Play/Pause/Step buttons
     QHBoxLayout* playLayout = new QHBoxLayout();
-    playLayout->setSpacing(14);
+    playLayout->setSpacing(8);
 
-    int btnH = 23;       
-    int btnW_Small = 57; 
-    int btnW_Large = 85;  
+    int btnH = 26;       
+    int btnW_Small = 45; 
+    int btnW_Large = 70;  
 
     stepBackwardButton = new QPushButton("⏮");
     stepBackwardButton->setFixedSize(btnW_Small, btnH);
@@ -79,31 +57,23 @@ void ControlPanel::setupUI()
     stepForwardButton = new QPushButton("⏭");
     stepForwardButton->setFixedSize(btnW_Small, btnH);
 
-    playLayout->addStretch();
     playLayout->addWidget(stepBackwardButton);
     playLayout->addWidget(playButton);
     playLayout->addWidget(pauseButton);
     playLayout->addWidget(stepForwardButton);
-    playLayout->addStretch();
 
     controlLayout->addLayout(playLayout);
-    controlLayout->addSpacing(20); 
+    controlLayout->addSpacing(8); 
 
-    // 2. RESET
+    // Reset button
     resetButton = new QPushButton("⟲ Reset");
-    resetButton->setFixedSize(320, btnH);
+    resetButton->setFixedHeight(btnH);
+    controlLayout->addWidget(resetButton);
 
-    QHBoxLayout* resetLayout = new QHBoxLayout();
-    resetLayout->addStretch();
-    resetLayout->addWidget(resetButton);
-    resetLayout->addStretch();
-    controlLayout->addLayout(resetLayout);
+    controlLayout->addSpacing(8);
 
-    // Espace réduit avant le slider
-    controlLayout->addSpacing(10);
-
-    // 3. SLIDER
-    controlLayout->addWidget(new QLabel("Vitesse d'animation:"));
+    // Speed slider
+    controlLayout->addWidget(new QLabel("Animation Speed:"));
 
     speedSlider = new QSlider(Qt::Horizontal);
     speedSlider->setRange(1, 100);
@@ -112,11 +82,10 @@ void ControlPanel::setupUI()
 
     currentFrameLabel = new QLabel("Frame: 0 / 0");
     currentFrameLabel->setAlignment(Qt::AlignCenter);
-    currentFrameLabel->setStyleSheet("color: #718096; margin-top: 2px; font-size: 8pt;");
+    currentFrameLabel->setStyleSheet("color: #718096; font-size: 8pt;");
     controlLayout->addWidget(currentFrameLabel);
 
     mainLayout->addWidget(controlGroup);
-    mainLayout->addStretch();
 }
 
 void ControlPanel::connectSignals()
@@ -126,18 +95,11 @@ void ControlPanel::connectSignals()
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetClicked);
     connect(stepForwardButton, &QPushButton::clicked, this, &ControlPanel::stepForwardClicked);
     connect(stepBackwardButton, &QPushButton::clicked, this, &ControlPanel::stepBackwardClicked);
-    connect(dataStructureCombo, &QComboBox::currentTextChanged, this, &ControlPanel::dataStructureSelected);
     connect(algorithmCombo, &QComboBox::currentTextChanged, this, &ControlPanel::algorithmSelected);
     connect(speedSlider, &QSlider::valueChanged, this, &ControlPanel::speedChanged);
-
-    connect(dataSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ControlPanel::dataSizeChanged);
-
-    connect(generateNodesButton, &QPushButton::clicked, this, [this]() {
-        emit generateNodesRequested(dataSizeSpinBox->value());
-    });
 }
 
-// --- Implémentation des méthodes publiques ---
+// --- Public methods ---
 
 void ControlPanel::populateAlgorithms(const std::vector<QString>& algorithms)
 {
@@ -145,19 +107,6 @@ void ControlPanel::populateAlgorithms(const std::vector<QString>& algorithms)
     for (const auto& algo : algorithms) {
         algorithmCombo->addItem(algo);
     }
-}
-
-void ControlPanel::populateDataStructures(const std::vector<QString>& structures)
-{
-    dataStructureCombo->clear();
-    for (const auto& s : structures) {
-        dataStructureCombo->addItem(s);
-    }
-}
-
-QString ControlPanel::getSelectedDataStructure() const 
-{ 
-    return dataStructureCombo->currentText(); 
 }
 
 void ControlPanel::setPlayingState(bool playing) 

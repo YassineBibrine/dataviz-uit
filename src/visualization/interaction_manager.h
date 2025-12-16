@@ -43,13 +43,44 @@ public:
     std::vector<EdgeDisplay> getAllEdges();
     std::string getNodeAtPosition(double x, double y);
     std::pair<std::string, std::string> getEdgeAtPosition(double x, double y);
+    
+    /**
+     * @brief Finalize interactive structure creation
+     * @param type Structure type or "Auto" for detection
+  * @param name Optional name
+     * @return ID of created structure in DataModelManager
+     */
+  std::string finalizeStructure(const std::string& type = "Auto", 
+        const std::string& name = "");
+    
+    /**
+     * @brief Clear all interactive nodes/edges (after finalization)
+     */
+    void clearInteractive();
+    
+    /**
+     * @brief Get all node values for structure building
+     */
+    std::map<std::string, int> getNodeValues() const;
+    
+    /**
+     * @brief Check if there are any interactive nodes/edges
+     */
+    bool hasInteractiveData() const { return !nodes.empty(); }
+ 
+    /**
+  * @brief Get count of interactive nodes and edges
+     */
+    std::pair<int, int> getInteractiveStats() const { 
+      return {static_cast<int>(nodes.size()), static_cast<int>(edges.size())}; 
+    }
 
 private:
     // Simulation (Mock) - On garde ça pour l'affichage local rapide
     struct MockNode {
         std::string id;
         double x, y;
-        std::string type;
+      std::string type;
     };
     struct MockEdge {
         std::string source;
@@ -58,11 +89,14 @@ private:
 
     std::vector<MockNode> nodes;
     std::vector<MockEdge> edges;
+  
+    // Store node values for finalization
+    std::map<std::string, int> nodeValues;
 
     std::string draggedNodeId = "";
     int nextId = 1;
 
     // --- MODIFICATION  : Le pointeur qui stocke le Backend ---
     DataModelManager* backend = nullptr;
-    // ---------------------------------------------------------
+ // ---------------------------------------------------------
 };
