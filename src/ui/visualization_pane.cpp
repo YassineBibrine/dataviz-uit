@@ -5,6 +5,8 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QListWidget>
+#include <sstream>
+#include <set>
 
 VisualizationPane::VisualizationPane(QWidget* parent)
     : QWidget(parent) {
@@ -17,6 +19,7 @@ VisualizationPane::VisualizationPane(QWidget* parent)
     layout->addWidget(renderer.get());
 
     interaction = std::make_unique<InteractionManager>();
+    layoutEngine = std::make_unique<GraphvizLayoutEngine>();
 
     updateDisplay();
 }
@@ -36,14 +39,106 @@ void VisualizationPane::updateDisplay() {
     f.edges = {};
 
     auto positions = interaction->getAllNodePositions();
+    std::vector<std::string> nodeIds;
+    nodeIds.reserve(positions.size());
+    std::map<std::string, std::string> nodeTypeMap;
     for (const auto& np : positions) {
-        f.nodePositions[np.id] = { np.x, np.y };
-        f.nodeShapes[np.id] = np.type;
+        nodeIds.push_back(np.id);
+        nodeTypeMap[np.id] = np.type;
     }
 
     auto edges = interaction->getAllEdges();
     for (const auto& e : edges) {
         f.edges.push_back({ e.source, e.target });
+    }
+
+    // Heuristic: detect tree when edge count == node count - 1, no node has indegree > 1,
+    // exactly one root (indegree == 0), and graph is connected.
+    bool isTree = false;
+    size_t n = nodeIds.size();
+    if (n > 0 && edges.size() == (n - 1)) {
+        std::map<std::string,int> indeg;
+        std::map<std::string,std::vector<std::string>> adjUndir;
+        for (const auto& id : nodeIds) { indeg[id] = 0; }
+        for (const auto& e : edges) {
+            if (indeg.find(e.target) == indeg.end() || indeg.find(e.source) == indeg.end()) {
+                // unknown node -> not a tree
+                isTree = false;
+                break;
+            }
+            indeg[e.target]++;
+            // build undirected adjacency for connectivity test
+            adjUndir[e.source].push_back(e.target);
+            adjUndir[e.target].push_back(e.source);
+        }
+
+        if (!isTree) {
+            // continue only if we didn't break
+        }
+
+        bool indegOk = true;
+        int roots = 0;
+        std::string rootId;
+        for (const auto& kv : indeg) {
+            if (kv.second > 1) { indegOk = false; break; }
+            if (kv.second == 0) { roots++; rootId = kv.first; }
+        }
+
+        if (indegOk && roots == 1) {
+            // connectivity via BFS
+            std::set<std::string> seen;
+            std::vector<std::string> q;
+            q.push_back(rootId);
+            seen.insert(rootId);
+            for (size_t i = 0; i < q.size(); ++i) {
+                auto u = q[i];
+                for (const auto& v : adjUndir[u]) {
+                    if (!seen.count(v)) {
+                        seen.insert(v);
+                        q.push_back(v);
+                    }
+                }
+            }
+            if (seen.size() == n) isTree = true;
+        }
+    }
+
+    if (isTree && layoutEngine && layoutEngine->isAvailable()) {
+        // Build DOT string for the tree and ask Graphviz for layout
+        std::ostringstream oss;
+        oss << "digraph BinaryTree {\n";
+        oss << "  node [shape=circle];\n";
+        for (const auto& id : nodeIds) {
+            oss << "  " << id << " [label=\"" << id << "\"];\n";
+        }
+        for (const auto& e : edges) {
+            oss << "  " << e.source << " -> " << e.target << ";\n";
+        }
+        oss << "}\n";
+
+        auto posMap = layoutEngine->computeLayout(oss.str());
+        if (!posMap.empty()) {
+            for (const auto& kv : posMap) {
+                f.nodePositions[kv.first] = { kv.second.first, kv.second.second };
+            }
+            for (const auto& nt : nodeTypeMap) {
+                f.nodeShapes[nt.first] = nt.second;
+            }
+        }
+        else {
+            // fallback to manual positions
+            for (const auto& np : positions) {
+                f.nodePositions[np.id] = { np.x, np.y };
+                f.nodeShapes[np.id] = np.type;
+            }
+        }
+    }
+    else {
+        // Not a tree or graphviz not available: use positions from interaction manager
+        for (const auto& np : positions) {
+            f.nodePositions[np.id] = { np.x, np.y };
+            f.nodeShapes[np.id] = np.type;
+        }
     }
 
     f.highlightedNodes = currentHighlights;

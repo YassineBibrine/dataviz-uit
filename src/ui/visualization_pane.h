@@ -6,11 +6,13 @@
 #include <string>
 #include "../visualization/visualization_renderer.h"
 #include "../visualization/interaction_manager.h"
+#include "../visualization/GraphvizLayoutEngine.h"
 
 class VisualizationPane : public QWidget {
     Q_OBJECT
         std::unique_ptr<VisualizationRenderer> renderer;
     std::unique_ptr<InteractionManager> interaction;
+    std::unique_ptr<GraphvizLayoutEngine> layoutEngine;
     std::vector<std::string> currentHighlights;
 
 public:
