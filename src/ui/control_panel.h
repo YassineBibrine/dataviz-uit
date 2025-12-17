@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QWidget>
 #include <QPushButton>
@@ -8,6 +8,7 @@
 #include <QGroupBox>
 #include <QSpinBox>
 #include <vector>
+#include <QString>
 
 class ControlPanel : public QWidget
 {
@@ -18,8 +19,9 @@ public:
 
     void setPlayingState(bool playing);
     void enableControls(bool enabled);
-    void populateAlgorithms(const std::vector<QString>& algorithms);
 
+    // ⚠️ Remplace populateAlgorithms (obsolète)
+    void updateAlgorithmList(const QString& structureType);
     void setupUI();
     void connectSignals();
 

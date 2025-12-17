@@ -44,3 +44,10 @@ std::vector<std::string> AlgorithmManager::getCategories() const {
     }
     return categories;
 }
+std::vector<std::string> AlgorithmManager::getAlgorithmNames(const std::string& category) const {
+    if (category == "Sorting") return { "BubbleSort", "QuickSort", "MergeSort" };
+    if (category == "Filtering") return { "RangeFilter" };
+    if (category == "Transform") return { "Normalize" };
+    if (category == "Graph") return { "BFS", "DFS", "Dijkstra" };
+    return {};
+}

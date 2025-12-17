@@ -134,6 +134,8 @@ void MainWindow::connectSignals() {
         this, &MainWindow::onFinalizeInteractive);
     connect(structureSelector, &StructureSelector::clearInteractiveRequested,
         this, &MainWindow::onClearInteractive);
+    connect(structureSelector, &StructureSelector::structureSelected,
+        controlPanel.get(), &ControlPanel::updateAlgorithmList);
 }
 
 void MainWindow::onStructureSelected(QString structureId) {
