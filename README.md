@@ -2,26 +2,67 @@
 
 A Qt-based application for visualizing data structures and algorithms.
 
-## Prerequisites
+## ?? Quick Start for New Team Members
 
-- Visual Studio 2022 (with C++ development tools)
-- CMake 3.16 or higher
-- Qt 6.10.0 (or compatible version) installed at `C:/Qt/`
-  - MSVC 2022 64-bit build
-- Graphviz (optional, for advanced graph layouts)
+### Prerequisites
 
-## Building the Project
+1. **Visual Studio 2022** with C++ development tools
+2. **Qt 6.x** (6.5.0 or higher) - MSVC 2022 64-bit build
+3. **CMake 3.16+** (usually included with Visual Studio)
+4. **Graphviz** (optional, for advanced graph layouts)
 
-### Quick Build
+---
 
-Use the provided build script:
+## ?? Setup Instructions
 
+### Step 1: Install Qt
+
+1. Download Qt Online Installer: https://www.qt.io/download-qt-installer
+2. During installation, select:
+   - ? Qt 6.x.x ? MSVC 2022 64-bit
+   - ? Qt 6.x.x ? Qt Debug Information Files (optional)
+   - ? Developer and Designer Tools ? CMake (if not installed)
+3. **Remember your installation path** (e.g., `C:\Qt\6.10.0\msvc2022_64`)
+
+### Step 2: Configure Environment
+
+**Option A: Automated Setup (Recommended)** ?
+```bash
+# Run the setup script
+.\setup_environment.bat
+```
+Follow the prompts to configure Qt and Graphviz paths.
+
+**Option B: Manual Configuration**
+
+Set environment variables (Windows ? System ? Environment Variables ? System variables):
+
+| Variable | Value | Required |
+|----------|-------|----------|
+| `QT_DIR` | `C:\Qt\6.10.0\msvc2022_64` | ? Yes |
+| `GRAPHVIZ_ROOT` | `C:\Program Files\Graphviz` | ?? Optional |
+| `QTFRAMEWORK_BYPASS_LICENSE_CHECK` | `1` | ? Yes |
+
+**?? IMPORTANT:** Restart your terminal/IDE after setting environment variables!
+
+### Step 3: Clone Repository
+
+```bash
+git clone https://github.com/YassineBibrine/dataviz-uit.git
+cd dataviz-uit
+```
+
+### Step 4: Build
+
+**Easy Build (Recommended):**
+```bash
+.\build.bat
+```
+
+**With Options:**
 ```bash
 # Clean build
 .\build.bat -Clean
-
-# Build only
-.\build.bat
 
 # Build and run
 .\build.bat -Run
@@ -30,135 +71,242 @@ Use the provided build script:
 .\build.bat -Config Debug
 ```
 
-### Manual Build
+**Manual Build:**
+```bash
+# Configure
+cmake -B build -G "Visual Studio 17 2022" -A x64
 
-1. **Configure with CMake:**
+# Build
+cmake --build build --config Release
+
+# Deploy Qt DLLs
+cd build\bin\Release
+windeployqt dataviz-uit.exe
+
+# Run
+.\dataviz-uit.exe
+```
+
+---
+
+## ?? Troubleshooting
+
+### ? Error: "Qt6 not found"
+
+**Symptoms:**
+```
+CMake Error at CMakeLists.txt:XX (find_package):
+  Could not find a configuration file for package "Qt6"
+```
+
+**Solutions:**
+
+1. **Check Qt installation:**
    ```bash
-   mkdir build
-   cd build
-   set QTFRAMEWORK_BYPASS_LICENSE_CHECK=1
-   set CMAKE_PREFIX_PATH=C:/Qt/6.10.0/msvc2022_64
-   cmake -G "Visual Studio 17 2022" -A x64 ..
+   # Verify Qt directory exists
+   dir "C:\Qt\6.10.0\msvc2022_64"
    ```
 
-2. **Build:**
- ```bash
-   cmake --build . --config Release
+2. **Set QT_DIR environment variable:**
+   ```bash
+   # In command prompt:
+   set QT_DIR=C:\Qt\6.10.0\msvc2022_64
+   
+   # Or permanently:
+   setx QT_DIR "C:\Qt\6.10.0\msvc2022_64"
    ```
 
-3. **Deploy Qt Dependencies:**
+3. **Pass path to CMake directly:**
    ```bash
-   cd bin\Release
-   windeployqt dataviz-uit.exe
- ```
-
-4. **Run:**
-   ```bash
-   .\dataviz-uit.exe
+   cmake -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.10.0/msvc2022_64" -G "Visual Studio 17 2022" -A x64
    ```
 
-## Project Structure
+4. **Re-run setup script:**
+   ```bash
+   .\setup_environment.bat
+   ```
+
+### ? Error: "Architecture mismatch" (32-bit vs 64-bit)
+
+**Symptoms:**
+```
+CMake uses Hostx86/x86 but Qt is 64-bit
+```
+
+**Solutions:**
+
+1. **Use Visual Studio x64 tools:**
+   - Open "x64 Native Tools Command Prompt for VS 2022"
+   - Navigate to project directory
+   - Run build commands
+
+2. **Specify architecture in CMake:**
+   ```bash
+   cmake -B build -G "Visual Studio 17 2022" -A x64 ..
+   ```
+
+3. **Check Qt version:**
+   - Ensure you installed `msvc2022_64` (not `msvc2022`)
+
+### ? Error: App builds but won't run (missing DLLs)
+
+**Symptoms:**
+```
+The code execution cannot proceed because Qt6Core.dll was not found
+```
+
+**Solution:**
+```bash
+cd build\bin\Release
+windeployqt dataviz-uit.exe
+```
+
+This copies all required Qt DLLs to the executable directory.
+
+### ? Warning: "Graphviz not found"
+
+**Not Critical:** The application will work with fallback graph layout.
+
+**To fix (optional):**
+1. Install Graphviz: https://graphviz.org/download/
+2. Set environment variable:
+   ```bash
+   setx GRAPHVIZ_ROOT "C:\Program Files\Graphviz"
+   ```
+3. Rebuild project
+
+### ?? Qt License Warning
+
+If you see license warnings, ensure this environment variable is set:
+```bash
+setx QTFRAMEWORK_BYPASS_LICENSE_CHECK "1"
+```
+
+---
+
+## ?? Project Structure
 
 ```
 dataviz-uit/
 ??? src/
-?   ??? algorithms/          # Algorithm implementations
-?   ?   ??? frame_recorder.h/cpp
-?   ?   ??? algorithm_runner.h/cpp
-?   ?   ??? execution_state.h
-?   ??? core/ # Core data structures
-?   ?   ??? data_model_manager.h/cpp
-?   ?   ??? data_structure.h
-?   ?   ??? array_structure.h/cpp
-?   ?   ??? list_structure.h/cpp
-?   ?   ??? tree_structure.h/cpp
-?   ?   ??? graph_structure.h/cpp
-?   ??? orchestration/       # Algorithm management
-?   ?   ??? algorithm_manager.h/cpp
-?   ?   ??? sorting_algorithm_factory.cpp
-?   ?   ??? ...
-?   ??? ui/          # User interface
-?   ?   ??? main_window.h/cpp
-?   ?   ??? control_panel.h/cpp
-?   ?   ??? visualization_pane.h/cpp
-?   ?   ??? metrics_panel.h/cpp
-?   ?   ??? toolbox_panel.h/cpp
-? ??? visualization/       # Rendering and animation
-?   ?   ??? visualization_renderer.h
-?   ?   ??? animation_frame.h/cpp
-?   ?   ??? playback_controller.h
-?   ?   ??? GraphvizLayoutEngine.cpp
-?   ??? main.cpp
-??? CMakeLists.txt
-??? build.ps1      # PowerShell build script
-??? build.bat         # Batch file wrapper
-
+?   ??? algorithms/ # Algorithm implementations
+?   ??? core/    # Core data structures
+?   ??? codegen/# Code generation & parsing
+?   ??? orchestration/ # Algorithm management
+?   ??? ui/ # User interface
+?   ??? visualization/       # Rendering and animation
+? ??? main.cpp
+??? CMakeLists.txt      # Build configuration
+??? setup_environment.bat    # Environment setup script ?
+??? build.bat           # Build wrapper
+??? README.md   # This file
 ```
 
-## Common Issues and Solutions
+---
 
-### Qt Not Found
-
-**Error:** `Could not find a configuration file for package "Qt6"`
-
-**Solution:** 
-- Make sure Qt is installed at `C:/Qt/6.10.0/msvc2022_64`
-- Or set `CMAKE_PREFIX_PATH` to your Qt installation path
-- The CMakeLists.txt has been configured to automatically detect common Qt paths
-
-### 32-bit vs 64-bit Architecture Mismatch
-
-**Error:** CMake uses 32-bit compiler but Qt is 64-bit
-
-**Solution:** 
-- Use Visual Studio generator with `-A x64` flag
-- Or open x64 Native Tools Command Prompt for VS 2022
-
-### Qt License Warning
-
-**Error:** `Could not initialize license client`
-
-**Solution:** 
-- Set environment variable: `set QTFRAMEWORK_BYPASS_LICENSE_CHECK=1`
-- This is automatically set by the build script
-
-### Missing Graphviz
-
-**Warning:** `Graphviz headers not found`
-
-**Solution:**
-- Optional: Install Graphviz from https://graphviz.org/download/
-- The application will use fallback layout if Graphviz is not available
-
-## Features
+## ?? Features
 
 - **Data Structure Visualization**: Array, Linked List, Binary Tree, Graph
 - **Algorithm Animation**: Sorting, Searching, Traversal algorithms
+- **Code Generator**: Generate C++ code from visualized structures
+- **Code Parser**: Create structures from C++ code
 - **Interactive Controls**: Play, Pause, Step Forward/Backward
-- **Real-time Metrics**: Performance statistics and algorithm details
-- **Customizable Speed**: Adjust animation playback speed
+- **Real-time Metrics**: Performance statistics
+- **Customizable Speed**: Adjust animation playback
 
-## Usage
+---
 
-1. **Select Data Structure**: Choose from the control panel
-2. **Configure Size**: Set the initial data size
+## ?? Usage
+
+1. **Select Data Structure**: Choose from the Structure Selector
+2. **Configure**: Set size and parameters
 3. **Select Algorithm**: Pick an algorithm to visualize
 4. **Control Playback**: Use play/pause/step controls
-5. **Interact**: Use toolbox to manipulate the visualization
+5. **Generate Code**: Tools ? Code Generator & Parser
 
-## Development
+---
 
-Built with:
-- **Language**: C++17
-- **GUI Framework**: Qt 6.10.0
-- **Build System**: CMake 3.16+
-- **Compiler**: MSVC 2022 (Visual Studio 17)
-- **Graphics**: Graphviz (optional)
+## ??? Development
 
-## License
+**Built with:**
+- Language: C++17
+- GUI Framework: Qt 6.10.0
+- Build System: CMake 3.16+
+- Compiler: MSVC 2022 (Visual Studio 17)
+- Graphics: Graphviz (optional)
+
+**Build Requirements:**
+- CMake minimum: 3.16
+- C++ Standard: C++17
+- Qt minimum: 6.5.0 (6.10.0 recommended)
+
+---
+
+## ?? Additional Documentation
+
+- **Code Generator Guide**: `CODE_GENERATOR_GUIDE.md`
+- **Multi-Structure Guide**: `MULTI_STRUCTURE_GUIDE.md`
+- **Build Fixes**: `BUILD_FIXES.md`
+- **CMake Portability**: `CMAKE_PORTABILITY_FIX.md`
+
+---
+
+## ?? Contributing
+
+When making changes that affect the build:
+1. ? Never hardcode absolute paths in CMakeLists.txt
+2. ? Use environment variables for external dependencies
+3. ? Test on a clean machine before committing
+4. ? Update documentation
+5. ? Run `.\build.bat -Clean` to verify clean builds
+
+---
+
+## ?? Common Build Commands
+
+```bash
+# Quick build
+.\build.bat
+
+# Clean + build
+.\build.bat -Clean
+
+# Debug build
+.\build.bat -Config Debug
+
+# Build and run
+.\build.bat -Run
+
+# Manual CMake configure
+cmake -B build -G "Visual Studio 17 2022" -A x64
+
+# Manual CMake build
+cmake --build build --config Release
+
+# Run tests (if available)
+ctest --test-dir build -C Release
+```
+
+---
+
+## ?? Still Having Issues?
+
+1. **Check your Qt version matches requirements**
+2. **Verify environment variables are set** (run `echo %QT_DIR%`)
+3. **Try clean build** (`.\build.bat -Clean`)
+4. **Check CMake output** for specific error messages
+5. **Open an issue** on GitHub with:
+   - CMake output
+   - Your Qt version and installation path
+   - Windows version
+   - Visual Studio version
+
+---
+
+## ?? License
 
 [Add your license information here]
 
-## Contributors
+## ?? Contributors
 
 [Add contributor information here]

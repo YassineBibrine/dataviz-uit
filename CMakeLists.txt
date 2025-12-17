@@ -5,14 +5,63 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set Qt6 path hints for Windows
-if(WIN32 AND NOT DEFINED CMAKE_PREFIX_PATH)
-    if(EXISTS "C:/Qt/6.10.0/msvc2022_64")
-        list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.10.0/msvc2022_64")
-    elseif(EXISTS "C:/Qt/6.8.0/msvc2022_64")
-   list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.8.0/msvc2022_64")
-    elseif(EXISTS "C:/Qt/6.7.0/msvc2022_64")
-  list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.0/msvc2022_64")
+# ===================================================================
+# Qt6 Configuration - Portable for all team members
+# ===================================================================
+# Priority 1: User-defined CMAKE_PREFIX_PATH (from command line)
+# Priority 2: QT_DIR environment variable
+# Priority 3: Qt6_DIR environment variable
+# Priority 4: Common installation paths (fallback)
+# ===================================================================
+
+if(WIN32)
+    if(NOT DEFINED CMAKE_PREFIX_PATH)
+        # Check Qt environment variables first
+        if(DEFINED ENV{QT_DIR})
+       list(APPEND CMAKE_PREFIX_PATH "$ENV{QT_DIR}")
+ message(STATUS "✓ Using Qt from QT_DIR environment variable: $ENV{QT_DIR}")
+        elseif(DEFINED ENV{Qt6_DIR})
+            list(APPEND CMAKE_PREFIX_PATH "$ENV{Qt6_DIR}")
+ message(STATUS "✓ Using Qt from Qt6_DIR environment variable: $ENV{Qt6_DIR}")
+        else()
+    # Try common installation paths as fallback
+   message(STATUS "Searching for Qt in common installation paths...")
+        set(QT_SEARCH_PATHS
+                "C:/Qt/6.10.0/msvc2022_64"
+     "C:/Qt/6.8.0/msvc2022_64"
+            "C:/Qt/6.7.0/msvc2022_64"
+              "C:/Qt/6.6.0/msvc2022_64"
+       "C:/Qt/6.5.0/msvc2022_64"
+            )
+
+     set(QT_FOUND FALSE)
+   foreach(qt_path IN LISTS QT_SEARCH_PATHS)
+     if(EXISTS "${qt_path}")
+        list(APPEND CMAKE_PREFIX_PATH "${qt_path}")
+        message(STATUS "✓ Found Qt at: ${qt_path}")
+    set(QT_FOUND TRUE)
+          break()
+      endif()
+  endforeach()
+
+          if(NOT QT_FOUND)
+     message(WARNING 
+        "\n"
+"================================================================================\n"
+          "  Qt6 NOT FOUND in standard locations!\n"
+       "================================================================================\n"
+         "  Please configure Qt using ONE of these methods:\n\n"
+    "  Method 1: Set environment variable (Recommended)\n"
+      "    set QT_DIR=C:\\Qt\\6.10.0\\msvc2022_64\n\n"
+    "  Method 2: Pass to CMake directly\n"
+      "    cmake -DCMAKE_PREFIX_PATH=\"C:/Qt/6.10.0/msvc2022_64\" ..\n\n"
+      "  Method 3: Run setup_environment.bat (if available)\n"
+            "================================================================================\n"
+            )
+     endif()
+        endif()
+    else()
+  message(STATUS "✓ Using user-defined CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
     endif()
 endif()
 
@@ -35,11 +84,16 @@ add_executable(${PROJECT_NAME} ${DATAVIZ_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${SRC_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
 
+# ===================================================================
+# Graphviz Configuration - Optional dependency
+# ===================================================================
+
 set(GRAPHVIZ_FOUND OFF)
 set(GRAPHVIZ_ROOT_DIR "")
 set(GRAPHVIZ_DLLS)
 
 if(WIN32)
+    # Search for Graphviz using environment variables and common paths
     set(GRAPHVIZ_SEARCH_PATHS
         "$ENV{GRAPHVIZ_ROOT}"
         "$ENV{GRAPHVIZ_HOME}"
@@ -48,58 +102,58 @@ if(WIN32)
     )
 
     foreach(candidate_path IN LISTS GRAPHVIZ_SEARCH_PATHS)
-        if(candidate_path AND EXISTS "${candidate_path}/include/graphviz/gvc.h")
-            set(GRAPHVIZ_FOUND ON)
+if(candidate_path AND EXISTS "${candidate_path}/include/graphviz/gvc.h")
+set(GRAPHVIZ_FOUND ON)
             set(GRAPHVIZ_ROOT_DIR "${candidate_path}")
             break()
-        endif()
+     endif()
     endforeach()
 
     if(GRAPHVIZ_FOUND)
-        message(STATUS "Graphviz detected at ${GRAPHVIZ_ROOT_DIR}")
+        message(STATUS "✓ Graphviz detected at ${GRAPHVIZ_ROOT_DIR}")
         target_include_directories(${PROJECT_NAME} PRIVATE "${GRAPHVIZ_ROOT_DIR}/include")
         set(GRAPHVIZ_LIBRARY_NAMES gvc cgraph cdt)
         set(GRAPHVIZ_LINK_LIBRARIES)
 
-        foreach(lib_name IN LISTS GRAPHVIZ_LIBRARY_NAMES)
-            find_library(GRAPHVIZ_${lib_name}_LIBRARY NAMES ${lib_name}
-                PATHS "${GRAPHVIZ_ROOT_DIR}/lib"
-                NO_DEFAULT_PATH
+     foreach(lib_name IN LISTS GRAPHVIZ_LIBRARY_NAMES)
+   find_library(GRAPHVIZ_${lib_name}_LIBRARY NAMES ${lib_name}
+             PATHS "${GRAPHVIZ_ROOT_DIR}/lib"
+             NO_DEFAULT_PATH
             )
 
-            if(GRAPHVIZ_${lib_name}_LIBRARY)
-                list(APPEND GRAPHVIZ_LINK_LIBRARIES "${GRAPHVIZ_${lib_name}_LIBRARY}")
-            else()
-                set(GRAPHVIZ_FOUND OFF)
-                message(WARNING "Graphviz library ${lib_name} not found under ${GRAPHVIZ_ROOT_DIR}/lib")
-                break()
+     if(GRAPHVIZ_${lib_name}_LIBRARY)
+     list(APPEND GRAPHVIZ_LINK_LIBRARIES "${GRAPHVIZ_${lib_name}_LIBRARY}")
+    else()
+     set(GRAPHVIZ_FOUND OFF)
+    message(WARNING "Graphviz library ${lib_name} not found under ${GRAPHVIZ_ROOT_DIR}/lib")
+      break()
             endif()
         endforeach()
 
         if(GRAPHVIZ_FOUND)
             target_link_libraries(${PROJECT_NAME} PRIVATE ${GRAPHVIZ_LINK_LIBRARIES})
-            set(GRAPHVIZ_DLL_NAMES gvc.dll cgraph.dll cdt.dll)
+          set(GRAPHVIZ_DLL_NAMES gvc.dll cgraph.dll cdt.dll)
 
-            foreach(dll_name IN LISTS GRAPHVIZ_DLL_NAMES)
-                set(dll_path "${GRAPHVIZ_ROOT_DIR}/bin/${dll_name}")
-                if(EXISTS "${dll_path}")
-                    list(APPEND GRAPHVIZ_DLLS "${dll_path}")
-                endif()
-            endforeach()
+     foreach(dll_name IN LISTS GRAPHVIZ_DLL_NAMES)
+    set(dll_path "${GRAPHVIZ_ROOT_DIR}/bin/${dll_name}")
+           if(EXISTS "${dll_path}")
+      list(APPEND GRAPHVIZ_DLLS "${dll_path}")
         endif()
+     endforeach()
+   endif()
     else()
-        message(WARNING "Graphviz headers not found; the fallback layout will be used.")
+        message(STATUS "⚠ Graphviz not found - Using fallback graph layout (optional)")
     endif()
 
     if(GRAPHVIZ_DLLS)
         foreach(graphviz_dll IN LISTS GRAPHVIZ_DLLS)
-            add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${graphviz_dll}"
-                    $<TARGET_FILE_DIR:${PROJECT_NAME}>
-                COMMENT "Copying ${graphviz_dll} to output directory"
-            )
-        endforeach()
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${graphviz_dll}"
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>
+     COMMENT "Copying ${graphviz_dll} to output directory"
+     )
+     endforeach()
     endif()
 endif()
 
@@ -116,3 +170,23 @@ endif()
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
+
+# ===================================================================
+# Configuration Summary
+# ===================================================================
+message(STATUS "")
+message(STATUS "================================================================================")
+message(STATUS "  DataViz-UIT Configuration Summary")
+message(STATUS "================================================================================")
+message(STATUS "  CMake Version:     ${CMAKE_VERSION}")
+message(STATUS "  C++ Standard:         C++${CMAKE_CXX_STANDARD}")
+message(STATUS "  Build Type:     ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Qt Version: ${Qt6_VERSION}")
+message(STATUS "  Qt Location:          ${CMAKE_PREFIX_PATH}")
+message(STATUS "  Graphviz Found:       ${GRAPHVIZ_FOUND}")
+if(GRAPHVIZ_FOUND)
+message(STATUS "  Graphviz Location:    ${GRAPHVIZ_ROOT_DIR}")
+endif()
+message(STATUS "  Output Directory:     ${CMAKE_BINARY_DIR}/bin")
+message(STATUS "================================================================================")
+message(STATUS "")

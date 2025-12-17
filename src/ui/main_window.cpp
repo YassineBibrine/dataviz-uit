@@ -4,6 +4,7 @@
 #include "metrics_panel.h"
 #include "toolbox_panel.h"
 #include "structure_selector.h"
+#include "code_generator_dialog.h"  // NEW: Include code generator dialog
 #include "../orchestration/algorithm_manager.h" 
 
 #include <QVBoxLayout>
@@ -129,13 +130,13 @@ void MainWindow::connectSignals() {
         this, &MainWindow::onStructureSelected);
 
     connect(structureSelector, &StructureSelector::structureRemoved,
-    this, &MainWindow::onStructureRemoved);
-    
+        this, &MainWindow::onStructureRemoved);
+  
     connect(structureSelector, &StructureSelector::finalizeInteractiveRequested,
-    this, &MainWindow::onFinalizeInteractive);
+      this, &MainWindow::onFinalizeInteractive);
  
     connect(structureSelector, &StructureSelector::clearInteractiveRequested,
-  this, &MainWindow::onClearInteractive);
+     this, &MainWindow::onClearInteractive);
 }
 
 void MainWindow::onAlgorithmSelected(QString algorithm) {
@@ -191,8 +192,26 @@ void MainWindow::createMenuBar() {
     QMenu* fileMenu = menuBar()->addMenu("File");
     QAction* exitAction = fileMenu->addAction("Exit");
     connect(exitAction, &QAction::triggered, this, &QMainWindow::close);
+    
+    // NEW: Tools menu with Code Generator and Metrics Toggle
+    QMenu* toolsMenu = menuBar()->addMenu("Tools");
+    
+  // Code Generator action
+    QAction* codeGenAction = toolsMenu->addAction("Code Generator && Parser...");
+    codeGenAction->setToolTip("Generate C++ code from structures or parse code to create structures");
+ connect(codeGenAction, &QAction::triggered, this, &MainWindow::onShowCodeGenerator);
+    
+toolsMenu->addSeparator();
+    
+    // Metrics Panel toggle action
+    toggleMetricsAction = toolsMenu->addAction("Show Algorithm Metrics");
+  toggleMetricsAction->setCheckable(true);
+    toggleMetricsAction->setChecked(true); // Visible by default
+    toggleMetricsAction->setToolTip("Toggle algorithm metrics panel visibility");
+    connect(toggleMetricsAction, &QAction::toggled, this, &MainWindow::onToggleMetricsPanel);
+    
     QMenu* helpMenu = menuBar()->addMenu("Help");
-    helpMenu->addAction("About");
+ helpMenu->addAction("About");
 }
 
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
@@ -326,4 +345,36 @@ void MainWindow::updateVisualizationForStructure(const std::string& structureId)
 
 void MainWindow::closeEvent(QCloseEvent* e) {
     e->accept();
+}
+
+void MainWindow::onShowCodeGenerator() {
+    CodeGeneratorDialog dialog(dataModelManager.get(), this);
+    connect(&dialog, &CodeGeneratorDialog::structureCreatedFromCode,
+     this, &MainWindow::onStructureCreatedFromCode);
+    dialog.exec();
+}
+
+void MainWindow::onStructureCreatedFromCode(QString structureId) {
+    // Refresh structure selector to show the new structure
+    if (structureSelector) {
+        structureSelector->refreshStructureList();
+    }
+    
+    // Update visualization for the new structure
+    updateVisualizationForStructure(structureId.toStdString());
+    
+    qDebug() << "Structure created from code:" << structureId;
+}
+
+void MainWindow::onToggleMetricsPanel(bool show) {
+    if (metricsPanel) {
+        metricsPanel->setVisible(show);
+        
+        // Update menu action text
+        if (toggleMetricsAction) {
+            toggleMetricsAction->setText(show ? "Hide Algorithm Metrics" : "Show Algorithm Metrics");
+        }
+        
+  qDebug() << "Metrics panel" << (show ? "shown" : "hidden");
+    }
 }
