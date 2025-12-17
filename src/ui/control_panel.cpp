@@ -1,4 +1,5 @@
 #include "control_panel.h"
+#include "../orchestration/algorithm_manager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -10,7 +11,19 @@ ControlPanel::ControlPanel(QWidget* parent)
     setAttribute(Qt::WA_StyledBackground, true);
     setupUI();
     connectSignals();
-    populateAlgorithms({ "BFS", "DFS", "Dijkstra" });
+    
+    // Charger les vrais algorithmes depuis AlgorithmManager
+    AlgorithmManager& manager = AlgorithmManager::getInstance();
+    std::vector<QString> algorithms;
+    
+    // Ajouter tous les algorithmes disponibles
+    algorithms.push_back("BubbleSort");
+    algorithms.push_back("QuickSort");
+    algorithms.push_back("MergeSort");
+    algorithms.push_back("RangeFilter");
+    algorithms.push_back("Normalize");
+    
+    populateAlgorithms(algorithms);
 }
 
 void ControlPanel::setupUI()
