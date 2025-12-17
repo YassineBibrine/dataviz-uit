@@ -74,3 +74,8 @@ AnimationFrame FrameRecorder::generateNodesFrame(int count) {
 std::vector<AnimationFrame> FrameRecorder::getAllFrames() const {
     return frameBuffer;
 }
+
+// ✅ AJOUT OBLIGATOIRE
+void FrameRecorder::reset() {
+    frameBuffer.clear();
+}

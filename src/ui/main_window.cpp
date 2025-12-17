@@ -28,7 +28,7 @@ MainWindow::MainWindow(QWidget* parent)
       frameRecorder(),
       currentAlgorithm(nullptr)
 {
-    setWindowTitle("DataViz UIT - Visualisation de Structures de Donn�es");
+    setWindowTitle("DataViz UIT - Visualisation de Structures de Données");
     resize(1350, 900);
     setMinimumSize(1200, 750);
 
@@ -146,9 +146,9 @@ void MainWindow::onAlgorithmSelected(QString algorithm) {
         QMessageBox::warning(this, "No Structure Selected",
   "Please select or create a data structure before choosing an algorithm.\n\n"
    "You can:\n"
-   "� Create a structure from the Control Panel\n"
-          "� Draw nodes/edges and finalize them\n"
-            "� Select an existing structure from the Structure list");
+   "• Create a structure from the Control Panel\n"
+          "• Draw nodes/edges and finalize them\n"
+            "• Select an existing structure from the Structure list");
     selectedAlgorithm = "";
         return;
     }
@@ -249,6 +249,33 @@ void MainWindow::onStructureSelected(QString structureId) {
             toolboxPanel->updateTools(structureType);
        qDebug() << "Toolbox updated for structure type:" << structureType;
     }
+
+}
+
+void MainWindow::onAlgorithmSelected(QString algorithm) {
+    selectedAlgorithm = algorithm.toStdString();
+}
+
+void MainWindow::onPlayClicked() {
+    controlPanel->setPlayingState(true);
+    if (!selectedAlgorithm.empty()) executeAlgorithm(selectedAlgorithm);
+}
+
+void MainWindow::onPauseClicked() { controlPanel->setPlayingState(false); }
+void MainWindow::onResetClicked() { controlPanel->setPlayingState(false); }
+void MainWindow::onStepForwardClicked() {}
+void MainWindow::onStepBackwardClicked() {}
+void MainWindow::onSpeedChanged(int speed) { qDebug() << "Speed:" << speed; }
+
+void MainWindow::onDataStructureSelected(QString structure) {
+    qDebug() << "Structure selected (UI):" << structure;
+
+    // âœ… 0. RESET DU FRAME RECORDER (OBLIGATOIRE)
+    frameRecorder.reset();
+
+    // 1. Mise Ã  jour de la Toolbox
+    if (toolboxPanel) {
+        toolboxPanel->updateTools(structure);
            break;
         }
         }
