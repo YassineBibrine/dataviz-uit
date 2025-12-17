@@ -164,6 +164,9 @@ void MainWindow::onSpeedChanged(int speed) { qDebug() << "Speed:" << speed; }
 void MainWindow::onDataStructureSelected(QString structure) {
     qDebug() << "Structure selected (UI):" << structure;
 
+    // ✅ 0. RESET DU FRAME RECORDER (OBLIGATOIRE)
+    frameRecorder.reset();
+
     // 1. Mise à jour de la Toolbox
     if (toolboxPanel) {
         toolboxPanel->updateTools(structure);

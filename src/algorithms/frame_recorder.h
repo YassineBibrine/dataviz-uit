@@ -1,4 +1,4 @@
-#ifndef FRAME_RECORDER_H
+﻿#ifndef FRAME_RECORDER_H
 #define FRAME_RECORDER_H
 
 #include <vector>
@@ -22,8 +22,8 @@ public:
     AnimationFrame generateNodesFrame(int count);
     std::vector<AnimationFrame> getAllFrames() const;
 
-    // Clear all recorded frames
-    void clear() { frameBuffer.clear(); }
+    // ✅ nouveau : reset du FrameRecorder (corrige le bug du canvas)
+    void reset();
 };
 
 #endif // FRAME_RECORDER_H
