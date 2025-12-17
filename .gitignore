@@ -10,7 +10,6 @@ out/
 cmake-build-*/
 
 # CMake
-CMakeLists.txt
 CMakeUserPresets.json
 CMakeCache.txt
 CMakeFiles/

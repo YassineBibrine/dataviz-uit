@@ -99,6 +99,8 @@ void VisualizationPane::updateDisplay() {
     nodeIds.reserve(positions.size());
     std::map<std::string, std::string> nodeTypeMap;
     for (const auto& np : positions) {
+        nodeIds.push_back(np.id);
+        nodeTypeMap[np.id] = np.type;
         f.nodePositions[np.id] = { np.x, np.y };
         f.nodeShapes[np.id] = np.type;
         if (nodeValues.count(np.id)) f.nodeLabels[np.id] = nodeValues[np.id];
@@ -176,20 +178,18 @@ void VisualizationPane::updateDisplay() {
 
         auto posMap = layoutEngine->computeLayout(oss.str());
         if (!posMap.empty()) {
-            for (const auto& kv : posMap) {
-                f.nodePositions[kv.first] = { kv.second.first, kv.second.second };
-            }
-            for (const auto& nt : nodeTypeMap) {
-                f.nodeShapes[nt.first] = nt.second;
-            }
-        }
-        else {
-            // fallback to manual positions
-            for (const auto& np : positions) {
-                f.nodePositions[np.id] = { np.x, np.y };
-                f.nodeShapes[np.id] = np.type;
-            }
-        }
+            f.nodePositions = posMap;
+             for (const auto& nt : nodeTypeMap) {
+                 f.nodeShapes[nt.first] = nt.second;
+             }
+         }
+         else {
+             // fallback to manual positions
+             for (const auto& np : positions) {
+                 f.nodePositions[np.id] = { np.x, np.y };
+                 f.nodeShapes[np.id] = np.type;
+             }
+         }
     }
     else {
         // Not a tree or graphviz not available: use positions from interaction manager

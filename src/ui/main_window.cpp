@@ -3,6 +3,8 @@
 #include "control_panel.h"
 #include "metrics_panel.h"
 #include "toolbox_panel.h"
+#include "structure_selector.h"
+#include "code_generator_dialog.h"  // NEW: Include code generator dialog
 #include "../orchestration/algorithm_manager.h" 
 
 #include <QVBoxLayout>
@@ -13,31 +15,25 @@
 #include <QLabel>
 #include <QDebug>
 #include <QMessageBox> 
-#include <QCloseEvent> 
+#include <QCloseEvent>
+#include <QScrollArea>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
+      dataModelManager(std::make_unique<DataModelManager>()),
       visualizationPane(std::make_unique<VisualizationPane>(this)),
       controlPanel(std::make_unique<ControlPanel>(this)),
       metricsPanel(std::make_unique<MetricsPanel>(this)),
-      currentAlgorithm(nullptr),
       algoManager(AlgorithmManager::getInstance()),
-      frameRecorder(this)
-    // On garde l'initialisation du DataModelManager (Crucial pour ton backend !)
-    dataModelManager(std::make_unique<DataModelManager>()), 
-    visualizationPane(std::make_unique<VisualizationPane>(this)),
-    controlPanel(std::make_unique<ControlPanel>(this)),
-    metricsPanel(std::make_unique<MetricsPanel>(this)),
-    algoManager(AlgorithmManager::getInstance())
+      frameRecorder(),
+      currentAlgorithm(nullptr)
 {
-    // On garde ton titre et ta taille (plus confortables)
     setWindowTitle("DataViz UIT - Visualisation de Structures de Données");
-    resize(1300, 850);
-    setMinimumSize(1150, 750);
+    resize(1350, 900);
+    setMinimumSize(1200, 750);
 
-    // Connexion vitale : Lier l'interface graphique au cerveau (Backend)
     if (visualizationPane && visualizationPane->getInteractionManager()) {
-        visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
+      visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
     }
 
     setupUI();
@@ -48,56 +44,74 @@ MainWindow::MainWindow(QWidget* parent)
 MainWindow::~MainWindow() = default;
 
 void MainWindow::setupUI() {
-    QWidget* central = new QWidget(this);
+ QWidget* central = new QWidget(this);
     setCentralWidget(central);
 
-    QVBoxLayout* mainLayout = new QVBoxLayout(central);
+  QVBoxLayout* mainLayout = new QVBoxLayout(central);
     mainLayout->setContentsMargins(10, 5, 10, 10);
     mainLayout->setSpacing(10);
 
-    // --- EN-TÊTE (Ton Design) ---
+    // Header
     QHBoxLayout* headerLayout = new QHBoxLayout();
     headerLayout->addStretch();
     QLabel* titleLabel = new QLabel("DataViz UIT", this);
-    titleLabel->setObjectName("appTitle"); // Pour le CSS
+    titleLabel->setObjectName("appTitle");
     titleLabel->setAlignment(Qt::AlignCenter);
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
 
     mainLayout->addLayout(headerLayout, 0);
 
-    // --- CONTENU PRINCIPAL ---
+    // Main Content
     QHBoxLayout* contentLayout = new QHBoxLayout();
     contentLayout->setSpacing(15);
 
-    // 1. Outils (Gauche)
+    // Left: Toolbox
     toolboxPanel = new ToolboxPanel(this);
     toolboxPanel->setObjectName("borderedPanel");
     toolboxPanel->setFixedWidth(110);
     contentLayout->addWidget(toolboxPanel);
 
-    // 2. Visualisation (Centre)
-    visualizationPane->setObjectName("borderedPanel");
+ // Center: Visualization
+ visualizationPane->setObjectName("borderedPanel");
     contentLayout->addWidget(visualizationPane.get(), 1);
 
-    // 3. Droite (Contrôles + Métriques)
+ // Right: Scrollable Panel
+    QScrollArea* rightScrollArea = new QScrollArea(this);
+    rightScrollArea->setWidgetResizable(true);
+    rightScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+rightScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    rightScrollArea->setFrameShape(QFrame::NoFrame);
+    rightScrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
+    
     QWidget* rightContainer = new QWidget();
     QVBoxLayout* rightLayout = new QVBoxLayout(rightContainer);
-    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setContentsMargins(5, 5, 10, 5);
     rightLayout->setSpacing(15);
 
-    controlPanel->setObjectName("borderedPanel");
-    metricsPanel->setObjectName("borderedPanel");
+    // Structure Selector
+    structureSelector = new StructureSelector(this);
+    structureSelector->setDataModelManager(dataModelManager.get());
+    structureSelector->setObjectName("borderedPanel");
+    rightLayout->addWidget(structureSelector);
 
+    // Control Panel
+    controlPanel->setObjectName("borderedPanel");
     rightLayout->addWidget(controlPanel.get());
+
+    // Metrics Panel
+    metricsPanel->setObjectName("borderedPanel");
     rightLayout->addWidget(metricsPanel.get());
 
-    rightContainer->setFixedWidth(360);
-    contentLayout->addWidget(rightContainer);
+    rightLayout->addStretch();
+
+    rightScrollArea->setWidget(rightContainer);
+    rightScrollArea->setFixedWidth(400);
+    
+  contentLayout->addWidget(rightScrollArea);
 
     mainLayout->addLayout(contentLayout, 1);
 
-    // Connexion Outils -> Visualisation
     connect(toolboxPanel, &ToolboxPanel::toolSelected,
         visualizationPane.get(), &VisualizationPane::setInteractionMode);
 }
@@ -110,40 +124,132 @@ void MainWindow::connectSignals() {
     connect(controlPanel.get(), &ControlPanel::stepBackwardClicked, this, &MainWindow::onStepBackwardClicked);
 
     connect(controlPanel.get(), &ControlPanel::algorithmSelected, this, &MainWindow::onAlgorithmSelected);
-    connect(controlPanel.get(), &ControlPanel::dataStructureSelected, this, &MainWindow::onDataStructureSelected);
     connect(controlPanel.get(), &ControlPanel::speedChanged, this, &MainWindow::onSpeedChanged);
-    connect(controlPanel.get(), &ControlPanel::dataSizeChanged, this, &MainWindow::onDataSizeChanged);
-    // --- NOUVEAU : génération de nœuds ---
-    connect(controlPanel.get(), &ControlPanel::generateNodesRequested,
-        this, [this](int count) {
-            frameRecorder.generateNodesFrame(count);
-        });
+    
+    connect(structureSelector, &StructureSelector::structureSelected,
+        this, &MainWindow::onStructureSelected);
+
+    connect(structureSelector, &StructureSelector::structureRemoved,
+        this, &MainWindow::onStructureRemoved);
+  
+    connect(structureSelector, &StructureSelector::finalizeInteractiveRequested,
+      this, &MainWindow::onFinalizeInteractive);
+ 
+    connect(structureSelector, &StructureSelector::clearInteractiveRequested,
+     this, &MainWindow::onClearInteractive);
+}
+
+void MainWindow::onAlgorithmSelected(QString algorithm) {
+    selectedAlgorithm = algorithm.toStdString();
+    
+    if (!dataModelManager->getSelectedStructure()) {
+        QMessageBox::warning(this, "No Structure Selected",
+  "Please select or create a data structure before choosing an algorithm.\n\n"
+   "You can:\n"
+   "• Create a structure from the Control Panel\n"
+          "• Draw nodes/edges and finalize them\n"
+            "• Select an existing structure from the Structure list");
+    selectedAlgorithm = "";
+        return;
+    }
+    
+    qDebug() << "Algorithm selected:" << algorithm 
+   << "for structure:" << QString::fromStdString(dataModelManager->getSelectedStructureId());
+}
+
+void MainWindow::onPlayClicked() {
+    if (selectedAlgorithm.empty()) {
+        QMessageBox::warning(this, "No Algorithm", "Please select an algorithm first.");
+        return;
+ }
+    
+    if (!dataModelManager->getSelectedStructure()) {
+  QMessageBox::warning(this, "No Structure", "Please select a data structure first.");
+        return;
+    }
+    
+    controlPanel->setPlayingState(true);
+    executeAlgorithm(selectedAlgorithm);
+}
+
+void MainWindow::onPauseClicked() { 
+    controlPanel->setPlayingState(false); 
+}
+
+void MainWindow::onResetClicked() { 
+controlPanel->setPlayingState(false); 
+}
+
+void MainWindow::onStepForwardClicked() {}
+
+void MainWindow::onStepBackwardClicked() {}
+
+void MainWindow::onSpeedChanged(int speed) { 
+    qDebug() << "Speed:" << speed; 
 }
 
 void MainWindow::createMenuBar() {
     QMenu* fileMenu = menuBar()->addMenu("File");
     QAction* exitAction = fileMenu->addAction("Exit");
     connect(exitAction, &QAction::triggered, this, &QMainWindow::close);
+    
+    // NEW: Tools menu with Code Generator and Metrics Toggle
+    QMenu* toolsMenu = menuBar()->addMenu("Tools");
+    
+  // Code Generator action
+    QAction* codeGenAction = toolsMenu->addAction("Code Generator && Parser...");
+    codeGenAction->setToolTip("Generate C++ code from structures or parse code to create structures");
+ connect(codeGenAction, &QAction::triggered, this, &MainWindow::onShowCodeGenerator);
+    
+toolsMenu->addSeparator();
+    
+    // Metrics Panel toggle action
+    toggleMetricsAction = toolsMenu->addAction("Show Algorithm Metrics");
+  toggleMetricsAction->setCheckable(true);
+    toggleMetricsAction->setChecked(true); // Visible by default
+    toggleMetricsAction->setToolTip("Toggle algorithm metrics panel visibility");
+    connect(toggleMetricsAction, &QAction::toggled, this, &MainWindow::onToggleMetricsPanel);
+    
     QMenu* helpMenu = menuBar()->addMenu("Help");
-    helpMenu->addAction("About");
+ helpMenu->addAction("About");
 }
 
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
+    DataStructure* targetStructure = dataModelManager->getSelectedStructure();
+    if (!targetStructure) {
+    qDebug() << "No structure selected for algorithm execution";
+        QMessageBox::warning(this, "No Structure", 
+      "Please select a data structure from the Structure Selector.");
+  return;
+    }
+    
     auto algo = algoManager.createAlgorithm("Sorting", algorithm);
     if (algo) {
-        qDebug() << "Algo created:" << QString::fromStdString(algorithm);
-        // Ici on pourra ajouter algo->execute() plus tard si besoin
+      qDebug() << "Algo created:" << QString::fromStdString(algorithm)
+    << "on structure:" << QString::fromStdString(dataModelManager->getSelectedStructureId());
     }
     else {
-        qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
+    qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
     }
 }
 
-void MainWindow::loadDataStructure(const std::string& type, int size) {
-    // C'est ici que la magie opère : On demande au Backend de créer la structure
+void MainWindow::onStructureSelected(QString structureId) {
+    std::string id = structureId.toStdString();
+    
     if (dataModelManager) {
-        dataModelManager->createDataStructure(type, size);
+        dataModelManager->selectStructure(id);
+        
+   // Get structure type and update toolbox
+        auto structures = dataModelManager->getAllStructures();
+        for (const auto& meta : structures) {
+     if (meta.id == id) {
+      // Update toolbox panel based on structure type
+         if (toolboxPanel) {
+       QString structureType = QString::fromStdString(meta.type);
+            toolboxPanel->updateTools(structureType);
+       qDebug() << "Toolbox updated for structure type:" << structureType;
     }
+
 }
 
 void MainWindow::onAlgorithmSelected(QString algorithm) {
@@ -164,45 +270,138 @@ void MainWindow::onSpeedChanged(int speed) { qDebug() << "Speed:" << speed; }
 void MainWindow::onDataStructureSelected(QString structure) {
     qDebug() << "Structure selected (UI):" << structure;
 
-    // ✅ 0. RESET DU FRAME RECORDER (OBLIGATOIRE)
+    // âœ… 0. RESET DU FRAME RECORDER (OBLIGATOIRE)
     frameRecorder.reset();
 
-    // 1. Mise à jour de la Toolbox
+    // 1. Mise Ã  jour de la Toolbox
     if (toolboxPanel) {
         toolboxPanel->updateTools(structure);
+           break;
+        }
+        }
+  
+        updateVisualizationForStructure(id);
+        
+     qDebug() << "Structure selected:" << structureId;
     }
+}
 
-    // 2. Nettoyage de l'affichage (Anti-Crash Visuel)
+void MainWindow::onStructureRemoved(QString structureId) {
+    qDebug() << "Structure removed:" << structureId;
+    
     if (visualizationPane) {
         visualizationPane->reset();
     }
+}
 
-    // 3. MAPPING DES NOMS (Correction "Binary Tree" -> "BinaryTree")
-    std::string backendKey = structure.toStdString();
-    if (structure == "Binary Tree") {
-        backendKey = "BinaryTree";
+void MainWindow::onFinalizeInteractive(QString type, QString name) {
+    if (!visualizationPane || !visualizationPane->getInteractionManager()) {
+        return;
     }
-    else if (structure == "Linked List") {
-        backendKey = "LinkedList";
+    
+    auto* interactionMgr = visualizationPane->getInteractionManager();
+    
+    if (!interactionMgr->hasInteractiveData()) {
+     QMessageBox::information(this, "No Data", 
+          "No nodes or edges to finalize.\n\n"
+      "Draw some nodes using the Node tool, then connect them with the Link tool.");
+ return;
     }
-
-    // 4. PROTECTION ANTI-CRASH (Try-Catch)
-    try {
-        loadDataStructure(backendKey, 10);
-    }
-    catch (const std::exception& e) {
-        QString errorMsg = QString("Le backend ne connait pas encore cette structure : %1\n\nErreur technique : %2")
-            .arg(structure)
-            .arg(e.what());
-        QMessageBox::critical(this, "Structure non implémentée", errorMsg);
+    
+    auto [nodeCount, edgeCount] = interactionMgr->getInteractiveStats();
+    
+    qDebug() << "Finalizing structure:" << type << name 
+      << "Nodes:" << nodeCount << "Edges:" << edgeCount;
+  
+    std::string structId = interactionMgr->finalizeStructure(
+   type.toStdString(), 
+        name.toStdString()
+    );
+    
+    if (!structId.empty()) {
+        if (structureSelector) {
+      structureSelector->refreshStructureList();
+        }
+   
+        // Update toolbox for the newly created structure type
+if (toolboxPanel) {
+        toolboxPanel->updateTools(type);
+      qDebug() << "Toolbox updated for finalized structure type:" << type;
+  }
+        
+        QMessageBox::information(this, "Structure Created",
+            QString("Custom structure created successfully!\n\n"
+          "Type: %1\n"
+    "Nodes: %2\n"
+       "Edges: %3\n\n"
+        "The structure is now available for algorithms.")
+          .arg(type).arg(nodeCount).arg(edgeCount));
+    } else {
+ QMessageBox::warning(this, "Creation Failed",
+       "Failed to create structure. Please try again.");
     }
 }
 
-void MainWindow::onDataSizeChanged(int size) {
-    if (visualizationPane) visualizationPane->setRenderSize(size);
+void MainWindow::onClearInteractive() {
+    if (visualizationPane && visualizationPane->getInteractionManager()) {
+        visualizationPane->getInteractionManager()->clearInteractive();
+        visualizationPane->update();
+        
+        qDebug() << "Interactive canvas cleared";
+  }
 }
 
+void MainWindow::updateVisualizationForStructure(const std::string& structureId) {
+    if (!dataModelManager || !visualizationPane) {
+   return;
+    }
+    
+    DataStructure* structure = dataModelManager->getStructure(structureId);
+    if (!structure) {
+     return;
+    }
+    
+  auto nodes = structure->getNodes();
+    auto edges = structure->getEdges();
+    
+    qDebug() << "Updating visualization for structure:" << QString::fromStdString(structureId)
+       << "Nodes:" << nodes.size() << "Edges:" << edges.size();
+    
+    visualizationPane->update();
+}
 
 void MainWindow::closeEvent(QCloseEvent* e) {
     e->accept();
+}
+
+void MainWindow::onShowCodeGenerator() {
+    CodeGeneratorDialog dialog(dataModelManager.get(), this);
+    connect(&dialog, &CodeGeneratorDialog::structureCreatedFromCode,
+     this, &MainWindow::onStructureCreatedFromCode);
+    dialog.exec();
+}
+
+void MainWindow::onStructureCreatedFromCode(QString structureId) {
+    // Refresh structure selector to show the new structure
+    if (structureSelector) {
+        structureSelector->refreshStructureList();
+    }
+    
+    // Update visualization for the new structure
+    updateVisualizationForStructure(structureId.toStdString());
+    
+    qDebug() << "Structure created from code:" << structureId;
+}
+
+void MainWindow::onToggleMetricsPanel(bool show) {
+    if (metricsPanel) {
+        metricsPanel->setVisible(show);
+        
+        // Update menu action text
+        if (toggleMetricsAction) {
+            toggleMetricsAction->setText(show ? "Hide Algorithm Metrics" : "Show Algorithm Metrics");
+        }
+        
+  qDebug() << "Metrics panel" << (show ? "shown" : "hidden");
+    }
 }

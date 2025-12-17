@@ -8,13 +8,15 @@
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
 #include "../algorithms/frame_recorder.h"   //  le chemin si nécessaire
-
+#include "../algorithms/algorithm_runner.h"
 
 class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
+class StructureSelector;
 class Algorithm; // Forward declaration générique
+class CodeGeneratorDialog; // NEW: Forward declaration for code generator
 
 /**
  * @class MainWindow
@@ -41,8 +43,19 @@ private slots:
 
     void onSpeedChanged(int speed);
     void onAlgorithmSelected(QString algorithm);
-    void onDataStructureSelected(QString structure);
-    void onDataSizeChanged(int size);
+    
+    // --- Structure Selector slots ---
+    void onStructureSelected(QString structureId);
+    void onStructureRemoved(QString structureId);
+    void onFinalizeInteractive(QString type, QString name);
+    void onClearInteractive();
+    
+    // NEW: Code Generator slots
+    void onShowCodeGenerator();
+    void onStructureCreatedFromCode(QString structureId);
+  
+    // NEW: Metrics Panel toggle slot
+  void onToggleMetricsPanel(bool show);
 
 private:
     void setupUI();
@@ -51,24 +64,25 @@ private:
 
     // Fonctions métier
     void executeAlgorithm(const std::string& algorithm);
-    void loadDataStructure(const std::string& type, int size);
+    void updateVisualizationForStructure(const std::string& structureId);
 
     // --- COMPOSANTS UI ---
     ToolboxPanel* toolboxPanel = nullptr;
+    StructureSelector* structureSelector = nullptr;
     std::unique_ptr<VisualizationPane> visualizationPane;
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
+    
+ // NEW: Menu action for metrics toggle
+    QAction* toggleMetricsAction = nullptr;
 
-    // Core components
-    AlgorithmRunner* currentAlgorithm{nullptr};
-    AlgorithmManager& algoManager = AlgorithmManager::getInstance();
-    FrameRecorder frameRecorder;   // 👉 nouveau membre
     // --- COEUR DU SYSTEME (BACKEND) ---
     // C'est la ligne la plus importante pour ton projet :
     std::unique_ptr<DataModelManager> dataModelManager;
 
     // --- ALGORITHMES ---
     AlgorithmManager& algoManager;
-    Algorithm* currentAlgorithm = nullptr;
+    FrameRecorder frameRecorder;
+    AlgorithmRunner* currentAlgorithm = nullptr;
     std::string selectedAlgorithm;
 };
