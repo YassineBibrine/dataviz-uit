@@ -1,16 +1,39 @@
 #include "control_panel.h"
+#include "../orchestration/algorithm_manager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
+#include <QLabel>
 #include <QSpacerItem>
-
+#include <QComboBox>
+#include <QString>
 ControlPanel::ControlPanel(QWidget* parent)
-    : QWidget(parent)
+    : QWidget(parent),
+    algorithmCombo(nullptr),
+    playButton(nullptr),
+    pauseButton(nullptr),
+    resetButton(nullptr),
+    stepForwardButton(nullptr),
+    stepBackwardButton(nullptr),
+    speedSlider(nullptr),
+    currentFrameLabel(nullptr)
 {
     setAttribute(Qt::WA_StyledBackground, true);
     setupUI();
     connectSignals();
-    populateAlgorithms({ "BFS", "DFS", "Dijkstra" });
+
+    // Charger les vrais algorithmes depuis AlgorithmManager
+    AlgorithmManager& manager = AlgorithmManager::getInstance();
+    std::vector<QString> algorithms;
+    
+    // Ajouter tous les algorithmes disponibles
+    algorithms.push_back("BubbleSort");
+    algorithms.push_back("QuickSort");
+    algorithms.push_back("MergeSort");
+    algorithms.push_back("RangeFilter");
+    algorithms.push_back("Normalize");
+    
+    populateAlgorithms(algorithms);
 }
 
 void ControlPanel::setupUI()
@@ -41,15 +64,15 @@ void ControlPanel::setupUI()
     QHBoxLayout* playLayout = new QHBoxLayout();
     playLayout->setSpacing(8);
 
-    int btnH = 26;       
-    int btnW_Small = 45; 
-    int btnW_Large = 70;  
+    int btnH = 26;
+    int btnW_Small = 45;
+    int btnW_Large = 70;
 
     stepBackwardButton = new QPushButton("⏮");
     stepBackwardButton->setFixedSize(btnW_Small, btnH);
 
     playButton = new QPushButton("▶ Play");
-    playButton->setFixedSize(btnW_Large, btnH); 
+    playButton->setFixedSize(btnW_Large, btnH);
 
     pauseButton = new QPushButton("⏸ Pause");
     pauseButton->setFixedSize(btnW_Large, btnH);
@@ -63,7 +86,7 @@ void ControlPanel::setupUI()
     playLayout->addWidget(stepForwardButton);
 
     controlLayout->addLayout(playLayout);
-    controlLayout->addSpacing(8); 
+    controlLayout->addSpacing(8);
 
     // Reset button
     resetButton = new QPushButton("⟲ Reset");
@@ -101,21 +124,48 @@ void ControlPanel::connectSignals()
 
 // --- Public methods ---
 
-void ControlPanel::populateAlgorithms(const std::vector<QString>& algorithms)
-{
+void ControlPanel::updateAlgorithmList(const QString& structureType) {
     algorithmCombo->clear();
-    for (const auto& algo : algorithms) {
-        algorithmCombo->addItem(algo);
+
+    auto& manager = AlgorithmManager::getInstance();
+    auto categories = manager.getCategories();
+
+    QString type = structureType;
+
+    if (type == "Graph") {
+        for (const auto& algo : manager.getAlgorithmNames("Graph")) {
+            algorithmCombo->addItem(QString::fromStdString(algo));
+        }
+    }
+    else if (type == "Tree") {
+        for (const auto& algo : manager.getAlgorithmNames("Graph")) {
+            algorithmCombo->addItem(QString::fromStdString(algo));
+        }
+    }
+    else if (type == "List") {
+        for (const auto& algo : manager.getAlgorithmNames("Sorting")) {
+            algorithmCombo->addItem(QString::fromStdString(algo));
+        }
+        for (const auto& algo : manager.getAlgorithmNames("Filtering")) {
+            algorithmCombo->addItem(QString::fromStdString(algo));
+        }
+    }
+    else if (type == "Array") {
+        for (const auto& category : { "Sorting", "Filtering", "Transform" }) {
+            for (const auto& algo : manager.getAlgorithmNames(category)) {
+                algorithmCombo->addItem(QString::fromStdString(algo));
+            }
+        }
     }
 }
 
-void ControlPanel::setPlayingState(bool playing) 
-{ 
-    playButton->setEnabled(!playing); 
-    pauseButton->setEnabled(playing); 
+void ControlPanel::setPlayingState(bool playing)
+{
+    playButton->setEnabled(!playing);
+    pauseButton->setEnabled(playing);
 }
 
-void ControlPanel::enableControls(bool enabled) 
-{ 
-    this->setEnabled(enabled); 
+void ControlPanel::enableControls(bool enabled)
+{
+    this->setEnabled(enabled);
 }

@@ -79,3 +79,6 @@ std::vector<AnimationFrame> FrameRecorder::getAllFrames() const {
 void FrameRecorder::reset() {
     frameBuffer.clear();
 }
+void FrameRecorder::clear() {
+    frameBuffer.clear();
+}

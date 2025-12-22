@@ -1,5 +1,7 @@
 #include "algorithm_manager.h"
 #include "sorting_algorithm_factory.h"
+#include "filtering_algorithm_factory.h"
+#include "transform_algorithm_factory.h"
 #include <stdexcept>
 #include <memory>
 
@@ -13,11 +15,12 @@ AlgorithmManager& AlgorithmManager::getInstance() {
 AlgorithmManager::AlgorithmManager() {
     // Enregistre les factories concrètes au démarrage
     registerFactory("Sorting", std::make_unique<SortingAlgorithmFactory>());
+    registerFactory("Filtering", std::make_unique<FilteringAlgorithmFactory>());
+    registerFactory("Transform", std::make_unique<TransformAlgorithmFactory>());
 }
 
 void AlgorithmManager::registerFactory(const std::string& category, std::unique_ptr<AlgorithmFactory> factory) {
     factories_[category] = std::move(factory);
-    // Optionnel : remplir m_categories si tu l'utilises
 }
 
 std::unique_ptr<Algorithm> AlgorithmManager::createAlgorithm(const std::string& category, const std::string& type) {
@@ -40,4 +43,11 @@ std::vector<std::string> AlgorithmManager::getCategories() const {
         categories.push_back(pair.first);
     }
     return categories;
+}
+std::vector<std::string> AlgorithmManager::getAlgorithmNames(const std::string& category) const {
+    if (category == "Sorting") return { "BubbleSort", "QuickSort", "MergeSort" };
+    if (category == "Filtering") return { "RangeFilter" };
+    if (category == "Transform") return { "Normalize" };
+    if (category == "Graph") return { "BFS", "DFS", "Dijkstra" };
+    return {};
 }
