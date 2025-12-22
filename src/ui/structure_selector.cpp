@@ -77,21 +77,31 @@ selectedLabel = new QLabel("No structure selected", this);
     mainLayout->addWidget(finalizeGroup);
   
     // --- Management Buttons ---
-  QGroupBox* manageGroup = new QGroupBox("Manage Structures", this);
+    QGroupBox* manageGroup = new QGroupBox("Manage Structures", this);
     QVBoxLayout* manageLayout = new QVBoxLayout(manageGroup);
     manageLayout->setContentsMargins(8, 12, 8, 8);
     manageLayout->setSpacing(6);
+    
+    // Add "Create Samples" button at the top
+    QPushButton* createSamplesBtn = new QPushButton("?? Create Sample Structures", this);
+    createSamplesBtn->setToolTip("Create one sample structure for each type (Array, List, Tree, Graph)");
+    createSamplesBtn->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;");
+  connect(createSamplesBtn, &QPushButton::clicked, 
+            this, &StructureSelector::onCreateSamplesClicked);
+    manageLayout->addWidget(createSamplesBtn);
+    
+    manageLayout->addSpacing(4);
   
     renameBtn = new QPushButton("Rename", this);
     connect(renameBtn, &QPushButton::clicked, 
-         this, &StructureSelector::onRenameClicked);
- manageLayout->addWidget(renameBtn);
+            this, &StructureSelector::onRenameClicked);
+  manageLayout->addWidget(renameBtn);
  
-removeBtn = new QPushButton("Remove", this);
+    removeBtn = new QPushButton("Remove", this);
     removeBtn->setStyleSheet("background-color: #d9534f; color: white;");
     connect(removeBtn, &QPushButton::clicked, 
-            this, &StructureSelector::onRemoveClicked);
- manageLayout->addWidget(removeBtn);
+          this, &StructureSelector::onRemoveClicked);
+    manageLayout->addWidget(removeBtn);
 
     mainLayout->addWidget(manageGroup);
     
@@ -250,4 +260,39 @@ void StructureSelector::updateButtonStates() {
     
     removeBtn->setEnabled(hasSelection);
     renameBtn->setEnabled(hasSelection);
+}
+
+void StructureSelector::onCreateSamplesClicked() {
+    if (!dataManager) {
+      QMessageBox::warning(this, "No Data Manager",
+            "Data manager not initialized.");
+   return;
+  }
+    
+    // Confirm with the user
+    auto reply = QMessageBox::question(this, "Create Sample Structures",
+        "This will create 4 sample structures:\n"
+      "• Sample Array [5, 12, 8, 3, 15, 10]\n"
+     "• Sample Linked List [1?3?5?7?9]\n"
+        "• Sample Binary Tree [BST with 6 nodes]\n"
+   "• Sample Graph [4 nodes, connected]\n\n"
+        "Continue?",
+ QMessageBox::Yes | QMessageBox::No);
+    
+    if (reply == QMessageBox::Yes) {
+        // Create the sample structures
+        std::vector<std::string> createdIds = dataManager->createSampleStructures();
+        
+  // Refresh the list to show new structures
+   refreshStructureList();
+        
+        // Notify success
+        QMessageBox::information(this, "Samples Created",
+            QString("Successfully created %1 sample structure(s).\n"
+     "You can now select and run algorithms on them!")
+      .arg(createdIds.size()));
+        
+    // Emit signal that samples were created
+ emit samplesCreated();
+    }
 }

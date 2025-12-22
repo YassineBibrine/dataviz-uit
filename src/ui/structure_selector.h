@@ -26,13 +26,15 @@ signals:
     void structureRemoved(const QString& structureId);
     void finalizeInteractiveRequested(const QString& type, const QString& name);
     void clearInteractiveRequested();
+    void samplesCreated(); // NEW: Signal when samples are created
 
 private slots:
-  void onStructureClicked(QListWidgetItem* item);
-  void onRemoveClicked();
+    void onStructureClicked(QListWidgetItem* item);
+    void onRemoveClicked();
     void onFinalizeClicked();
     void onRenameClicked();
     void onClearInteractiveClicked();
+    void onCreateSamplesClicked(); // NEW: Slot for creating samples
 
 private:
     void setupUI();
@@ -41,9 +43,9 @@ private:
     QListWidget* structureList;
     QPushButton* removeBtn;
     QPushButton* finalizeBtn;
-  QPushButton* clearInteractiveBtn;
+    QPushButton* clearInteractiveBtn;
     QPushButton* renameBtn;
-  QLabel* selectedLabel;
+    QLabel* selectedLabel;
     QLabel* statsLabel;
     QComboBox* typeCombo;
     QLineEdit* nameEdit;

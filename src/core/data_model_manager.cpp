@@ -293,10 +293,88 @@ void DataModelManager::clearAll() {
 }
 
 bool DataModelManager::renameStructure(const std::string& structureId, const std::string& newName) {
-  auto it = metadata.find(structureId);
+    auto it = metadata.find(structureId);
     if (it != metadata.end()) {
-        it->second.name = newName;
+    it->second.name = newName;
         return true;
     }
     return false;
+}
+
+std::vector<std::string> DataModelManager::createSampleStructures() {
+    std::vector<std::string> createdIds;
+    
+    // Sample Array [5, 12, 8, 3, 15, 10]
+    {
+    std::string id = "sample_array";
+      auto arr = std::make_unique<ArrayStructure>(0);
+ arr->getData().clear();
+        arr->getData() = {5, 12, 8, 3, 15, 10};
+  
+        structures[id] = std::move(arr);
+        metadata[id] = StructureMetadata(id, "Sample Array", "Array", StructureCreationType::GENERATED);
+        createdIds.push_back(id);
+    }
+    
+  // Sample Linked List [1 -> 3 -> 5 -> 7 -> 9]
+    {
+        std::string id = "sample_list";
+        auto list = std::make_unique<ListStructure>();
+        list->append(1);
+        list->append(3);
+        list->append(5);
+    list->append(7);
+        list->append(9);
+        
+        structures[id] = std::move(list);
+     metadata[id] = StructureMetadata(id, "Sample Linked List", "List", StructureCreationType::GENERATED);
+     createdIds.push_back(id);
+    }
+    
+    // Sample Binary Search Tree [8, 3, 10, 1, 6, 14]
+    {
+     std::string id = "sample_tree";
+        auto tree = std::make_unique<TreeStructure>();
+        tree->insert(8);  // Root
+        tree->insert(3);  // Left
+   tree->insert(10); // Right
+    tree->insert(1);  // Left-left
+        tree->insert(6);  // Left-right
+        tree->insert(14); // Right-right
+  
+        structures[id] = std::move(tree);
+      metadata[id] = StructureMetadata(id, "Sample Binary Tree", "Tree", StructureCreationType::GENERATED);
+        createdIds.push_back(id);
+    }
+    
+    // Sample Graph (A <-> B <-> C, A <-> C, B <-> D)
+    {
+ std::string id = "sample_graph";
+     auto graph = std::make_unique<GraphStructure>(false); // Undirected
+        
+        if (auto* g = graph->getGraph()) {
+   // Add nodes
+            g->addNode("A", {{"label", "A"}});
+            g->addNode("B", {{"label", "B"}});
+ g->addNode("C", {{"label", "C"}});
+  g->addNode("D", {{"label", "D"}});
+    
+  // Add edges
+     g->addEdge("A", "B", 1.0);
+     g->addEdge("B", "C", 2.0);
+     g->addEdge("A", "C", 3.0);
+            g->addEdge("B", "D", 1.5);
+        }
+  
+        structures[id] = std::move(graph);
+        metadata[id] = StructureMetadata(id, "Sample Graph", "Graph", StructureCreationType::GENERATED);
+        createdIds.push_back(id);
+    }
+    
+    // Auto-select the first sample structure
+    if (!createdIds.empty() && selectedStructureId.empty()) {
+        selectStructure(createdIds[0]);
+  }
+    
+    return createdIds;
 }

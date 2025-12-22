@@ -6,6 +6,15 @@
 #include "structure_selector.h"
 #include "code_generator_dialog.h"
 #include "../orchestration/algorithm_manager.h"
+#include "../visualization/animation_frame.h"
+#include "../visualization/visualization_renderer.h"
+#include "../core/array_structure.h"
+#include "../core/list_structure.h"
+#include "../core/tree_structure.h"
+#include "../core/graph_structure.h"
+#include "../core/list_node.h"
+#include "../core/tree_node.h"
+#include "../core/graph.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -17,6 +26,8 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QScrollArea>
+#include <cmath>
+#include <functional>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
@@ -312,6 +323,218 @@ void MainWindow::updateVisualizationForStructure(const std::string& structureId)
     DataStructure* structure = dataModelManager->getStructure(structureId);
     if (!structure) return;
 
+    // Get structure metadata to determine type
+    std::string structureType;
+    auto structures = dataModelManager->getAllStructures();
+    for (const auto& meta : structures) {
+        if (meta.id == structureId) {
+            structureType = meta.type;
+     break;
+  }
+    }
+
+    // Get nodes and edges from the structure
+    auto nodes = structure->getNodes();
+    auto edges = structure->getEdges();
+    
+    qDebug() << "Updating visualization for structure:" << QString::fromStdString(structureId)
+        << "Type:" << QString::fromStdString(structureType)
+  << "Nodes:" << nodes.size() << "Edges:" << edges.size();
+    
+    // DON'T clear interactive - just update the frame
+    // This prevents user-drawn structures from being deleted
+    
+    // Create an animation frame with the structure data
+    AnimationFrame frame;
+    
+    int nodeCount = nodes.size();
+    if (nodeCount == 0) {
+        // Empty structure - just clear visualization
+        if (auto* renderer = visualizationPane->findChild<VisualizationRenderer*>()) {
+         renderer->renderFrame(frame);
+      }
+        visualizationPane->update();
+        return;
+ }
+    
+    // Layout and render based on structure type
+ if (structureType == "Array") {
+        // Get actual array values
+        if (auto* arrayStruct = dynamic_cast<ArrayStructure*>(structure)) {
+       const auto& arrayData = arrayStruct->getData();
+      
+            // Layout: Horizontal row
+            double startX = 200.0;
+          double y = 300.0;
+        double spacing = 80.0;
+     
+     for (size_t i = 0; i < nodes.size(); ++i) {
+              const auto& node = nodes[i];
+                double x = startX + i * spacing;
+           
+     frame.nodePositions[node.id] = {x, y};
+        frame.nodeShapes[node.id] = "RECT";  // Arrays use rectangles
+      
+   // Use actual array value
+ if (i < arrayData.size()) {
+          frame.nodeLabels[node.id] = std::to_string(arrayData[i]);
+   } else {
+           frame.nodeLabels[node.id] = "?";
+      }
+            }
+      }
+    }
+    else if (structureType == "List") {
+        // Get actual list values
+        if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
+            std::vector<int> listValues;
+    const ListNode* current = listStruct->getHead();
+          while (current != nullptr) {
+    listValues.push_back(current->value);
+         current = current->next;
+            }
+ 
+            // Layout: Horizontal chain
+            double startX = 150.0;
+double y = 300.0;
+ double spacing = 100.0;
+  
+            for (size_t i = 0; i < nodes.size(); ++i) {
+          const auto& node = nodes[i];
+ double x = startX + i * spacing;
+    
+      frame.nodePositions[node.id] = {x, y};
+                frame.nodeShapes[node.id] = "RECT";  // Lists use rectangles with pointer
+    
+        // Use actual list value
+                if (i < listValues.size()) {
+      frame.nodeLabels[node.id] = std::to_string(listValues[i]);
+     } else {
+  frame.nodeLabels[node.id] = "?";
+   }
+            }
+  
+            // Add edges (arrows)
+      for (const auto& edge : edges) {
+                frame.edges.push_back({edge.from, edge.to});
+            }
+     }
+    }
+ else if (structureType == "Tree") {
+        // Get actual tree values
+        if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
+    std::map<std::string, int> nodeValueMap;
+         
+       // Collect node values
+   std::function<void(const TreeNode*, std::vector<int>&)> collectValues = 
+            [&](const TreeNode* node, std::vector<int>& values) {
+      if (node == nullptr) return;
+          collectValues(node->left, values);
+          values.push_back(node->value);
+nodeValueMap["tree_" + std::to_string(node->value)] = node->value;
+     collectValues(node->right, values);
+            };
+   
+            std::vector<int> treeValues;
+      collectValues(treeStruct->getRoot(), treeValues);
+            
+         // Layout: Circular (will use Graphviz if available for tree layout)
+            double centerX = 400.0;
+ double centerY = 300.0;
+double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+            
+            for (size_t i = 0; i < nodes.size(); ++i) {
+    const auto& node = nodes[i];
+   double angle = (2.0 * 3.14159 * i) / nodeCount;
+ double x = centerX + radius * std::cos(angle);
+ double y = centerY + radius * std::sin(angle);
+                
+  frame.nodePositions[node.id] = {x, y};
+       frame.nodeShapes[node.id] = "CIRCLE";  // Trees use circles
+     
+                // Use actual tree value
+            if (nodeValueMap.count(node.id)) {
+           frame.nodeLabels[node.id] = std::to_string(nodeValueMap[node.id]);
+    } else {
+     frame.nodeLabels[node.id] = node.id;
+    }
+  }
+      
+            // Add edges
+    for (const auto& edge : edges) {
+            frame.edges.push_back({edge.from, edge.to});
+            }
+      }
+    }
+    else if (structureType == "Graph") {
+        // Get actual graph values
+   if (auto* graphStruct = dynamic_cast<GraphStructure*>(structure)) {
+            const Graph* g = graphStruct->getGraph();
+          
+         // Layout: Circular
+      double centerX = 400.0;
+   double centerY = 300.0;
+      double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+  
+            for (size_t i = 0; i < nodes.size(); ++i) {
+       const auto& node = nodes[i];
+     double angle = (2.0 * 3.14159 * i) / nodeCount;
+     double x = centerX + radius * std::cos(angle);
+        double y = centerY + radius * std::sin(angle);
+    
+    frame.nodePositions[node.id] = {x, y};
+            frame.nodeShapes[node.id] = "CIRCLE";  // Graphs use circles
+      
+     // Try to get label from graph properties
+                if (g) {
+       if (const Graph::Node* graphNode = g->getNode(node.id)) {
+        auto it = graphNode->properties.find("label");
+               if (it != graphNode->properties.end()) {
+   frame.nodeLabels[node.id] = it->second;
+       } else {
+          frame.nodeLabels[node.id] = node.id;
+              }
+         } else {
+           frame.nodeLabels[node.id] = node.id;
+             }
+ } else {
+      frame.nodeLabels[node.id] = node.id;
+             }
+     }
+       
+            // Add edges
+          for (const auto& edge : edges) {
+       frame.edges.push_back({edge.from, edge.to});
+         }
+      }
+ }
+    else {
+        // Unknown type - use generic circular layout
+        double centerX = 400.0;
+    double centerY = 300.0;
+        double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+        
+        for (size_t i = 0; i < nodes.size(); ++i) {
+        const auto& node = nodes[i];
+   double angle = (2.0 * 3.14159 * i) / nodeCount;
+  double x = centerX + radius * std::cos(angle);
+            double y = centerY + radius * std::sin(angle);
+      
+            frame.nodePositions[node.id] = {x, y};
+     frame.nodeShapes[node.id] = "CIRCLE";
+        frame.nodeLabels[node.id] = node.id;
+        }
+        
+  for (const auto& edge : edges) {
+frame.edges.push_back({edge.from, edge.to});
+        }
+    }
+    
+ // Render the frame
+ if (auto* renderer = visualizationPane->findChild<VisualizationRenderer*>()) {
+        renderer->renderFrame(frame);
+    }
+    
     visualizationPane->update();
 }
 

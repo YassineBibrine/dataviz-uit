@@ -22,18 +22,8 @@ ControlPanel::ControlPanel(QWidget* parent)
     setupUI();
     connectSignals();
 
-    // Charger les vrais algorithmes depuis AlgorithmManager
-    AlgorithmManager& manager = AlgorithmManager::getInstance();
-    std::vector<QString> algorithms;
-    
-    // Ajouter tous les algorithmes disponibles
-    algorithms.push_back("BubbleSort");
-    algorithms.push_back("QuickSort");
-    algorithms.push_back("MergeSort");
-    algorithms.push_back("RangeFilter");
-    algorithms.push_back("Normalize");
-    
-    populateAlgorithms(algorithms);
+    // Initialize with default algorithms for Array type
+    updateAlgorithmList("Array");
 }
 
 void ControlPanel::setupUI()
