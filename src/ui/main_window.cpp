@@ -28,6 +28,7 @@
 #include <QScrollArea>
 #include <cmath>
 #include <functional>
+#include <queue>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
@@ -79,10 +80,11 @@ void MainWindow::setupUI() {
     QHBoxLayout* contentLayout = new QHBoxLayout();
     contentLayout->setSpacing(15);
 
-    // Left: Toolbox
+    // Left: Toolbox (hidden by default until a structure is selected)
     toolboxPanel = new ToolboxPanel(this);
     toolboxPanel->setObjectName("borderedPanel");
     toolboxPanel->setFixedWidth(110);
+    toolboxPanel->setVisible(false);  // Hidden initially
     contentLayout->addWidget(toolboxPanel);
 
     // Center: Visualization
@@ -141,12 +143,10 @@ void MainWindow::connectSignals() {
         this, &MainWindow::onStructureSelected);
     connect(structureSelector, &StructureSelector::structureRemoved,
         this, &MainWindow::onStructureRemoved);
-    connect(structureSelector, &StructureSelector::finalizeInteractiveRequested,
-        this, &MainWindow::onFinalizeInteractive);
     connect(structureSelector, &StructureSelector::clearInteractiveRequested,
         this, &MainWindow::onClearInteractive);
-    connect(structureSelector, &StructureSelector::structureSelected,
-        controlPanel.get(), &ControlPanel::updateAlgorithmList);
+    connect(structureSelector, &StructureSelector::samplesCreated,
+      this, &MainWindow::onSamplesCreated);
 }
 
 void MainWindow::onStructureSelected(QString structureId) {
@@ -158,15 +158,26 @@ void MainWindow::onStructureSelected(QString structureId) {
         auto structures = dataModelManager->getAllStructures();
         for (const auto& meta : structures) {
             if (meta.id == id) {
-                if (toolboxPanel) {
-                    QString structureType = QString::fromStdString(meta.type);
-                    toolboxPanel->updateTools(structureType);
-                    qDebug() << "Toolbox updated for structure type:" << structureType;
-                }
-                break;
-            }
+        QString structureType = QString::fromStdString(meta.type);
+       
+    // Show and update toolbox for the selected structure type
+     if (toolboxPanel) {
+           toolboxPanel->setVisible(true);  // Show toolbox when structure is selected
+    toolboxPanel->updateTools(structureType);
+         qDebug() << "Toolbox shown and updated for structure type:" << structureType;
+    }
+         
+     // Update algorithm list for the selected structure type
+    if (controlPanel) {
+         controlPanel->updateAlgorithmList(structureType);
+qDebug() << "Algorithm list updated for structure type:" << structureType;
+      }
+ break;
         }
-        updateVisualizationForStructure(id);
+        }
+        
+    // Load structure into the interactive canvas so user can interact with it
+      loadStructureIntoCanvas(id);
         qDebug() << "Structure selected:" << structureId;
     }
 }
@@ -243,81 +254,107 @@ void MainWindow::createMenuBar() {
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
     DataStructure* targetStructure = dataModelManager->getSelectedStructure();
     if (!targetStructure) {
-        QMessageBox::warning(this, "No Structure",
-            "Please select a data structure from the Structure Selector.");
-        return;
+     QMessageBox::warning(this, "No Structure",
+  "Please select a data structure from the Structure Selector.");
+        controlPanel->setPlayingState(false);
+    return;
     }
 
-    // ✅ Utilise getCategoryForAlgorithm ici (à implémenter dans AlgorithmManager)
-    std::string category = "Sorting"; // Fallback temporaire
-    // Si tu as ajouté getCategoryForAlgorithm, remplace par :
-    // auto& mgr = AlgorithmManager::getInstance();
-    // std::string category = mgr.getCategoryForAlgorithm(algorithm);
+ // Get the correct category for this algorithm
+    std::string category = algoManager.getCategoryForAlgorithm(algorithm);
+ qDebug() << "Executing algorithm:" << QString::fromStdString(algorithm) 
+       << "Category:" << QString::fromStdString(category);
 
-    auto algo = algoManager.createAlgorithm(category, algorithm);
-    if (algo) {
-        qDebug() << "Executing:" << QString::fromStdString(algorithm);
-        algo->execute();
-    }
-    else {
-        qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
-        QMessageBox::warning(this, "Algorithm Not Implemented",
-            QString("The algorithm '%1' is not yet implemented.").arg(QString::fromStdString(algorithm)));
+    try {
+     auto algo = algoManager.createAlgorithm(category, algorithm);
+        if (algo) {
+            qDebug() << "Executing:" << QString::fromStdString(algorithm);
+       algo->execute();
+  
+ // Update visualization after algorithm execution
+            // Reload the structure to show any changes
+            std::string structId = dataModelManager->getSelectedStructureId();
+          if (!structId.empty()) {
+     loadStructureIntoCanvas(structId);
+      }
+       
+  controlPanel->setPlayingState(false);
+  QMessageBox::information(this, "Algorithm Complete",
+                QString("Algorithm '%1' completed successfully.")
+  .arg(QString::fromStdString(algorithm)));
+      }
+        else {
+            qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
+            controlPanel->setPlayingState(false);
+   QMessageBox::warning(this, "Algorithm Not Implemented",
+QString("The algorithm '%1' is not yet implemented.\n\n"
+       "Currently implemented algorithms:\n"
+             "• Sorting: BubbleSort, QuickSort, MergeSort\n"
+       "• Filtering: RangeFilter\n"
+           "• Transform: Normalize")
+     .arg(QString::fromStdString(algorithm)));
+        }
+    } catch (const std::exception& e) {
+qDebug() << "Algorithm execution error:" << e.what();
+     controlPanel->setPlayingState(false);
+    QMessageBox::critical(this, "Execution Error",
+   QString("Error executing algorithm '%1':\n%2")
+              .arg(QString::fromStdString(algorithm))
+        .arg(e.what()));
     }
 }
 
 void MainWindow::onStructureRemoved(QString structureId) {
-    qDebug() << "Structure removed:" << structureId;
+  qDebug() << "Structure removed:" << structureId;
     if (visualizationPane) {
         visualizationPane->reset();
     }
-}
-
-void MainWindow::onFinalizeInteractive(QString type, QString name) {
-    if (!visualizationPane || !visualizationPane->getInteractionManager()) {
-        return;
-    }
-
-    auto* interactionMgr = visualizationPane->getInteractionManager();
-    if (!interactionMgr->hasInteractiveData()) {
-        QMessageBox::information(this, "No Data",
-            "No nodes or edges to finalize.\n\n"
-            "Draw some nodes using the Node tool, then connect them with the Link tool.");
-        return;
-    }
-
-    auto [nodeCount, edgeCount] = interactionMgr->getInteractiveStats();
-    qDebug() << "Finalizing structure:" << type << name << "Nodes:" << nodeCount << "Edges:" << edgeCount;
-
-    std::string structId = interactionMgr->finalizeStructure(type.toStdString(), name.toStdString());
-
-    if (!structId.empty()) {
-        if (structureSelector) {
-            structureSelector->refreshStructureList();
+    
+    // Hide toolbox if no structures remain
+    if (dataModelManager && dataModelManager->getAllStructures().empty()) {
+     if (toolboxPanel) {
+         toolboxPanel->setVisible(false);
         }
-        if (toolboxPanel) {
-            toolboxPanel->updateTools(type);
-            qDebug() << "Toolbox updated for finalized structure type:" << type;
-        }
-        QMessageBox::information(this, "Structure Created",
-            QString("Custom structure created successfully!\n\n"
-                "Type: %1\nNodes: %2\nEdges: %3\n\nThe structure is now available for algorithms.")
-            .arg(type).arg(nodeCount).arg(edgeCount));
-    }
-    else {
-        QMessageBox::warning(this, "Creation Failed", "Failed to create structure. Please try again.");
     }
 }
 
 void MainWindow::onClearInteractive() {
     if (visualizationPane && visualizationPane->getInteractionManager()) {
         visualizationPane->getInteractionManager()->clearInteractive();
-        visualizationPane->update();
-        qDebug() << "Interactive canvas cleared";
+    visualizationPane->clearNodeValues();
+        visualizationPane->refreshDisplay();
+   qDebug() << "Interactive canvas cleared";
+ }
+}
+
+void MainWindow::onSamplesCreated() {
+    // Auto-select the first sample structure and visualize it
+    if (dataModelManager) {
+        auto structures = dataModelManager->getAllStructures();
+if (!structures.empty()) {
+  // Select the first structure
+         std::string firstId = structures[0].id;
+            dataModelManager->selectStructure(firstId);
+   
+     // Update UI
+   QString structureType = QString::fromStdString(structures[0].type);
+      if (toolboxPanel) {
+      toolboxPanel->setVisible(true);
+        toolboxPanel->updateTools(structureType);
+            }
+ if (controlPanel) {
+             controlPanel->updateAlgorithmList(structureType);
+      }
+         
+       // Load into canvas
+            loadStructureIntoCanvas(firstId);
+   
+            qDebug() << "Sample structures created, auto-selected:" << QString::fromStdString(firstId);
+  }
     }
 }
 
-void MainWindow::updateVisualizationForStructure(const std::string& structureId) {
+void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
     if (!dataModelManager || !visualizationPane) return;
 
     DataStructure* structure = dataModelManager->getStructure(structureId);
@@ -328,214 +365,230 @@ void MainWindow::updateVisualizationForStructure(const std::string& structureId)
     auto structures = dataModelManager->getAllStructures();
     for (const auto& meta : structures) {
         if (meta.id == structureId) {
-            structureType = meta.type;
-     break;
-  }
+   structureType = meta.type;
+       break;
+        }
     }
 
     // Get nodes and edges from the structure
     auto nodes = structure->getNodes();
     auto edges = structure->getEdges();
     
-    qDebug() << "Updating visualization for structure:" << QString::fromStdString(structureId)
+    qDebug() << "Loading structure into canvas:" << QString::fromStdString(structureId)
         << "Type:" << QString::fromStdString(structureType)
-  << "Nodes:" << nodes.size() << "Edges:" << edges.size();
+        << "Nodes:" << nodes.size() << "Edges:" << edges.size();
+
+// Get interaction manager and clear existing data
+    auto* interactionMgr = visualizationPane->getInteractionManager();
+    if (!interactionMgr) return;
     
-    // DON'T clear interactive - just update the frame
-    // This prevents user-drawn structures from being deleted
-    
-    // Create an animation frame with the structure data
-    AnimationFrame frame;
+ interactionMgr->clearInteractive();
+    visualizationPane->clearNodeValues();
     
     int nodeCount = nodes.size();
-    if (nodeCount == 0) {
-        // Empty structure - just clear visualization
-        if (auto* renderer = visualizationPane->findChild<VisualizationRenderer*>()) {
-         renderer->renderFrame(frame);
-      }
-        visualizationPane->update();
-        return;
- }
+ if (nodeCount == 0) {
+        visualizationPane->refreshDisplay();
+  return;
+    }
+
+    // Determine shape based on type
+    std::string shape = (structureType == "Array" || structureType == "List") ? "RECT" : "CIRCLE";
     
-    // Layout and render based on structure type
- if (structureType == "Array") {
-        // Get actual array values
+    // Map from old node IDs to new node IDs
+    std::map<std::string, std::string> oldToNewId;
+    
+    // Calculate layout positions and add nodes to interaction manager
+    if (structureType == "Array") {
         if (auto* arrayStruct = dynamic_cast<ArrayStructure*>(structure)) {
-       const auto& arrayData = arrayStruct->getData();
-      
-            // Layout: Horizontal row
-            double startX = 200.0;
-          double y = 300.0;
-        double spacing = 80.0;
-     
-     for (size_t i = 0; i < nodes.size(); ++i) {
-              const auto& node = nodes[i];
-                double x = startX + i * spacing;
-           
-     frame.nodePositions[node.id] = {x, y};
-        frame.nodeShapes[node.id] = "RECT";  // Arrays use rectangles
-      
-   // Use actual array value
- if (i < arrayData.size()) {
-          frame.nodeLabels[node.id] = std::to_string(arrayData[i]);
-   } else {
-           frame.nodeLabels[node.id] = "?";
-      }
+            const auto& arrayData = arrayStruct->getData();
+   double startX = 200.0;
+            double y = 300.0;
+            double spacing = 80.0;
+ 
+  for (size_t i = 0; i < nodes.size(); ++i) {
+     double x = startX + i * spacing;
+       std::string newId = interactionMgr->addNode(x, y, shape);
+         oldToNewId[nodes[i].id] = newId;
+         
+        if (i < arrayData.size()) {
+          interactionMgr->updateNodeValue(newId, arrayData[i]);
+    }
             }
-      }
+        }
     }
     else if (structureType == "List") {
-        // Get actual list values
         if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
             std::vector<int> listValues;
-    const ListNode* current = listStruct->getHead();
-          while (current != nullptr) {
-    listValues.push_back(current->value);
-         current = current->next;
-            }
- 
-            // Layout: Horizontal chain
-            double startX = 150.0;
-double y = 300.0;
- double spacing = 100.0;
+ const ListNode* current = listStruct->getHead();
+     while (current != nullptr) {
+                listValues.push_back(current->value);
+                current = current->next;
+       }
   
-            for (size_t i = 0; i < nodes.size(); ++i) {
-          const auto& node = nodes[i];
- double x = startX + i * spacing;
-    
-      frame.nodePositions[node.id] = {x, y};
-                frame.nodeShapes[node.id] = "RECT";  // Lists use rectangles with pointer
-    
-        // Use actual list value
-                if (i < listValues.size()) {
-      frame.nodeLabels[node.id] = std::to_string(listValues[i]);
-     } else {
-  frame.nodeLabels[node.id] = "?";
-   }
-            }
-  
-            // Add edges (arrows)
-      for (const auto& edge : edges) {
-                frame.edges.push_back({edge.from, edge.to});
-            }
-     }
-    }
- else if (structureType == "Tree") {
-        // Get actual tree values
-        if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
-    std::map<std::string, int> nodeValueMap;
-         
-       // Collect node values
-   std::function<void(const TreeNode*, std::vector<int>&)> collectValues = 
-            [&](const TreeNode* node, std::vector<int>& values) {
-      if (node == nullptr) return;
-          collectValues(node->left, values);
-          values.push_back(node->value);
-nodeValueMap["tree_" + std::to_string(node->value)] = node->value;
-     collectValues(node->right, values);
-            };
+     double startX = 150.0;
+            double y = 300.0;
+        double spacing = 100.0;
    
-            std::vector<int> treeValues;
-      collectValues(treeStruct->getRoot(), treeValues);
-            
-         // Layout: Circular (will use Graphviz if available for tree layout)
-            double centerX = 400.0;
- double centerY = 300.0;
-double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
-            
-            for (size_t i = 0; i < nodes.size(); ++i) {
-    const auto& node = nodes[i];
-   double angle = (2.0 * 3.14159 * i) / nodeCount;
- double x = centerX + radius * std::cos(angle);
- double y = centerY + radius * std::sin(angle);
-                
-  frame.nodePositions[node.id] = {x, y};
-       frame.nodeShapes[node.id] = "CIRCLE";  // Trees use circles
-     
-                // Use actual tree value
-            if (nodeValueMap.count(node.id)) {
-           frame.nodeLabels[node.id] = std::to_string(nodeValueMap[node.id]);
-    } else {
-     frame.nodeLabels[node.id] = node.id;
-    }
-  }
-      
-            // Add edges
-    for (const auto& edge : edges) {
-            frame.edges.push_back({edge.from, edge.to});
-            }
-      }
-    }
-    else if (structureType == "Graph") {
-        // Get actual graph values
-   if (auto* graphStruct = dynamic_cast<GraphStructure*>(structure)) {
-            const Graph* g = graphStruct->getGraph();
-          
-         // Layout: Circular
-      double centerX = 400.0;
-   double centerY = 300.0;
-      double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+            std::vector<std::string> newNodeIds;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+    double x = startX + i * spacing;
+      std::string newId = interactionMgr->addNode(x, y, shape);
+      oldToNewId[nodes[i].id] = newId;
+     newNodeIds.push_back(newId);
   
-            for (size_t i = 0; i < nodes.size(); ++i) {
-       const auto& node = nodes[i];
-     double angle = (2.0 * 3.14159 * i) / nodeCount;
-     double x = centerX + radius * std::cos(angle);
-        double y = centerY + radius * std::sin(angle);
-    
-    frame.nodePositions[node.id] = {x, y};
-            frame.nodeShapes[node.id] = "CIRCLE";  // Graphs use circles
-      
-     // Try to get label from graph properties
-                if (g) {
-       if (const Graph::Node* graphNode = g->getNode(node.id)) {
-        auto it = graphNode->properties.find("label");
-               if (it != graphNode->properties.end()) {
-   frame.nodeLabels[node.id] = it->second;
-       } else {
-          frame.nodeLabels[node.id] = node.id;
-              }
-         } else {
-           frame.nodeLabels[node.id] = node.id;
-             }
- } else {
-      frame.nodeLabels[node.id] = node.id;
-             }
-     }
-       
-            // Add edges
-          for (const auto& edge : edges) {
-       frame.edges.push_back({edge.from, edge.to});
+   if (i < listValues.size()) {
+    interactionMgr->updateNodeValue(newId, listValues[i]);
          }
       }
- }
-    else {
-        // Unknown type - use generic circular layout
-        double centerX = 400.0;
-    double centerY = 300.0;
-        double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
-        
-        for (size_t i = 0; i < nodes.size(); ++i) {
-        const auto& node = nodes[i];
-   double angle = (2.0 * 3.14159 * i) / nodeCount;
-  double x = centerX + radius * std::cos(angle);
-            double y = centerY + radius * std::sin(angle);
+   
+            // Add edges for list (sequential)
+       for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
+                interactionMgr->addEdge(newNodeIds[i], newNodeIds[i + 1]);
+            }
+        }
+    }
+    else if (structureType == "Binary Tree" || structureType == "Tree") {
+        if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
+       const TreeNode* root = treeStruct->getRoot();
+            if (!root) {
+     visualizationPane->refreshDisplay();
+     return;
+     }
+     
+            // Calculate tree layout using level-order traversal
+          // Map node value to position info
+         std::map<int, std::pair<double, double>> nodePositions;
+            std::map<int, std::string> valueToNewId;
+       
+      double startX = 400.0;// Center X
+    double startY = 100.0;  // Top Y
+            double levelHeight = 80.0;
+double baseWidth = 400.0;  // Width at the deepest level
+            
+ // BFS to assign positions level by level
+            std::queue<std::tuple<const TreeNode*, int, double, double>> bfsQueue;
+            // node, level, x position, width for children
+   bfsQueue.push({root, 0, startX, baseWidth});
+          
+   while (!bfsQueue.empty()) {
+          auto [node, level, xPos, width] = bfsQueue.front();
+          bfsQueue.pop();
+                
+         if (!node) continue;
+     
+ double yPos = startY + level * levelHeight;
+      nodePositions[node->value] = {xPos, yPos};
+  
+     // Create the node
+    std::string newId = interactionMgr->addNode(xPos, yPos, shape);
+                valueToNewId[node->value] = newId;
+       oldToNewId["tree_" + std::to_string(node->value)] = newId;
+       interactionMgr->updateNodeValue(newId, node->value);
+     
+          // Queue children with updated positions
+     double childWidth = width / 2.0;
+   if (node->left) {
+               bfsQueue.push({node->left, level + 1, xPos - childWidth / 2.0, childWidth});
+    }
+        if (node->right) {
+       bfsQueue.push({node->right, level + 1, xPos + childWidth / 2.0, childWidth});
+                }
+          }
+ 
+    // Add edges from parent to children
+            std::function<void(const TreeNode*)> addTreeEdges = [&](const TreeNode* node) {
+   if (!node) return;
+           
+std::string parentId = valueToNewId[node->value];
+       
+     if (node->left && valueToNewId.count(node->left->value)) {
+std::string leftId = valueToNewId[node->left->value];
+      interactionMgr->addEdge(parentId, leftId);
+        addTreeEdges(node->left);
+      }
+                if (node->right && valueToNewId.count(node->right->value)) {
+       std::string rightId = valueToNewId[node->right->value];
+           interactionMgr->addEdge(parentId, rightId);
+         addTreeEdges(node->right);
+        }
+         };
+          addTreeEdges(root);
+}
+    }
+    else if (structureType == "Graph") {
+  if (auto* graphStruct = dynamic_cast<GraphStructure*>(structure)) {
+      const Graph* g = graphStruct->getGraph();
       
-            frame.nodePositions[node.id] = {x, y};
-     frame.nodeShapes[node.id] = "CIRCLE";
-        frame.nodeLabels[node.id] = node.id;
-        }
+          // Layout: Circular
+            double centerX = 400.0;
+      double centerY = 300.0;
+            double radius = std::min(200.0, 80.0 + nodeCount * 25.0);
+      
+for (size_t i = 0; i < nodes.size(); ++i) {
+      double angle = (2.0 * 3.14159 * i) / nodeCount;
+        double x = centerX + radius * std::cos(angle);
+          double y = centerY + radius * std::sin(angle);
         
-  for (const auto& edge : edges) {
-frame.edges.push_back({edge.from, edge.to});
+      std::string newId = interactionMgr->addNode(x, y, shape);
+            oldToNewId[nodes[i].id] = newId;
+       
+          // Try to get value from graph properties
+                if (g) {
+      if (const Graph::Node* graphNode = g->getNode(nodes[i].id)) {
+    auto it = graphNode->properties.find("label");
+              if (it != graphNode->properties.end()) {
+       try {
+          interactionMgr->updateNodeValue(newId, std::stoi(it->second));
+           } catch (...) {
+            // Use index as value if label is not a number
+    interactionMgr->updateNodeValue(newId, static_cast<int>(i));
+       }
+      } else {
+     interactionMgr->updateNodeValue(newId, static_cast<int>(i));
+        }
+       }
+       }
+         }
+  
+   // Add edges
+    for (const auto& edge : edges) {
+           if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+       interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+                }
+    }
+        }
+    }
+    else {
+        // Generic circular layout
+        double centerX = 400.0;
+        double centerY = 300.0;
+        double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+   
+     for (size_t i = 0; i < nodes.size(); ++i) {
+   double angle = (2.0 * 3.14159 * i) / nodeCount;
+    double x = centerX + radius * std::cos(angle);
+         double y = centerY + radius * std::sin(angle);
+ 
+            std::string newId = interactionMgr->addNode(x, y, shape);
+            oldToNewId[nodes[i].id] = newId;
+        }
+
+  // Add edges
+    for (const auto& edge : edges) {
+            if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+           interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+          }
         }
     }
     
- // Render the frame
- if (auto* renderer = visualizationPane->findChild<VisualizationRenderer*>()) {
-        renderer->renderFrame(frame);
-    }
-    
-    visualizationPane->update();
+    // Force refresh the display to show the loaded structure
+    visualizationPane->refreshDisplay();
+}
+
+// Remove or simplify updateVisualizationForStructure since loadStructureIntoCanvas now handles this
+void MainWindow::updateVisualizationForStructure(const std::string& structureId) {
+    // Now just delegate to loadStructureIntoCanvas
+    loadStructureIntoCanvas(structureId);
 }
 
 void MainWindow::closeEvent(QCloseEvent* e) {

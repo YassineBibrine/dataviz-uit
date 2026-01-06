@@ -8,7 +8,10 @@
 #include <QListWidget>
 #include <sstream>
 #include <set>
+#include <cmath>
 #include <QInputDialog>
+#include "../core/data_model_manager.h"
+#include "../core/data_structure.h"
 
 VisualizationPane::VisualizationPane(QWidget* parent)
     : QWidget(parent) {
@@ -45,7 +48,7 @@ void VisualizationPane::reset() {
 
     // 2. On dit au manager de tout oublier (Nœuds, Arêtes)
     if (interaction) {
-        
+        interaction->clearInteractive();
     }
 
     // 3. On force un rendu vide pour effacer l'écran
@@ -89,7 +92,6 @@ QPointF VisualizationPane::getLogicalPosition(QPoint mousePos) {
 
 void VisualizationPane::updateDisplay() {
     AnimationFrame f;
-    // ... (Initialisation vide) ...
 
     // PROTECTION CRASH : Si interaction est null ou backend pas prêt
     if (!interaction) return;
@@ -98,13 +100,24 @@ void VisualizationPane::updateDisplay() {
     std::vector<std::string> nodeIds;
     nodeIds.reserve(positions.size());
     std::map<std::string, std::string> nodeTypeMap;
+    
+    // Get node values from interaction manager
+    auto interactionNodeValues = interaction->getNodeValues();
+    
     for (const auto& np : positions) {
         nodeIds.push_back(np.id);
-        nodeTypeMap[np.id] = np.type;
+   nodeTypeMap[np.id] = np.type;
         f.nodePositions[np.id] = { np.x, np.y };
         f.nodeShapes[np.id] = np.type;
-        if (nodeValues.count(np.id)) f.nodeLabels[np.id] = nodeValues[np.id];
-        else f.nodeLabels[np.id] = np.id;
+     
+        // Priority: local nodeValues > interaction manager values > node id
+   if (nodeValues.count(np.id)) {
+            f.nodeLabels[np.id] = nodeValues[np.id];
+        } else if (interactionNodeValues.count(np.id)) {
+            f.nodeLabels[np.id] = std::to_string(interactionNodeValues[np.id]);
+     } else {
+  f.nodeLabels[np.id] = np.id;
+        }
     }
 
     auto edges = interaction->getAllEdges();
@@ -118,48 +131,48 @@ void VisualizationPane::updateDisplay() {
     size_t n = nodeIds.size();
     if (n > 0 && edges.size() == (n - 1)) {
         std::map<std::string,int> indeg;
-        std::map<std::string,std::vector<std::string>> adjUndir;
+      std::map<std::string,std::vector<std::string>> adjUndir;
         for (const auto& id : nodeIds) { indeg[id] = 0; }
-        for (const auto& e : edges) {
-            if (indeg.find(e.target) == indeg.end() || indeg.find(e.source) == indeg.end()) {
-                // unknown node -> not a tree
-                isTree = false;
-                break;
-            }
-            indeg[e.target]++;
+     for (const auto& e : edges) {
+      if (indeg.find(e.target) == indeg.end() || indeg.find(e.source) == indeg.end()) {
+      // unknown node -> not a tree
+             isTree = false;
+    break;
+  }
+         indeg[e.target]++;
             // build undirected adjacency for connectivity test
             adjUndir[e.source].push_back(e.target);
-            adjUndir[e.target].push_back(e.source);
-        }
+   adjUndir[e.target].push_back(e.source);
+   }
 
         if (!isTree) {
-            // continue only if we didn't break
+         // continue only if we didn't break
         }
 
         bool indegOk = true;
-        int roots = 0;
+    int roots = 0;
         std::string rootId;
-        for (const auto& kv : indeg) {
+     for (const auto& kv : indeg) {
             if (kv.second > 1) { indegOk = false; break; }
-            if (kv.second == 0) { roots++; rootId = kv.first; }
+  if (kv.second == 0) { roots++; rootId = kv.first; }
         }
 
-        if (indegOk && roots == 1) {
-            // connectivity via BFS
+    if (indegOk && roots == 1) {
+          // connectivity via BFS
             std::set<std::string> seen;
             std::vector<std::string> q;
             q.push_back(rootId);
-            seen.insert(rootId);
-            for (size_t i = 0; i < q.size(); ++i) {
-                auto u = q[i];
-                for (const auto& v : adjUndir[u]) {
-                    if (!seen.count(v)) {
-                        seen.insert(v);
-                        q.push_back(v);
-                    }
-                }
+       seen.insert(rootId);
+    for (size_t i = 0; i < q.size(); ++i) {
+       auto u = q[i];
+      for (const auto& v : adjUndir[u]) {
+      if (!seen.count(v)) {
+         seen.insert(v);
+              q.push_back(v);
+        }
+   }
             }
-            if (seen.size() == n) isTree = true;
+  if (seen.size() == n) isTree = true;
         }
     }
 
@@ -167,34 +180,34 @@ void VisualizationPane::updateDisplay() {
         // Build DOT string for the tree and ask Graphviz for layout
         std::ostringstream oss;
         oss << "digraph BinaryTree {\n";
-        oss << "  node [shape=circle];\n";
+    oss << "  node [shape=circle];\n";
         for (const auto& id : nodeIds) {
             oss << "  " << id << " [label=\"" << id << "\"];\n";
         }
         for (const auto& e : edges) {
-            oss << "  " << e.source << " -> " << e.target << ";\n";
-        }
+         oss << "  " << e.source << " -> " << e.target << ";\n";
+   }
         oss << "}\n";
 
-        auto posMap = layoutEngine->computeLayout(oss.str());
+ auto posMap = layoutEngine->computeLayout(oss.str());
         if (!posMap.empty()) {
-            f.nodePositions = posMap;
-             for (const auto& nt : nodeTypeMap) {
-                 f.nodeShapes[nt.first] = nt.second;
-             }
+     f.nodePositions = posMap;
+        for (const auto& nt : nodeTypeMap) {
+    f.nodeShapes[nt.first] = nt.second;
+  }
          }
-         else {
-             // fallback to manual positions
-             for (const auto& np : positions) {
-                 f.nodePositions[np.id] = { np.x, np.y };
-                 f.nodeShapes[np.id] = np.type;
-             }
+    else {
+    // fallback to manual positions
+  for (const auto& np : positions) {
+  f.nodePositions[np.id] = { np.x, np.y };
+         f.nodeShapes[np.id] = np.type;
          }
+       }
     }
     else {
-        // Not a tree or graphviz not available: use positions from interaction manager
+   // Not a tree or graphviz not available: use positions from interaction manager
         for (const auto& np : positions) {
-            f.nodePositions[np.id] = { np.x, np.y };
+      f.nodePositions[np.id] = { np.x, np.y };
             f.nodeShapes[np.id] = np.type;
         }
     }
@@ -206,6 +219,10 @@ void VisualizationPane::updateDisplay() {
 void VisualizationPane::highlightNodes(const std::vector<std::string>& ids, const std::string& color) {
     (void)color;
     currentHighlights = ids;
+    updateDisplay();
+}
+
+void VisualizationPane::refreshDisplay() {
     updateDisplay();
 }
 
@@ -229,6 +246,102 @@ void VisualizationPane::paintEvent(QPaintEvent* e) {
     QWidget::paintEvent(e);
 }
 
+// Load a structure from the backend into the interactive canvas for editing
+void VisualizationPane::loadStructureForEditing(const std::string& structureId) {
+    if (!interaction) return;
+    
+    // Get the backend manager
+    DataModelManager* backend = interaction->getBackend();
+    if (!backend) return;
+    
+    DataStructure* structure = backend->getStructure(structureId);
+    if (!structure) return;
+    
+    // Clear current interactive data
+    interaction->clearInteractive();
+    nodeValues.clear();
+    
+    // Get structure metadata to determine type
+    std::string structureType;
+    auto structures = backend->getAllStructures();
+    for (const auto& meta : structures) {
+        if (meta.id == structureId) {
+     structureType = meta.type;
+            break;
+   }
+    }
+    
+    // Get nodes and edges from the structure
+    auto nodes = structure->getNodes();
+    auto edges = structure->getEdges();
+    
+    // Layout nodes based on structure type and add them to interaction manager
+    int nodeCount = nodes.size();
+    if (nodeCount == 0) return;
+    
+    // Determine shape based on type
+    std::string shape = (structureType == "Array" || structureType == "List") ? "RECT" : "CIRCLE";
+    
+    // Calculate layout positions
+    if (structureType == "Array") {
+        double startX = 200.0;
+        double y = 300.0;
+        double spacing = 80.0;
+        
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            double x = startX + i * spacing;
+            std::string newId = interaction->addNode(x, y, shape);
+       // Map old id to new id and store value
+nodeValues[newId] = nodes[i].id;
+        }
+    }
+    else if (structureType == "List") {
+     double startX = 150.0;
+        double y = 300.0;
+        double spacing = 100.0;
+        
+    std::vector<std::string> newNodeIds;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            double x = startX + i * spacing;
+            std::string newId = interaction->addNode(x, y, shape);
+            newNodeIds.push_back(newId);
+            nodeValues[newId] = nodes[i].id;
+        }
+  
+        // Add edges for list (sequential)
+    for (size_t i = 0; i < newNodeIds.size() - 1; ++i) {
+            interaction->addEdge(newNodeIds[i], newNodeIds[i + 1]);
+        }
+    }
+    else {
+  // Circular layout for trees and graphs
+        double centerX = 400.0;
+    double centerY = 300.0;
+    double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+        
+      std::map<std::string, std::string> oldToNewId;
+    
+        for (size_t i = 0; i < nodes.size(); ++i) {
+  double angle = (2.0 * 3.14159 * i) / nodeCount;
+            double x = centerX + radius * std::cos(angle);
+        double y = centerY + radius * std::sin(angle);
+  
+    std::string newId = interaction->addNode(x, y, shape);
+            oldToNewId[nodes[i].id] = newId;
+       nodeValues[newId] = nodes[i].id;
+        }
+      
+        // Add edges using the mapped IDs
+        for (const auto& edge : edges) {
+        if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+          interaction->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+            }
+        }
+    }
+    
+    updateDisplay();
+}
+
 // --- EVENTS SOURIS ---
 void VisualizationPane::mouseDoubleClickEvent(QMouseEvent* event) {
     QPointF logicalPos = getLogicalPosition(event->pos());
@@ -238,9 +351,9 @@ void VisualizationPane::mouseDoubleClickEvent(QMouseEvent* event) {
         QString currentVal = nodeValues.count(nodeId) ? QString::fromStdString(nodeValues[nodeId]) : "";
         QString text = QInputDialog::getText(this, "Valeur", "Entier :", QLineEdit::Normal, currentVal, &ok);
         if (ok && !text.isEmpty()) {
-            nodeValues[nodeId] = text.toStdString();
+       nodeValues[nodeId] = text.toStdString();
             interaction->updateNodeValue(nodeId, text.toInt());
-            updateDisplay();
+       updateDisplay();
         }
     }
 }
@@ -254,33 +367,33 @@ void VisualizationPane::mousePressEvent(QMouseEvent* event) {
         std::string nodeId = interaction->getNodeAtPosition(x, y);
         if (!nodeId.empty()) {
             interaction->removeNode(nodeId);
-            nodeValues.erase(nodeId);
+     nodeValues.erase(nodeId);
             updateDisplay();
             return;
-        }
+     }
         auto edge = interaction->getEdgeAtPosition(x, y);
-        if (!edge.first.empty()) {
-            interaction->removeEdge(edge.first, edge.second);
+      if (!edge.first.empty()) {
+   interaction->removeEdge(edge.first, edge.second);
             updateDisplay();
             return;
-        }
+     }
         return;
     }
 
     if (isLinkingMode) {
         std::string clickedId = interaction->getNodeAtPosition(x, y);
-        if (clickedId.empty()) return;
+  if (clickedId.empty()) return;
         if (tempSourceNodeId.empty()) {
             tempSourceNodeId = clickedId;
-            highlightNodes({ tempSourceNodeId }, "red");
-        }
-        else {
-            if (clickedId != tempSourceNodeId) {
-                interaction->addEdge(tempSourceNodeId, clickedId);
-                tempSourceNodeId = "";
-                highlightNodes({}, "");
-                updateDisplay();
-            }
+      highlightNodes({ tempSourceNodeId }, "red");
+  }
+    else {
+         if (clickedId != tempSourceNodeId) {
+    interaction->addEdge(tempSourceNodeId, clickedId);
+          tempSourceNodeId = "";
+    highlightNodes({}, "");
+ updateDisplay();
+      }
         }
         return;
     }
@@ -309,25 +422,25 @@ void VisualizationPane::dropEvent(QDropEvent* event) {
     if (source) {
         QListWidgetItem* item = source->currentItem();
         QString type = item->data(Qt::UserRole).toString();
-        QPoint dropPoint(event->position().x(), event->position().y());
+   QPoint dropPoint(event->position().x(), event->position().y());
         QPointF logicalPos = getLogicalPosition(dropPoint);
-        double dropX = logicalPos.x();
-        double dropY = logicalPos.y();
+  double dropX = logicalPos.x();
+   double dropY = logicalPos.y();
 
-        if (type == "CREATE_NODE_CIRCLE") interaction->addNode(dropX, dropY, "CIRCLE");
-        else if (type == "CREATE_NODE_RECT") interaction->addNode(dropX, dropY, "RECT");
+      if (type == "CREATE_NODE_CIRCLE") interaction->addNode(dropX, dropY, "CIRCLE");
+      else if (type == "CREATE_NODE_RECT") interaction->addNode(dropX, dropY, "RECT");
 
         updateDisplay();
         std::string newNodeId = interaction->getNodeAtPosition(dropX, dropY);
         if (!newNodeId.empty()) {
-            bool ok;
-            QString text = QInputDialog::getText(this, "Nouvelle cellule", "Valeur :", QLineEdit::Normal, "0", &ok);
-            if (ok && !text.isEmpty()) {
-                nodeValues[newNodeId] = text.toStdString();
-                interaction->updateNodeValue(newNodeId, text.toInt());
+  bool ok;
+        QString text = QInputDialog::getText(this, "Nouvelle cellule", "Valeur :", QLineEdit::Normal, "0", &ok);
+     if (ok && !text.isEmpty()) {
+     nodeValues[newNodeId] = text.toStdString();
+     interaction->updateNodeValue(newNodeId, text.toInt());
             }
         }
-        updateDisplay();
+    updateDisplay();
     }
     event->acceptProposedAction();
 }

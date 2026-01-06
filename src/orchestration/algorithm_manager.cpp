@@ -28,13 +28,15 @@ std::unique_ptr<Algorithm> AlgorithmManager::createAlgorithm(const std::string& 
     if (it == factories_.end()) {
         return nullptr;
     }
-    return it->second->createAlgorithm(type);
+    try {
+        return it->second->createAlgorithm(type);
+    } catch (const std::exception&) {
+        return nullptr;
+    }
 }
 
 std::vector<std::string> AlgorithmManager::listAlgorithmsByCategory(const std::string& category) const {
-    // Tu peux étendre ça si tu stockes la liste des types par catégorie
-    // Pour l'instant, retour vide ou logique spécifique
-    return {};
+    return getAlgorithmNames(category);
 }
 
 std::vector<std::string> AlgorithmManager::getCategories() const {
@@ -44,10 +46,39 @@ std::vector<std::string> AlgorithmManager::getCategories() const {
     }
     return categories;
 }
+
 std::vector<std::string> AlgorithmManager::getAlgorithmNames(const std::string& category) const {
     if (category == "Sorting") return { "BubbleSort", "QuickSort", "MergeSort" };
     if (category == "Filtering") return { "RangeFilter" };
     if (category == "Transform") return { "Normalize" };
     if (category == "Graph") return { "BFS", "DFS", "Dijkstra" };
+    if (category == "Tree") return { "InOrder", "PreOrder", "PostOrder" };
     return {};
+}
+
+std::string AlgorithmManager::getCategoryForAlgorithm(const std::string& algorithm) const {
+    // Sorting algorithms
+    if (algorithm == "BubbleSort" || algorithm == "QuickSort" || algorithm == "MergeSort" ||
+     algorithm == "InsertionSort" || algorithm == "SelectionSort" || algorithm == "HeapSort") {
+        return "Sorting";
+    }
+    // Filtering algorithms
+    if (algorithm == "RangeFilter" || algorithm == "Filter") {
+ return "Filtering";
+    }
+    // Transform algorithms
+    if (algorithm == "Normalize" || algorithm == "Transform") {
+        return "Transform";
+    }
+    // Graph algorithms
+    if (algorithm == "BFS" || algorithm == "DFS" || algorithm == "Dijkstra" || 
+  algorithm == "Kruskal" || algorithm == "Prim") {
+        return "Graph";
+    }
+    // Tree algorithms
+    if (algorithm == "InOrder" || algorithm == "PreOrder" || algorithm == "PostOrder" ||
+        algorithm == "LevelOrder") {
+        return "Tree";
+    }
+    return "Sorting";  // Default fallback
 }

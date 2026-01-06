@@ -24,6 +24,7 @@ public:
 
     
     void setBackend(DataModelManager* manager);
+    DataModelManager* getBackend() const { return backend; }
    
 
     std::string addNode(double x, double y, const std::string& type);
@@ -51,7 +52,7 @@ public:
      * @return ID of created structure in DataModelManager
      */
   std::string finalizeStructure(const std::string& type = "Auto", 
-        const std::string& name = "");
+     const std::string& name = "");
     
     /**
      * @brief Clear all interactive nodes/edges (after finalization)
@@ -72,8 +73,8 @@ public:
   * @brief Get count of interactive nodes and edges
      */
     std::pair<int, int> getInteractiveStats() const { 
-      return {static_cast<int>(nodes.size()), static_cast<int>(edges.size())}; 
-    }
+    return {static_cast<int>(nodes.size()), static_cast<int>(edges.size())}; 
+}
 
 private:
     // Simulation (Mock) - On garde ça pour l'affichage local rapide
@@ -83,14 +84,14 @@ private:
       std::string type;
     };
     struct MockEdge {
-        std::string source;
+   std::string source;
         std::string target;
     };
 
     std::vector<MockNode> nodes;
     std::vector<MockEdge> edges;
   
-    // Store node values for finalization
+  // Store node values for finalization
     std::map<std::string, int> nodeValues;
 
     std::string draggedNodeId = "";

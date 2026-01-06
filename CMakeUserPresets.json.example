@@ -1,0 +1,20 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+      "name": "local",
+       "displayName": "Local Development",
+            "inherits": "windows-x64-release",
+            "cacheVariables": {
+    "CMAKE_PREFIX_PATH": "C:/Qt/6.10.0/msvc2022_64"
+  }
+   }
+    ],
+    "buildPresets": [
+     {
+ "name": "local",
+            "configurePreset": "local",
+            "configuration": "Release"
+        }
+]
+}

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <!-- Auto-detect Qt installation path -->
+  <QtDir Condition="'$(QtDir)' == '' AND '$(QT_DIR)' != ''">$(QT_DIR)</QtDir>
+    <QtDir Condition="'$(QtDir)' == '' AND Exists('C:\Qt\6.10.0\msvc2022_64')">C:\Qt\6.10.0\msvc2022_64</QtDir>
+    <QtDir Condition="'$(QtDir)' == '' AND Exists('C:\Qt\6.9.0\msvc2022_64')">C:\Qt\6.9.0\msvc2022_64</QtDir>
+    <QtDir Condition="'$(QtDir)' == '' AND Exists('C:\Qt\6.8.0\msvc2022_64')">C:\Qt\6.8.0\msvc2022_64</QtDir>
+    <QtDir Condition="'$(QtDir)' == '' AND Exists('C:\Qt\6.7.0\msvc2022_64')">C:\Qt\6.7.0\msvc2022_64</QtDir>
+    <QtDir Condition="'$(QtDir)' == '' AND Exists('C:\Qt\6.6.0\msvc2022_64')">C:\Qt\6.6.0\msvc2022_64</QtDir>
+    <QtDir Condition="'$(QtDir)' == '' AND Exists('C:\Qt\6.5.0\msvc2019_64')">C:\Qt\6.5.0\msvc2019_64</QtDir>
+  </PropertyGroup>
+  
+  <ItemDefinitionGroup Condition="'$(QtDir)' != ''">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(QtDir)\include;$(QtDir)\include\QtCore;$(QtDir)\include\QtGui;$(QtDir)\include\QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;GRAPHVIZ_AVAILABLE=0;WIN32;_WINDOWS;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

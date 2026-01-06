@@ -127,9 +127,15 @@ void ControlPanel::updateAlgorithmList(const QString& structureType) {
             algorithmCombo->addItem(QString::fromStdString(algo));
         }
     }
-    else if (type == "Tree") {
-        for (const auto& algo : manager.getAlgorithmNames("Graph")) {
+    else if (type == "Binary Tree" || type == "Tree") {
+        for (const auto& algo : manager.getAlgorithmNames("Tree")) {
             algorithmCombo->addItem(QString::fromStdString(algo));
+        }
+        // Also add graph algorithms as fallback if tree category is empty
+        if (algorithmCombo->count() == 0) {
+            for (const auto& algo : manager.getAlgorithmNames("Graph")) {
+                algorithmCombo->addItem(QString::fromStdString(algo));
+            }
         }
     }
     else if (type == "List") {

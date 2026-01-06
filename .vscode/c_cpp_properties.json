@@ -1,0 +1,87 @@
+{
+    "configurations": [
+        {
+            "name": "Win32-MSVC",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/build/**",
+                "C:/Qt/*/msvc*/include",
+                "C:/Qt/*/msvc*/include/QtCore",
+                "C:/Qt/*/msvc*/include/QtGui",
+                "C:/Qt/*/msvc*/include/QtWidgets"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "QT_CORE_LIB",
+                "QT_GUI_LIB",
+                "QT_WIDGETS_LIB",
+                "GRAPHVIZ_AVAILABLE=0",
+                "WIN32",
+                "_WINDOWS"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        },
+        {
+            "name": "Linux-GCC",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/build/**",
+                "/usr/include/qt6",
+                "/usr/include/qt6/QtCore",
+                "/usr/include/qt6/QtGui",
+                "/usr/include/qt6/QtWidgets",
+                "/usr/include/x86_64-linux-gnu/qt6",
+                "/usr/include/x86_64-linux-gnu/qt6/QtCore",
+                "/usr/include/x86_64-linux-gnu/qt6/QtGui",
+                "/usr/include/x86_64-linux-gnu/qt6/QtWidgets"
+            ],
+            "defines": [
+                "QT_CORE_LIB",
+                "QT_GUI_LIB",
+                "QT_WIDGETS_LIB",
+                "GRAPHVIZ_AVAILABLE=0"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        },
+        {
+            "name": "macOS-Clang",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/build/**",
+                "/opt/homebrew/opt/qt@6/include",
+                "/opt/homebrew/opt/qt@6/include/QtCore",
+                "/opt/homebrew/opt/qt@6/include/QtGui",
+                "/opt/homebrew/opt/qt@6/include/QtWidgets",
+                "/usr/local/opt/qt@6/include",
+                "/usr/local/opt/qt@6/include/QtCore",
+                "/usr/local/opt/qt@6/include/QtGui",
+                "/usr/local/opt/qt@6/include/QtWidgets"
+            ],
+            "defines": [
+                "QT_CORE_LIB",
+                "QT_GUI_LIB",
+                "QT_WIDGETS_LIB",
+                "GRAPHVIZ_AVAILABLE=0"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

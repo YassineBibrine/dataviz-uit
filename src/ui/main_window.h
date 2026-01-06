@@ -7,7 +7,7 @@
 // On inclut les managers 
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
-#include "../algorithms/frame_recorder.h"   //  le chemin si nécessaire
+#include "../algorithms/frame_recorder.h"
 #include "../algorithms/algorithm_runner.h"
 
 class VisualizationPane;
@@ -47,15 +47,15 @@ private slots:
     // --- Structure Selector slots ---
     void onStructureSelected(QString structureId);
     void onStructureRemoved(QString structureId);
-    void onFinalizeInteractive(QString type, QString name);
     void onClearInteractive();
+    void onSamplesCreated();  // NEW: Handle samples created
     
     // NEW: Code Generator slots
     void onShowCodeGenerator();
     void onStructureCreatedFromCode(QString structureId);
   
     // NEW: Metrics Panel toggle slot
-  void onToggleMetricsPanel(bool show);
+    void onToggleMetricsPanel(bool show);
 
 private:
     void setupUI();
@@ -65,6 +65,7 @@ private:
     // Fonctions métier
     void executeAlgorithm(const std::string& algorithm);
     void updateVisualizationForStructure(const std::string& structureId);
+    void loadStructureIntoCanvas(const std::string& structureId);  // NEW: Load structure into interactive canvas
 
     // --- COMPOSANTS UI ---
     ToolboxPanel* toolboxPanel = nullptr;
@@ -73,7 +74,7 @@ private:
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
     
- // NEW: Menu action for metrics toggle
+    // NEW: Menu action for metrics toggle
     QAction* toggleMetricsAction = nullptr;
 
     // --- COEUR DU SYSTEME (BACKEND) ---

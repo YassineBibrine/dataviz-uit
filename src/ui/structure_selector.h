@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QComboBox>
+#include <QSpinBox>
 #include "../core/data_model_manager.h"
 
 /**
@@ -49,6 +50,7 @@ private:
     QLabel* statsLabel;
     QComboBox* typeCombo;
     QLineEdit* nameEdit;
+    QSpinBox* sizeSpinBox;
     
     DataModelManager* dataManager = nullptr;
     std::string currentSelectedId;
