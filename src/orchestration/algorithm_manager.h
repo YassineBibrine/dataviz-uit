@@ -8,6 +8,10 @@
 #include <memory>
 #include "../core/algorithm_info.h"
 
+// Forward declarations
+class DataStructure;
+class ArrayStructure;
+
 class AlgorithmManager {
 public:
     static AlgorithmManager& getInstance();
@@ -15,7 +19,15 @@ public:
     AlgorithmManager& operator=(const AlgorithmManager&) = delete;
 
     void registerFactory(const std::string& category, std::unique_ptr<AlgorithmFactory> factory);
+    
+    // Create algorithm without data (backward compatibility)
     std::unique_ptr<Algorithm> createAlgorithm(const std::string& category, const std::string& type);
+    
+    // Create algorithm WITH the actual data structure (NEW)
+    std::unique_ptr<Algorithm> createAlgorithmWithData(
+        const std::string& category, 
+        const std::string& type, 
+        DataStructure* data);
 
     // Methodes optionnelles
   std::vector<std::string> listAlgorithmsByCategory(const std::string& category) const;

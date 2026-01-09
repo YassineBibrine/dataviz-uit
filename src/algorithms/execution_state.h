@@ -1,57 +1,38 @@
 #pragma once
-
-#include <map>
-#include <string>
 #include <vector>
+#include <string>
+#include <map>
 
 struct ExecutionSnapshot {
-    int step;
-    std::map<std::string,int> metrics;
-    std::map<std::string,std::string> details; // details optionnels pour l'operation
+    int stepNumber{};
+    int comparisonCount{};
+    int swapCount{};
+    std::map<std::string, int> metrics;
 };
 
 class ExecutionState {
 public:
-    ExecutionState() = default;
+    // Attributes per UML
+    int currentStep{ 0 };
+    int totalSteps{ 0 };
+    int comparisonCount{ 0 };
+    int swapCount{ 0 };
+    std::vector<ExecutionSnapshot> stateHistory;
 
-    // --- ENREGISTREMENT D'OPERATIONS ---
-    void recordComparison(const std::string& a, const std::string& b);
-    void recordSwap(const std::string& a, const std::string& b);
-    void recordAccess(const std::string& a);
-
-    // Enregistrement generique (utile pour AlgorithmRunner::recordStep)
-    void recordOperation(const std::string& operation, const std::map<std::string,std::string>& details);
-
-    // --- SNAPSHOT / RESTAURATION ---
+    // Methods per UML
+    void recordComparison(const std::string& elem1, const std::string& elem2);
+    void recordSwap(const std::string& elem1, const std::string& elem2);
+    void recordAccess(const std::string& elem);
     void saveState();
-    void restoreState(int step);
+    std::map<std::string, int> getMetrics() const;
+    void restoreState(int stepNumber);
 
-    // --- GETTERS ---
-  std::map<std::string,int> getMetrics() const;
-    int getCurrentStep() const;
-    int getTotalSteps() const;
-
-    // Avancer d'une etape (utile pour l'execution pas-a-pas)
+    // Additional methods
+    void recordOperation(const std::string& operation, const std::map<std::string, std::string>& details);
     void advanceStep();
-
-    // --- RESET ---
     void reset();
 
 private:
-    int currentStep{0};
-    int totalSteps{0};
-
-    // Metriques individuelles (pour acces rapide) - maintenues en miroir avec `metricsMap`
-    int comparisonCount{0};
-    int swapCount{0};
-
-    // Carte flexible pour toutes les metriques (source pour les snapshots)
-    std::map<std::string,int> metricsMap{
-        {"comparisons", 0},
-        {"swaps", 0},
-        {"access", 0}
-    };
-
-  // Historique complet de snapshots
-    std::vector<ExecutionSnapshot> history;
+    // Internal counters
+    int accessCount_{ 0 };
 };
