@@ -249,10 +249,10 @@ void VisualizationPane::paintEvent(QPaintEvent* e) {
 // Load a structure from the backend into the interactive canvas for editing
 void VisualizationPane::loadStructureForEditing(const std::string& structureId) {
     if (!interaction) return;
-    
+  
     // Get the backend manager
-    DataModelManager* backend = interaction->getBackend();
-    if (!backend) return;
+ DataModelManager* backend = interaction->getBackend();
+ if (!backend) return;
     
     DataStructure* structure = backend->getStructure(structureId);
     if (!structure) return;
@@ -261,14 +261,14 @@ void VisualizationPane::loadStructureForEditing(const std::string& structureId) 
     interaction->clearInteractive();
     nodeValues.clear();
     
-    // Get structure metadata to determine type
+ // Get structure metadata to determine type
     std::string structureType;
     auto structures = backend->getAllStructures();
     for (const auto& meta : structures) {
-        if (meta.id == structureId) {
-     structureType = meta.type;
-            break;
-   }
+   if (meta.id == structureId) {
+   structureType = meta.type;
+       break;
+        }
     }
     
     // Get nodes and edges from the structure
@@ -276,7 +276,7 @@ void VisualizationPane::loadStructureForEditing(const std::string& structureId) 
     auto edges = structure->getEdges();
     
     // Layout nodes based on structure type and add them to interaction manager
-    int nodeCount = nodes.size();
+    int nodeCount = static_cast<int>(nodes.size());
     if (nodeCount == 0) return;
     
     // Determine shape based on type
@@ -284,62 +284,72 @@ void VisualizationPane::loadStructureForEditing(const std::string& structureId) 
     
     // Calculate layout positions
     if (structureType == "Array") {
-        double startX = 200.0;
+    double startX = 200.0;
         double y = 300.0;
         double spacing = 80.0;
         
         for (size_t i = 0; i < nodes.size(); ++i) {
-            double x = startX + i * spacing;
-            std::string newId = interaction->addNode(x, y, shape);
-       // Map old id to new id and store value
-nodeValues[newId] = nodes[i].id;
-        }
+ double x = startX + i * spacing;
+         std::string newId = interaction->addNode(x, y, shape);
+            // Use value for display
+            nodeValues[newId] = nodes[i].value;
+        interaction->updateNodeValue(newId, std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value));
+   }
     }
-    else if (structureType == "List") {
-     double startX = 150.0;
+  else if (structureType == "List") {
+ double startX = 150.0;
         double y = 300.0;
-        double spacing = 100.0;
+     double spacing = 100.0;
         
-    std::vector<std::string> newNodeIds;
-        for (size_t i = 0; i < nodes.size(); ++i) {
-            double x = startX + i * spacing;
-            std::string newId = interaction->addNode(x, y, shape);
+      std::vector<std::string> newNodeIds;
+     for (size_t i = 0; i < nodes.size(); ++i) {
+   double x = startX + i * spacing;
+     std::string newId = interaction->addNode(x, y, shape);
             newNodeIds.push_back(newId);
-            nodeValues[newId] = nodes[i].id;
+            // Use value for display
+      nodeValues[newId] = nodes[i].value;
+        interaction->updateNodeValue(newId, std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value));
         }
-  
-        // Add edges for list (sequential)
-    for (size_t i = 0; i < newNodeIds.size() - 1; ++i) {
-            interaction->addEdge(newNodeIds[i], newNodeIds[i + 1]);
+        
+     // Add edges for list (sequential)
+        for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
+   interaction->addEdge(newNodeIds[i], newNodeIds[i + 1]);
         }
     }
     else {
-  // Circular layout for trees and graphs
+        // Circular layout for trees and graphs
         double centerX = 400.0;
-    double centerY = 300.0;
-    double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+        double centerY = 300.0;
+        double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
         
-      std::map<std::string, std::string> oldToNewId;
-    
-        for (size_t i = 0; i < nodes.size(); ++i) {
-  double angle = (2.0 * 3.14159 * i) / nodeCount;
-            double x = centerX + radius * std::cos(angle);
-        double y = centerY + radius * std::sin(angle);
-  
-    std::string newId = interaction->addNode(x, y, shape);
+        std::map<std::string, std::string> oldToNewId;
+        
+   for (size_t i = 0; i < nodes.size(); ++i) {
+     double angle = (2.0 * 3.14159 * i) / nodeCount;
+  double x = centerX + radius * std::cos(angle);
+ double y = centerY + radius * std::sin(angle);
+     
+            std::string newId = interaction->addNode(x, y, shape);
             oldToNewId[nodes[i].id] = newId;
-       nodeValues[newId] = nodes[i].id;
+            // Use value for display
+            nodeValues[newId] = nodes[i].value;
+            try {
+                interaction->updateNodeValue(newId, std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value));
+ } catch (...) {
+                // If value is not a number, just use 0
+             interaction->updateNodeValue(newId, 0);
+    }
         }
-      
-        // Add edges using the mapped IDs
-        for (const auto& edge : edges) {
-        if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-          interaction->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+        
+  // Add edges using the mapped IDs
+  for (const auto& edge : edges) {
+            if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+      interaction->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
             }
         }
     }
-    
-    updateDisplay();
+ 
+updateDisplay();
 }
 
 // --- EVENTS SOURIS ---
@@ -420,27 +430,30 @@ void VisualizationPane::dragEnterEvent(QDragEnterEvent* event) { event->acceptPr
 void VisualizationPane::dropEvent(QDropEvent* event) {
     QListWidget* source = qobject_cast<QListWidget*>(event->source());
     if (source) {
-        QListWidgetItem* item = source->currentItem();
+   QListWidgetItem* item = source->currentItem();
         QString type = item->data(Qt::UserRole).toString();
-   QPoint dropPoint(event->position().x(), event->position().y());
+        QPoint dropPoint(event->position().x(), event->position().y());
         QPointF logicalPos = getLogicalPosition(dropPoint);
-  double dropX = logicalPos.x();
-   double dropY = logicalPos.y();
+        double dropX = logicalPos.x();
+  double dropY = logicalPos.y();
 
-      if (type == "CREATE_NODE_CIRCLE") interaction->addNode(dropX, dropY, "CIRCLE");
-      else if (type == "CREATE_NODE_RECT") interaction->addNode(dropX, dropY, "RECT");
+        // Enable sync for user-created nodes
+        interaction->setSyncWithBackend(true);
+        
+        if (type == "CREATE_NODE_CIRCLE") interaction->addNode(dropX, dropY, "CIRCLE");
+  else if (type == "CREATE_NODE_RECT") interaction->addNode(dropX, dropY, "RECT");
 
         updateDisplay();
-        std::string newNodeId = interaction->getNodeAtPosition(dropX, dropY);
+     std::string newNodeId = interaction->getNodeAtPosition(dropX, dropY);
         if (!newNodeId.empty()) {
-  bool ok;
-        QString text = QInputDialog::getText(this, "Nouvelle cellule", "Valeur :", QLineEdit::Normal, "0", &ok);
-     if (ok && !text.isEmpty()) {
+     bool ok;
+       QString text = QInputDialog::getText(this, "Nouvelle cellule", "Valeur :", QLineEdit::Normal, "0", &ok);
+    if (ok && !text.isEmpty()) {
      nodeValues[newNodeId] = text.toStdString();
-     interaction->updateNodeValue(newNodeId, text.toInt());
+              interaction->updateNodeValue(newNodeId, text.toInt());
             }
         }
-    updateDisplay();
+      updateDisplay();
     }
     event->acceptProposedAction();
 }

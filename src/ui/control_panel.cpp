@@ -7,6 +7,60 @@
 #include <QSpacerItem>
 #include <QComboBox>
 #include <QString>
+#include <QWheelEvent>
+
+// Custom ComboBox that ignores wheel events to prevent scroll hijacking
+class NoScrollComboBox : public QComboBox {
+public:
+    explicit NoScrollComboBox(QWidget* parent = nullptr) : QComboBox(parent) {
+   setFocusPolicy(Qt::StrongFocus);
+    }
+protected:
+    void wheelEvent(QWheelEvent* event) override {
+        // Only handle wheel events if the combo box has focus
+        if (!hasFocus()) {
+      event->ignore();
+        } else {
+ QComboBox::wheelEvent(event);
+        }
+    }
+};
+
+// Custom Slider that ignores wheel events to prevent scroll hijacking
+class NoScrollSlider : public QSlider {
+public:
+    explicit NoScrollSlider(Qt::Orientation orientation, QWidget* parent = nullptr) 
+        : QSlider(orientation, parent) {
+     setFocusPolicy(Qt::StrongFocus);
+    }
+protected:
+    void wheelEvent(QWheelEvent* event) override {
+        // Only handle wheel events if the slider has focus
+        if (!hasFocus()) {
+        event->ignore();
+        } else {
+       QSlider::wheelEvent(event);
+    }
+    }
+};
+
+// Custom SpinBox that ignores wheel events to prevent scroll hijacking
+class NoScrollSpinBox : public QSpinBox {
+public:
+    explicit NoScrollSpinBox(QWidget* parent = nullptr) : QSpinBox(parent) {
+        setFocusPolicy(Qt::StrongFocus);
+    }
+protected:
+void wheelEvent(QWheelEvent* event) override {
+        // Only handle wheel events if the spin box has focus
+    if (!hasFocus()) {
+            event->ignore();
+ } else {
+      QSpinBox::wheelEvent(event);
+        }
+    }
+};
+
 ControlPanel::ControlPanel(QWidget* parent)
     : QWidget(parent),
     algorithmCombo(nullptr),
@@ -38,8 +92,8 @@ void ControlPanel::setupUI()
     algoLayout->setContentsMargins(10, 15, 10, 10);
     algoLayout->setSpacing(8);
 
-    algoLayout->addWidget(new QLabel("Select algorithm:"));
-    algorithmCombo = new QComboBox();
+  algoLayout->addWidget(new QLabel("Select algorithm:"));
+    algorithmCombo = new NoScrollComboBox();
     algoLayout->addWidget(algorithmCombo);
 
     mainLayout->addWidget(algoGroup);
@@ -51,24 +105,27 @@ void ControlPanel::setupUI()
     controlLayout->setSpacing(8);
 
     // Play/Pause/Step buttons
-    QHBoxLayout* playLayout = new QHBoxLayout();
+QHBoxLayout* playLayout = new QHBoxLayout();
     playLayout->setSpacing(8);
 
     int btnH = 26;
     int btnW_Small = 45;
     int btnW_Large = 70;
 
-    stepBackwardButton = new QPushButton("⏮");
+    stepBackwardButton = new QPushButton("|<", this);
     stepBackwardButton->setFixedSize(btnW_Small, btnH);
+    stepBackwardButton->setToolTip("Step Backward");
 
-    playButton = new QPushButton("▶ Play");
+    playButton = new QPushButton("Play", this);
     playButton->setFixedSize(btnW_Large, btnH);
+    playButton->setObjectName("playButton");
 
-    pauseButton = new QPushButton("⏸ Pause");
+    pauseButton = new QPushButton("Pause", this);
     pauseButton->setFixedSize(btnW_Large, btnH);
 
-    stepForwardButton = new QPushButton("⏭");
+    stepForwardButton = new QPushButton(">|", this);
     stepForwardButton->setFixedSize(btnW_Small, btnH);
+  stepForwardButton->setToolTip("Step Forward");
 
     playLayout->addWidget(stepBackwardButton);
     playLayout->addWidget(playButton);
@@ -79,23 +136,23 @@ void ControlPanel::setupUI()
     controlLayout->addSpacing(8);
 
     // Reset button
-    resetButton = new QPushButton("⟲ Reset");
+    resetButton = new QPushButton("Reset", this);
     resetButton->setFixedHeight(btnH);
     controlLayout->addWidget(resetButton);
 
     controlLayout->addSpacing(8);
 
-    // Speed slider
+    // Speed slider - use custom NoScrollSlider
     controlLayout->addWidget(new QLabel("Animation Speed:"));
 
-    speedSlider = new QSlider(Qt::Horizontal);
-    speedSlider->setRange(1, 100);
+    speedSlider = new NoScrollSlider(Qt::Horizontal);
+  speedSlider->setRange(1, 100);
     speedSlider->setValue(50);
     controlLayout->addWidget(speedSlider);
 
     currentFrameLabel = new QLabel("Frame: 0 / 0");
-    currentFrameLabel->setAlignment(Qt::AlignCenter);
-    currentFrameLabel->setStyleSheet("color: #718096; font-size: 8pt;");
+ currentFrameLabel->setAlignment(Qt::AlignCenter);
+  currentFrameLabel->setStyleSheet("color: #718096; font-size: 8pt;");
     controlLayout->addWidget(currentFrameLabel);
 
     mainLayout->addWidget(controlGroup);
@@ -104,7 +161,7 @@ void ControlPanel::setupUI()
 void ControlPanel::connectSignals()
 {
     connect(playButton, &QPushButton::clicked, this, &ControlPanel::playClicked);
-    connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::pauseClicked);
+connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::pauseClicked);
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetClicked);
     connect(stepForwardButton, &QPushButton::clicked, this, &ControlPanel::stepForwardClicked);
     connect(stepBackwardButton, &QPushButton::clicked, this, &ControlPanel::stepBackwardClicked);
@@ -122,34 +179,34 @@ void ControlPanel::updateAlgorithmList(const QString& structureType) {
 
     QString type = structureType;
 
-    if (type == "Graph") {
+  if (type == "Graph") {
         for (const auto& algo : manager.getAlgorithmNames("Graph")) {
-            algorithmCombo->addItem(QString::fromStdString(algo));
+    algorithmCombo->addItem(QString::fromStdString(algo));
         }
-    }
+}
     else if (type == "Binary Tree" || type == "Tree") {
         for (const auto& algo : manager.getAlgorithmNames("Tree")) {
             algorithmCombo->addItem(QString::fromStdString(algo));
-        }
+      }
         // Also add graph algorithms as fallback if tree category is empty
         if (algorithmCombo->count() == 0) {
-            for (const auto& algo : manager.getAlgorithmNames("Graph")) {
-                algorithmCombo->addItem(QString::fromStdString(algo));
-            }
+    for (const auto& algo : manager.getAlgorithmNames("Graph")) {
+       algorithmCombo->addItem(QString::fromStdString(algo));
+  }
         }
     }
     else if (type == "List") {
         for (const auto& algo : manager.getAlgorithmNames("Sorting")) {
-            algorithmCombo->addItem(QString::fromStdString(algo));
+        algorithmCombo->addItem(QString::fromStdString(algo));
         }
-        for (const auto& algo : manager.getAlgorithmNames("Filtering")) {
-            algorithmCombo->addItem(QString::fromStdString(algo));
+   for (const auto& algo : manager.getAlgorithmNames("Filtering")) {
+     algorithmCombo->addItem(QString::fromStdString(algo));
         }
     }
     else if (type == "Array") {
         for (const auto& category : { "Sorting", "Filtering", "Transform" }) {
-            for (const auto& algo : manager.getAlgorithmNames(category)) {
-                algorithmCombo->addItem(QString::fromStdString(algo));
+          for (const auto& algo : manager.getAlgorithmNames(category)) {
+            algorithmCombo->addItem(QString::fromStdString(algo));
             }
         }
     }

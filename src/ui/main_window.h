@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QSettings>
 #include <memory>
 #include <string>
 
@@ -15,6 +16,7 @@ class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
 class StructureSelector;
+class TutorialOverlay;
 class Algorithm; // Forward declaration générique
 class CodeGeneratorDialog; // NEW: Forward declaration for code generator
 
@@ -32,6 +34,7 @@ public:
 protected:
     //  On déclare la fonction de fermeture qu'on a ajoutée dans le CPP
     void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     // Slots pour les signaux du ControlPanel
@@ -57,10 +60,17 @@ private slots:
     // NEW: Metrics Panel toggle slot
     void onToggleMetricsPanel(bool show);
 
+    // Tutorial slots
+    void onTutorialCompleted();
+    void onTutorialSkipped();
+    void onShowTutorial();
+
 private:
     void setupUI();
     void connectSignals();
     void createMenuBar();
+    void setupTutorial();
+    void checkFirstLaunch();
 
     // Fonctions métier
     void executeAlgorithm(const std::string& algorithm);
@@ -74,11 +84,19 @@ private:
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
     
-    // NEW: Menu action for metrics toggle
+    // Tutorial overlay
+    TutorialOverlay* tutorialOverlay = nullptr;
+
+    // Menu actions
     QAction* toggleMetricsAction = nullptr;
+    QAction* showTutorialAction = nullptr;
+    
+    // Settings
+    QSettings settings;
+    bool firstLaunchChecked = false;
 
     // --- COEUR DU SYSTEME (BACKEND) ---
-    // C'est la ligne la plus importante pour ton projet :
+    // C'est la ligne la plus importante pour le projet :
     std::unique_ptr<DataModelManager> dataModelManager;
 
     // --- ALGORITHMES ---

@@ -3,6 +3,7 @@
 #include "data_structure.h"
 #include "tree_node.h"
 #include <vector>
+#include <map>
 
 /**
  * @class TreeStructure
@@ -12,7 +13,6 @@ class TreeStructure : public DataStructure {
 private:
     TreeNode* root;
     
-    void clear(TreeNode* node);
     void insertNode(TreeNode*& node, int value, TreeNode* parent);
     void collectNodes(TreeNode* node, std::vector<DSNode>& nodes) const;
     void collectEdges(TreeNode* node, std::vector<DSEdge>& edges) const;
@@ -22,10 +22,30 @@ private:
     // Helper to build balanced BST from sorted array
     TreeNode* buildBalancedTree(const std::vector<int>& sortedValues, int start, int end, TreeNode* parent);
     
+    // Helper for index-based node IDs
+    void buildNodeIndexMap(std::map<const TreeNode*, int>& nodeToIndex) const;
+    
 public:
     TreeStructure();
     ~TreeStructure();
     
+    /**
+     * @brief Clear a subtree (recursive delete)
+     * @param node Root of subtree to clear
+     */
+    void clear(TreeNode* node);
+    
+    /**
+ * @brief Clear the entire tree
+     */
+    void clearTree();
+    
+    /**
+     * @brief Set the root node
+     * @param newRoot New root node (can be nullptr)
+   */
+    void setRoot(TreeNode* newRoot) { root = newRoot; }
+
     /**
      * @brief Insert a value into the tree
      * @param value Value to insert
@@ -33,26 +53,26 @@ public:
     void insert(int value);
     
     /**
-     * @brief Generate a balanced random tree
+  * @brief Generate a balanced random tree
      * @param count Number of nodes
-     */
-    void generateRandom(int count);
-    
+   */
+ void generateRandom(int count);
+
     /**
-     * @brief Generate a balanced tree (alias for generateRandom)
+   * @brief Generate a balanced tree (alias for generateRandom)
      * @param count Number of nodes
      */
     void generateBalanced(int count);
     
-    /**
-* @brief Get the root node
+  /**
+     * @brief Get the root node
      */
 TreeNode* getRoot() { return root; }
     const TreeNode* getRoot() const { return root; }
     
-    // DataStructure interface
+ // DataStructure interface
     std::vector<DSNode> getNodes() const override;
     std::vector<DSEdge> getEdges() const override;
-  std::string serializeToDOT() const override;
+    std::string serializeToDOT() const override;
     void* getDataForRunner() override;
 };
