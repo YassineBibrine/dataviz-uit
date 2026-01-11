@@ -20,6 +20,22 @@ public:
     void setInteractionMode(const QString& mode);
     void reset();
     InteractionManager* getInteractionManager() const { return interaction.get(); }
+    
+    /**
+     * @brief Load a structure from the backend into the interactive canvas for editing
+     * @param structureId ID of the structure to load
+     */
+    void loadStructureForEditing(const std::string& structureId);
+    
+    /**
+     * @brief Force refresh the display (calls updateDisplay internally)
+     */
+    void refreshDisplay();
+    
+    /**
+     * @brief Clear local node values map
+     */
+    void clearNodeValues() { nodeValues.clear(); }
 
 protected:
     void paintEvent(QPaintEvent* event) override;

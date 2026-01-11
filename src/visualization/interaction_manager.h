@@ -22,14 +22,53 @@ public:
     InteractionManager();
     ~InteractionManager();
 
-    
     void setBackend(DataModelManager* manager);
-   
+    DataModelManager* getBackend() const { return backend; }
+    
+    /**
+     * @brief Enable/disable syncing changes to backend structure
+     * @param sync True to sync user edits to backend, false when just displaying
+     */
+    void setSyncWithBackend(bool sync);
 
+    /**
+     * @brief Set the ID of the structure currently being edited
+     * @param structureId The ID of the structure loaded in the canvas
+     */
+    void setCurrentStructureId(const std::string& structureId);
+    
+    /**
+     * @brief Get the ID of the structure currently being edited
+     */
+    std::string getCurrentStructureId() const { return currentStructureId; }
+    
+    /**
+     * @brief Get the type of the current structure
+     */
+    std::string getStructureType() const;
+ 
+    /**
+     * @brief Save current canvas state back to the backend structure
+     * @return True if save was successful
+     */
+    bool saveToCurrentStructure();
+    
+    /**
+     * @brief Save node positions to the backend structure for persistence
+     */
+    void saveNodePositionsToStructure();
+
+    /**
+     * @brief Add a node and optionally track its original structure ID
+*/
     std::string addNode(double x, double y, const std::string& type);
-    void removeNode(const std::string& nodeId);
-
-    // Fonction qui enverra la valeur au backend
+    
+    /**
+     * @brief Add a node with mapping to original structure node ID
+     */
+    std::string addNodeWithMapping(double x, double y, const std::string& type, const std::string& originalNodeId);
+    
+  void removeNode(const std::string& nodeId);
     void updateNodeValue(const std::string& nodeId, int value);
 
     void addEdge(const std::string& sourceId, const std::string& targetId);
@@ -47,10 +86,10 @@ public:
     /**
      * @brief Finalize interactive structure creation
      * @param type Structure type or "Auto" for detection
-  * @param name Optional name
+     * @param name Optional name
      * @return ID of created structure in DataModelManager
      */
-  std::string finalizeStructure(const std::string& type = "Auto", 
+    std::string finalizeStructure(const std::string& type = "Auto", 
         const std::string& name = "");
     
     /**
@@ -65,38 +104,43 @@ public:
     
     /**
      * @brief Check if there are any interactive nodes/edges
-     */
+   */
     bool hasInteractiveData() const { return !nodes.empty(); }
- 
+    
     /**
-  * @brief Get count of interactive nodes and edges
+     * @brief Get count of interactive nodes and edges
      */
     std::pair<int, int> getInteractiveStats() const { 
-      return {static_cast<int>(nodes.size()), static_cast<int>(edges.size())}; 
+        return {static_cast<int>(nodes.size()), static_cast<int>(edges.size())}; 
     }
 
 private:
-    // Simulation (Mock) - On garde ça pour l'affichage local rapide
     struct MockNode {
         std::string id;
         double x, y;
-      std::string type;
-    };
+        std::string type;
+};
     struct MockEdge {
-        std::string source;
+   std::string source;
         std::string target;
     };
 
     std::vector<MockNode> nodes;
     std::vector<MockEdge> edges;
-  
+    
     // Store node values for finalization
     std::map<std::string, int> nodeValues;
+
+    // Mapping from canvas node ID to original structure node ID
+    std::map<std::string, std::string> canvasToStructureNodeId;
 
     std::string draggedNodeId = "";
     int nextId = 1;
 
-    // --- MODIFICATION  : Le pointeur qui stocke le Backend ---
+ // Backend connection
     DataModelManager* backend = nullptr;
- // ---------------------------------------------------------
+    // Flag to control whether changes are synced to backend
+    bool syncWithBackend = false;
+    // ID of the structure currently being edited
+    std::string currentStructureId;
 };

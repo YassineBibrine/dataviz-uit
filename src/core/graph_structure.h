@@ -15,20 +15,21 @@ private:
 public:
     GraphStructure();
     explicit GraphStructure(bool directed);
+    explicit GraphStructure(int nodeCount, bool directed = false);
     
     /**
-   * @brief Get the underlying graph
-  * @return Pointer to the graph
-   */
+     * @brief Get the underlying graph
+     * @return Pointer to the graph
+     */
     Graph* getGraph() { return graph.get(); }
     const Graph* getGraph() const { return graph.get(); }
     
     /**
-   * @brief Generate a random graph
+     * @brief Generate a random graph
      * @param nodeCount Number of nodes to generate
-     * @param edgeAttempts Number of edges to attempt to create
+     * @param edgeAttempts Number of edges to attempt to create (default: nodeCount * 1.5)
      */
-    void generateRandom(int nodeCount, int edgeAttempts);
+    void generateRandom(int nodeCount, int edgeAttempts = 0);
     
     // DataStructure interface implementation
     std::vector<DSNode> getNodes() const override;

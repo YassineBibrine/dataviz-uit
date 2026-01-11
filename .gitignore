@@ -13,8 +13,8 @@ cmake-build-*/
 CMakeUserPresets.json
 CMakeCache.txt
 CMakeFiles/
-*.cmake
 cmake_install.cmake
+compile_commands.json
 
 # Compiler outputs
 *.o
@@ -23,9 +23,10 @@ cmake_install.cmake
 *.dll
 *.lib
 *.a
+*.pdb
+*.ilk
 
-# IDE
-.vscode/
+# IDE - keep .vscode in repo for shared settings
 .idea/
 
 # OS
@@ -34,3 +35,8 @@ Thumbs.db
 
 # Dependencies
 llvm-build/
+
+# Qt generated files
+moc_*.cpp
+ui_*.h
+qrc_*.cpp

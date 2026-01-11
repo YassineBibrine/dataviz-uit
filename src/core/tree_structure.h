@@ -2,46 +2,75 @@
 
 #include "data_structure.h"
 #include "tree_node.h"
+#include <vector>
+#include <map>
 
 /**
  * @class TreeStructure
- * @brief Wrapper for binary tree data structure
+ * @brief Binary Search Tree data structure
  */
 class TreeStructure : public DataStructure {
 private:
     TreeNode* root;
     
-  void clear(TreeNode* node);
     void insertNode(TreeNode*& node, int value, TreeNode* parent);
     void collectNodes(TreeNode* node, std::vector<DSNode>& nodes) const;
     void collectEdges(TreeNode* node, std::vector<DSEdge>& edges) const;
     void serializeNode(TreeNode* node, std::ostringstream& oss) const;
     void serializeEdges(TreeNode* node, std::ostringstream& oss) const;
     
+    // Helper to build balanced BST from sorted array
+    TreeNode* buildBalancedTree(const std::vector<int>& sortedValues, int start, int end, TreeNode* parent);
+    
+    // Helper for index-based node IDs
+    void buildNodeIndexMap(std::map<const TreeNode*, int>& nodeToIndex) const;
+    
 public:
     TreeStructure();
-    ~TreeStructure() override;
+    ~TreeStructure();
     
     /**
-     * @brief Get the root of the tree
-     * @return Pointer to root node
+     * @brief Clear a subtree (recursive delete)
+     * @param node Root of subtree to clear
      */
-    TreeNode* getRoot() { return root; }
- const TreeNode* getRoot() const { return root; }
+    void clear(TreeNode* node);
     
     /**
-     * @brief Insert a value into the tree (BST insertion)
+ * @brief Clear the entire tree
+     */
+    void clearTree();
+    
+    /**
+     * @brief Set the root node
+     * @param newRoot New root node (can be nullptr)
+   */
+    void setRoot(TreeNode* newRoot) { root = newRoot; }
+
+    /**
+     * @brief Insert a value into the tree
      * @param value Value to insert
      */
     void insert(int value);
     
     /**
-     * @brief Generate a random tree
+  * @brief Generate a balanced random tree
+     * @param count Number of nodes
+   */
+ void generateRandom(int count);
+
+    /**
+   * @brief Generate a balanced tree (alias for generateRandom)
      * @param count Number of nodes
      */
-    void generateRandom(int count);
+    void generateBalanced(int count);
     
-    // DataStructure interface implementation
+  /**
+     * @brief Get the root node
+     */
+TreeNode* getRoot() { return root; }
+    const TreeNode* getRoot() const { return root; }
+    
+ // DataStructure interface
     std::vector<DSNode> getNodes() const override;
     std::vector<DSEdge> getEdges() const override;
     std::string serializeToDOT() const override;

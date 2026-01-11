@@ -20,7 +20,15 @@ public:
     // Methodes optionnelles
     std::vector<std::string> listAlgorithmsByCategory(const std::string& category) const;
     std::vector<std::string> getCategories() const;
-
+    std::vector<std::string> getAlgorithmNames(const std::string& category) const;
+    
+    /**
+     * @brief Get the category for a given algorithm name
+     * @param algorithm The algorithm name (e.g., "BubbleSort", "BFS")
+     * @return The category name (e.g., "Sorting", "Graph")
+     */
+    std::string getCategoryForAlgorithm(const std::string& algorithm) const;
+    
 private:
     AlgorithmManager(); // declaration seulement
 

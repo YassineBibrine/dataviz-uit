@@ -154,6 +154,12 @@ public:
    */
 bool renameStructure(const std::string& structureId, const std::string& newName);
     
+    /**
+     * @brief Create sample/demo structures for each type
+     * @return Vector of created structure IDs
+     */
+    std::vector<std::string> createSampleStructures();
+    
     // LEGACY SUPPORT - for backward compatibility
     DataStructure* getCurrentStructure() { return getSelectedStructure(); }
     const DataStructure* getCurrentStructure() const { return getSelectedStructure(); }

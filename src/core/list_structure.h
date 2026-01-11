@@ -11,11 +11,14 @@ class ListStructure : public DataStructure {
 private:
     ListNode* head;
     
-    void clearList();
-    
 public:
     ListStructure();
     ~ListStructure() override;
+    
+    /**
+     * @brief Clear all nodes from the list
+     */
+    void clearList();
     
     /**
      * @brief Get the head of the list

@@ -24,6 +24,8 @@ public:
 
     // ✅ nouveau : reset du FrameRecorder (corrige le bug du canvas)
     void reset();
+
+    void clear();
 };
 
 #endif // FRAME_RECORDER_H

@@ -127,30 +127,45 @@ ParsedStructure CodeStructureParser::parseGraph(const std::string& code) {
     
     // Check if directed
     result.isDirected = containsKeyword(code, "Graph(true)") || 
-          containsKeyword(code, "directed = true");
+            containsKeyword(code, "directed = true");
     
-    // Extract nodes: addNode("nodeId")
-    std::regex nodeRegex(R"(addNode\s*\(\s*\"([^\"]+)\"\s*\))");
-    std::sregex_iterator nodeIter(code.begin(), code.end(), nodeRegex);
+  // Extract nodes with values: addNode("nodeId", value) or addNode("nodeId")
+    std::regex nodeWithValueRegex(R"(addNode\s*\(\s*\"([^\"]+)\"\s*,\s*(\d+)\s*\))");
+    std::regex nodeOnlyRegex(R"(addNode\s*\(\s*\"([^\"]+)\"\s*\))");
+    
+    std::sregex_iterator nodeValIter(code.begin(), code.end(), nodeWithValueRegex);
+    std::sregex_iterator nodeOnlyIter(code.begin(), code.end(), nodeOnlyRegex);
     std::sregex_iterator end;
     
-    int nodeIndex = 0;
-    while (nodeIter != end) {
-        std::string nodeId = (*nodeIter)[1].str();
-        result.nodeValues[nodeId] = nodeIndex++;  // Assign sequential values
-        ++nodeIter;
-  }
+    // First, try to parse nodes with values
+    while (nodeValIter != end) {
+        std::string nodeId = (*nodeValIter)[1].str();
+        int value = std::stoi((*nodeValIter)[2].str());
+        result.nodeValues[nodeId] = value;
+        ++nodeValIter;
+    }
+ 
+    // Then parse nodes without explicit values (assign sequential index)
+    int nodeIndex = static_cast<int>(result.nodeValues.size());
+    while (nodeOnlyIter != end) {
+        std::string nodeId = (*nodeOnlyIter)[1].str();
+  // Only add if not already added with a value
+        if (result.nodeValues.find(nodeId) == result.nodeValues.end()) {
+        result.nodeValues[nodeId] = nodeIndex++;
+    }
+        ++nodeOnlyIter;
+    }
     
     // Extract edges: addEdge("from", "to")
     result.edges = extractEdges(code);
     
     if (result.nodeValues.empty() && result.edges.empty()) {
-     result.errorMessage = "No graph structure found. Expected: addNode(\"id\") and addEdge(\"from\", \"to\");";
-        result.success = false;
+      result.errorMessage = "No graph structure found. Expected: addNode(\"id\", value) and addEdge(\"from\", \"to\");";
+     result.success = false;
     } else {
-        result.success = true;
+      result.success = true;
     }
-    
+
     return result;
 }
 

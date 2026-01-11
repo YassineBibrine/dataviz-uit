@@ -1,13 +1,14 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QSettings>
 #include <memory>
 #include <string>
 
 // On inclut les managers 
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
-#include "../algorithms/frame_recorder.h"   //  le chemin si nécessaire
+#include "../algorithms/frame_recorder.h"
 #include "../algorithms/algorithm_runner.h"
 
 class VisualizationPane;
@@ -15,6 +16,7 @@ class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
 class StructureSelector;
+class TutorialOverlay;
 class Algorithm; // Forward declaration générique
 class CodeGeneratorDialog; // NEW: Forward declaration for code generator
 
@@ -32,6 +34,7 @@ public:
 protected:
     //  On déclare la fonction de fermeture qu'on a ajoutée dans le CPP
     void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     // Slots pour les signaux du ControlPanel
@@ -47,24 +50,32 @@ private slots:
     // --- Structure Selector slots ---
     void onStructureSelected(QString structureId);
     void onStructureRemoved(QString structureId);
-    void onFinalizeInteractive(QString type, QString name);
     void onClearInteractive();
+    void onSamplesCreated();  // NEW: Handle samples created
     
     // NEW: Code Generator slots
     void onShowCodeGenerator();
     void onStructureCreatedFromCode(QString structureId);
   
     // NEW: Metrics Panel toggle slot
-  void onToggleMetricsPanel(bool show);
+    void onToggleMetricsPanel(bool show);
+
+    // Tutorial slots
+    void onTutorialCompleted();
+    void onTutorialSkipped();
+    void onShowTutorial();
 
 private:
     void setupUI();
     void connectSignals();
     void createMenuBar();
+    void setupTutorial();
+    void checkFirstLaunch();
 
     // Fonctions métier
     void executeAlgorithm(const std::string& algorithm);
     void updateVisualizationForStructure(const std::string& structureId);
+    void loadStructureIntoCanvas(const std::string& structureId);  // NEW: Load structure into interactive canvas
 
     // --- COMPOSANTS UI ---
     ToolboxPanel* toolboxPanel = nullptr;
@@ -73,11 +84,19 @@ private:
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
     
- // NEW: Menu action for metrics toggle
+    // Tutorial overlay
+    TutorialOverlay* tutorialOverlay = nullptr;
+
+    // Menu actions
     QAction* toggleMetricsAction = nullptr;
+    QAction* showTutorialAction = nullptr;
+    
+    // Settings
+    QSettings settings;
+    bool firstLaunchChecked = false;
 
     // --- COEUR DU SYSTEME (BACKEND) ---
-    // C'est la ligne la plus importante pour ton projet :
+    // C'est la ligne la plus importante pour le projet :
     std::unique_ptr<DataModelManager> dataModelManager;
 
     // --- ALGORITHMES ---

@@ -62,7 +62,7 @@ std::string StructureCodeGenerator::generateArrayCode(const ArrayStructure* arr,
     oss << "int main() {\n";
  oss << "  // Initialize array\n";
     oss << "    std::vector<int> arr = {";
-    
+
  const auto& data = arr->getData();
     for (size_t i = 0; i < data.size(); ++i) {
         if (i > 0) oss << ", ";
@@ -252,39 +252,41 @@ std::string StructureCodeGenerator::generateGraphCode(const GraphStructure* grap
     
     // Graph class
     if (includeComments) {
-   oss << "// Simple Graph implementation using adjacency list\n";
+        oss << "// Simple Graph implementation using adjacency list\n";
     }
-  oss << "class Graph {\n";
+    oss << "class Graph {\n";
     oss << "private:\n";
     oss << "    std::map<std::string, std::vector<std::string>> adjList;\n";
+    oss << "    std::map<std::string, int> nodeValues;\n";
     oss << "    bool directed;\n\n";
     
     oss << "public:\n";
     oss << "    Graph(bool isDirected = false) : directed(isDirected) {}\n\n";
     
-    oss << "    void addNode(const std::string& node) {\n";
+    oss << "    void addNode(const std::string& node, int value = 0) {\n";
     oss << "        if (adjList.find(node) == adjList.end()) {\n";
-    oss << "    adjList[node] = std::vector<std::string>();\n";
-  oss << "      }\n";
+    oss << "adjList[node] = std::vector<std::string>();\n";
+    oss << "    nodeValues[node] = value;\n";
+    oss << "   }\n";
     oss << "    }\n\n";
     
-oss << "    void addEdge(const std::string& from, const std::string& to) {\n";
+    oss << "    void addEdge(const std::string& from, const std::string& to) {\n";
     oss << "        addNode(from);\n";
-    oss << "        addNode(to);\n";
+    oss << "   addNode(to);\n";
     oss << "        adjList[from].push_back(to);\n";
     oss << "        if (!directed) {\n";
-oss << "   adjList[to].push_back(from);\n";
-    oss << "  }\n";
-  oss << "    }\n\n";
+    oss << "     adjList[to].push_back(from);\n";
+    oss << "        }\n";
+    oss << "    }\n\n";
     
     oss << "    void display() {\n";
-    oss << "      for (const auto& pair : adjList) {\n";
-    oss << "     std::cout << pair.first << \" -> \";\n";
-    oss << "            for (const auto& neighbor : pair.second) {\n";
-    oss << "                std::cout << neighbor << \" \";\n";
-    oss << "            }\n";
-    oss << "            std::cout << std::endl;\n";
-    oss << "    }\n";
+    oss << "        for (const auto& pair : adjList) {\n";
+    oss << "   std::cout << pair.first << \" (value: \" << nodeValues[pair.first] << \") -> \";\n";
+    oss << " for (const auto& neighbor : pair.second) {\n";
+    oss << "      std::cout << neighbor << \" \";\n";
+    oss << "        }\n";
+    oss << " std::cout << std::endl;\n";
+    oss << "        }\n";
     oss << "    }\n";
     oss << "};\n\n";
     
@@ -299,30 +301,45 @@ oss << "   adjList[to].push_back(from);\n";
     if (includeComments) {
         oss << "    // Create " << (isDirected ? "directed" : "undirected") << " graph\n";
     }
-  oss << "    Graph g(" << (isDirected ? "true" : "false") << ");\n\n";
+    oss << "    Graph g(" << (isDirected ? "true" : "false") << ");\n\n";
     
     if (includeComments) {
-        oss << "    // Add nodes\n";
+        oss << "    // Add nodes with values\n";
     }
     
-    auto nodes = graph->getNodes();
-  for (const auto& node : nodes) {
-    oss << "    g.addNode(\"" << node.id << "\");\n";
+    // Add nodes with their actual values from properties
+    if (const Graph* g = graph->getGraph()) {
+     auto nodeIds = g->getAllNodeIds();
+        for (const auto& nodeId : nodeIds) {
+        const Graph::Node* node = g->getNode(nodeId);
+      int nodeValue = 0;
+            if (node) {
+      auto it = node->properties.find("value");
+       if (it != node->properties.end()) {
+              try {
+        nodeValue = std::stoi(it->second);
+      } catch (...) {
+   nodeValue = 0;
+  }
+      }
+            }
+   oss << "  g.addNode(\"" << nodeId << "\", " << nodeValue << ");\n";
+        }
     }
     
     oss << "\n";
-    if (includeComments) {
-        oss << "    // Add edges\n";
+ if (includeComments) {
+        oss << "  // Add edges (fully connected graph)\n";
     }
-    
+  
     auto edges = graph->getEdges();
     for (const auto& edge : edges) {
         oss << "    g.addEdge(\"" << edge.from << "\", \"" << edge.to << "\");\n";
     }
-    
+
     oss << "\n";
     if (includeComments) {
-   oss << "    // Display graph\n";
+      oss << "    // Display graph\n";
     }
     oss << "    std::cout << \"Graph Structure:\\n\";\n";
     oss << "    g.display();\n\n";
