@@ -5,25 +5,17 @@
 #include <memory>
 #include <string>
 
-// On inclut les managers 
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
 #include "../algorithms/frame_recorder.h"
-#include "../algorithms/algorithm_runner.h"
+#include "../session/session_manager.h"
 
 class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
-class StructureSelector;
-class TutorialOverlay;
-class Algorithm; // Forward declaration générique
-class CodeGeneratorDialog; // NEW: Forward declaration for code generator
+class Algorithm;
 
-/**
- * @class MainWindow
- * @brief Main application window
- */
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -32,12 +24,9 @@ public:
     ~MainWindow() override;
 
 protected:
-    //  On déclare la fonction de fermeture qu'on a ajoutée dans le CPP
-    void closeEvent(QCloseEvent *event) override;
-    void showEvent(QShowEvent *event) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    // Slots pour les signaux du ControlPanel
     void onPlayClicked();
     void onPauseClicked();
     void onResetClicked();
@@ -69,37 +58,21 @@ private:
     void setupUI();
     void connectSignals();
     void createMenuBar();
-    void setupTutorial();
-    void checkFirstLaunch();
+    void restorePreviousSession();
 
-    // Fonctions métier
     void executeAlgorithm(const std::string& algorithm);
     void updateVisualizationForStructure(const std::string& structureId);
     void loadStructureIntoCanvas(const std::string& structureId);  // NEW: Load structure into interactive canvas
 
-    // --- COMPOSANTS UI ---
     ToolboxPanel* toolboxPanel = nullptr;
     StructureSelector* structureSelector = nullptr;
     std::unique_ptr<VisualizationPane> visualizationPane;
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
-    
-    // Tutorial overlay
-    TutorialOverlay* tutorialOverlay = nullptr;
 
-    // Menu actions
-    QAction* toggleMetricsAction = nullptr;
-    QAction* showTutorialAction = nullptr;
-    
-    // Settings
-    QSettings settings;
-    bool firstLaunchChecked = false;
-
-    // --- COEUR DU SYSTEME (BACKEND) ---
-    // C'est la ligne la plus importante pour le projet :
+    FrameRecorder frameRecorder;
     std::unique_ptr<DataModelManager> dataModelManager;
 
-    // --- ALGORITHMES ---
     AlgorithmManager& algoManager;
     FrameRecorder frameRecorder;
     AlgorithmRunner* currentAlgorithm = nullptr;

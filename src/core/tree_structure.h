@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "data_structure.h"
 #include "tree_node.h"
@@ -75,4 +75,8 @@ TreeNode* getRoot() { return root; }
     std::vector<DSEdge> getEdges() const override;
     std::string serializeToDOT() const override;
     void* getDataForRunner() override;
+    // 🔥 Session
+    QJsonObject serialize() const override;
+    void deserialize(const QJsonObject& obj) override;
+    std::string getType() const override;
 };

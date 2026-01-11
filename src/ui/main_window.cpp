@@ -1,4 +1,4 @@
-#include "main_window.h"
+﻿#include "main_window.h"
 #include "visualization_pane.h"
 #include "control_panel.h"
 #include "metrics_panel.h"
@@ -61,7 +61,8 @@ MainWindow::MainWindow(QWidget* parent)
     setupUI();
     connectSignals();
     createMenuBar();
-    setupTutorial();
+    // ✅ RESTAURATION SESSION
+    restorePreviousSession();
 }
 
 MainWindow::~MainWindow() = default;
@@ -872,36 +873,30 @@ double dy = y - pos.second;
     interactionMgr->setSyncWithBackend(true);
     visualizationPane->refreshDisplay();
 }
+void MainWindow::restorePreviousSession() {
+    SessionManager session;
 
-void MainWindow::updateVisualizationForStructure(const std::string& structureId) {
-    loadStructureIntoCanvas(structureId);
-}
-
-void MainWindow::closeEvent(QCloseEvent* e) {
-e->accept();
-}
-
-void MainWindow::onShowCodeGenerator() {
-    CodeGeneratorDialog dialog(dataModelManager.get(), this);
-    connect(&dialog, &CodeGeneratorDialog::structureCreatedFromCode,
-         this, &MainWindow::onStructureCreatedFromCode);
-    dialog.exec();
-}
-
-void MainWindow::onStructureCreatedFromCode(QString structureId) {
-    if (structureSelector) {
-        structureSelector->refreshStructureList();
+    if (!session.hasSession()) {
+        qDebug() << "No previous session";
+        return;
     }
-    updateVisualizationForStructure(structureId.toStdString());
-    qDebug() << "Structure created from code:" << structureId;
+
+    SessionData data = session.loadSession();
+
+    frameRecorder.reset();
+    if (visualizationPane) visualizationPane->reset();
+
+    loadDataStructure(data.structureType, data.size);
+
+    qDebug() << "Session restored";
 }
 
-void MainWindow::onToggleMetricsPanel(bool show) {
-    if (metricsPanel) {
-        metricsPanel->setVisible(show);
-        if (toggleMetricsAction) {
-            toggleMetricsAction->setText(show ? "Hide Algorithm Metrics" : "Show Algorithm Metrics");
-        }
-        qDebug() << "Metrics panel" << (show ? "shown" : "hidden");
+void MainWindow::closeEvent(QCloseEvent* event) {
+    SessionManager session;
+
+    if (dataModelManager && dataModelManager->getCurrentStructure()) {
+        session.saveSession(*dataModelManager->getCurrentStructure());
     }
+
+    event->accept();
 }

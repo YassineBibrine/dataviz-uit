@@ -1,151 +1,104 @@
-#include "graph_structure.h"
+﻿#include "graph_structure.h"
 #include <random>
-#include <sstream>
-#include <map>
+#include <QJsonArray>
 
-GraphStructure::GraphStructure() 
-    : graph(std::make_unique<Graph>(false)) {
-}
-
-GraphStructure::GraphStructure(bool directed)
-    : graph(std::make_unique<Graph>(directed)) {
-}
-
-GraphStructure::GraphStructure(int nodeCount, bool directed)
-    : graph(std::make_unique<Graph>(directed)) {
-    if (nodeCount > 0) {
-        generateRandom(nodeCount, 0);  // 0 means fully connected
-    }
-}
+GraphStructure::GraphStructure() : graph(std::make_unique<Graph>(false)) {}
+GraphStructure::GraphStructure(bool directed) : graph(std::make_unique<Graph>(directed)) {}
 
 void GraphStructure::generateRandom(int nodeCount, int edgeAttempts) {
-    (void)edgeAttempts;  // Unused - we create fully connected graph
-    
-    if (!graph) {
-        graph = std::make_unique<Graph>(false);
+    if (!graph) graph = std::make_unique<Graph>(false);
+    graph->clear();
+
+    for (int i = 0; i < nodeCount; ++i) {
+        graph->addNode("n" + std::to_string(i), { {"label", std::to_string(i)} });
     }
-    
- graph->clear();
- 
-    if (nodeCount <= 0) return;
- 
-    // Random value generator for node values
+
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> valueDis(1, 100);
+    std::uniform_int_distribution<> nodeDis(0, nodeCount - 1);
     std::uniform_real_distribution<> weightDis(1.0, 10.0);
-    
- // Add nodes with random values
-    for (int i = 0; i < nodeCount; ++i) {
-        std::string nodeId = "n" + std::to_string(i);
-        int randomValue = valueDis(gen);
-      std::map<std::string, std::string> props;
-        props["label"] = std::to_string(randomValue);
-  props["value"] = std::to_string(randomValue);
-     graph->addNode(nodeId, props);
-    }
-  
-    // Create a fully connected graph (all nodes linked to each other)
-    for (int i = 0; i < nodeCount; ++i) {
-        for (int j = i + 1; j < nodeCount; ++j) {
-     std::string fromId = "n" + std::to_string(i);
-   std::string toId = "n" + std::to_string(j);
-       double weight = weightDis(gen);
-            graph->addEdge(fromId, toId, weight);
+
+    int edgesAdded = 0, attempts = 0;
+    while (edgesAdded < edgeAttempts && attempts < edgeAttempts * 3) {
+        int from = nodeDis(gen);
+        int to = nodeDis(gen);
+        if (from != to) {
+            std::string fromId = "n" + std::to_string(from);
+            std::string toId = "n" + std::to_string(to);
+            if (!graph->hasEdge(fromId, toId)) {
+                graph->addEdge(fromId, toId, weightDis(gen), {});
+                edgesAdded++;
+            }
         }
+        attempts++;
     }
 }
 
 std::vector<DSNode> GraphStructure::getNodes() const {
     std::vector<DSNode> nodes;
-    
-    if (graph) {
-        auto nodeIds = graph->getAllNodeIds();
-        nodes.reserve(nodeIds.size());
-      
-        for (const auto& id : nodeIds) {
-    const Graph::Node* node = graph->getNode(id);
-  std::string displayValue = id;  // Default to id
-            
-    // Use the node value from properties if available
-            if (node) {
- auto it = node->properties.find("value");
-     if (it != node->properties.end()) {
-    displayValue = it->second;
-   }
-            }
-            nodes.emplace_back(id, displayValue);
-        }
-  }
-    
+    if (!graph) return nodes;
+    for (const auto& id : graph->getAllNodeIds())
+        nodes.emplace_back(id);
     return nodes;
 }
 
 std::vector<DSEdge> GraphStructure::getEdges() const {
     std::vector<DSEdge> edges;
-    
-    if (graph) {
-   auto graphEdges = graph->getAllEdges();
-        edges.reserve(graphEdges.size());
-   
-        for (const auto& edge : graphEdges) {
-     edges.emplace_back(edge.from, edge.to);
-        }
-    }
-    
+    if (!graph) return edges;
+    for (const auto& e : graph->getAllEdges())
+        edges.emplace_back(e.from, e.to);
     return edges;
 }
 
 std::string GraphStructure::serializeToDOT() const {
+    if (!graph) return "";
     std::ostringstream oss;
-    
-    if (!graph) {
-        return "";
-    }
-    
-    if (graph->isDirected()) {
-oss << "digraph G {\n";
-    } else {
-        oss << "graph G {\n";
-    }
-    
+    oss << (graph->isDirected() ? "digraph G {\n" : "graph G {\n");
     oss << "  node [shape=circle];\n";
-    
-    // Add nodes
-    auto nodeIds = graph->getAllNodeIds();
-    for (const auto& id : nodeIds) {
-        auto* node = graph->getNode(id);
-        if (node) {
-            oss << "  " << id;
-            if (!node->properties.empty()) {
-        oss << " [";
-         bool first = true;
-                for (const auto& [key, value] : node->properties) {
-      if (!first) oss << ",";
- oss << key << "=\"" << value << "\"";
-   first = false;
-                }
-   oss << "]";
-          }
-            oss << ";\n";
-        }
-    }
-    
-    // Add edges
-    auto edges = graph->getAllEdges();
-  std::string connector = graph->isDirected() ? " -> " : " -- ";
-    
-  for (const auto& edge : edges) {
-   oss << "  " << edge.from << connector << edge.to;
-        oss << " [label=\"" << edge.weight << "\"]";
-        oss << ";\n";
-    }
-    
+    for (const auto& id : graph->getAllNodeIds()) oss << "  " << id << ";\n";
+    std::string connector = graph->isDirected() ? " -> " : " -- ";
+    for (const auto& e : graph->getAllEdges())
+        oss << "  " << e.from << connector << e.to << " [label=\"" << e.weight << "\"];\n";
     oss << "}\n";
-    
     return oss.str();
 }
 
-void* GraphStructure::getDataForRunner() {
-    return static_cast<void*>(graph.get());
+void* GraphStructure::getDataForRunner() { return static_cast<void*>(graph.get()); }
+
+// 🔥 Session
+QJsonObject GraphStructure::serialize() const {
+    QJsonObject obj;
+    obj["type"] = QString::fromStdString(getType());
+    QJsonArray nodes;
+    for (const auto& id : graph->getAllNodeIds()) nodes.append(QString::fromStdString(id));
+    obj["nodes"] = nodes;
+
+    QJsonArray edges;
+    for (auto& e : graph->getAllEdges()) {
+        QJsonObject edgeObj;
+        edgeObj["from"] = QString::fromStdString(e.from);
+        edgeObj["to"] = QString::fromStdString(e.to);
+        edgeObj["weight"] = e.weight;
+        edges.append(edgeObj);
+    }
+    obj["edges"] = edges;
+    return obj;
 }
+
+void GraphStructure::deserialize(const QJsonObject& obj) {
+    if (!graph) graph = std::make_unique<Graph>(false);
+    graph->clear();
+
+    QJsonArray nodes = obj["nodes"].toArray();
+    for (auto n : nodes) graph->addNode(n.toString().toStdString(), {});
+
+    QJsonArray edges = obj["edges"].toArray();
+    for (auto e : edges) {
+        QJsonObject eo = e.toObject();
+        graph->addEdge(eo["from"].toString().toStdString(),
+            eo["to"].toString().toStdString(),
+            eo["weight"].toDouble(), {});
+    }
+}
+
+std::string GraphStructure::getType() const { return "Graph"; }
