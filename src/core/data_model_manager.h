@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <memory>
@@ -42,9 +42,10 @@ struct StructureMetadata {
 
 /**
  * @class DataModelManager
- * @brief Manages creation and lifecycle of multiple data structures
+ * @brief Manages creation, lifecycle, and restoration of data structures
  */
-class DataModelManager {
+class DataModelManager
+{
 private:
     // Map of structure ID -> structure instance
     std::map<std::string, std::unique_ptr<DataStructure>> structures;
@@ -62,105 +63,20 @@ private:
     std::unique_ptr<DataStructure> currentStructure;
 
 public:
-    DataModelManager() = default;
+    // ✅ Constructor: restore last structure if exists
+    DataModelManager();
+
     ~DataModelManager() = default;
 
-    /**
-     * @brief Create a data structure from configuration (generated)
-   * @param type Type of data structure
-     * @param size Initial size
-     * @param name Optional custom name
-     * @return ID of created structure
-     */
-    std::string createDataStructure(const std::string& type, int size, 
-     const std::string& name = "");
+    DataModelManager(const DataModelManager&) = delete;
+    DataModelManager& operator=(const DataModelManager&) = delete;
+    DataModelManager(DataModelManager&&) = default;
+    DataModelManager& operator=(DataModelManager&&) = default;
 
-    /**
-     * @brief Create an empty interactive structure
-     * @param type Type of data structure
-     * @param name Optional custom name
-     * @return ID of created structure
-  */
-    std::string createInteractiveStructure(const std::string& type,
-       const std::string& name = "");
+    DataStructure* createDataStructure(const std::string& type, int size);
 
-    /**
-     * @brief Build a structure from user-created nodes and edges
-     * @param type Detected or specified type
-     * @param nodes Node IDs and their values
-  * @param edges Edge connections
-     * @param name Optional name
-     * @return ID of created structure
-     */
-    std::string buildStructureFromNodes(
-        const std::string& type,
-        const std::map<std::string, int>& nodes,
-        const std::vector<std::pair<std::string, std::string>>& edges,
-  const std::string& name = "");
+    DataStructure* getCurrentStructure() noexcept { return currentStructure.get(); }
+    const DataStructure* getCurrentStructure() const noexcept { return currentStructure.get(); }
 
-    /**
-     * @brief Auto-detect structure type from topology
-     * @param nodeCount Number of nodes
-     * @param edges Edge list
-   * @return Detected type: "Graph", "Tree", "List", or "Unknown"
-     */
-    std::string detectStructureType(
-        int nodeCount,
-        const std::vector<std::pair<std::string, std::string>>& edges);
-
- /**
-     * @brief Select a structure for algorithm execution
-     * @param structureId ID of structure to select
-     * @return True if selection successful
-     */
-    bool selectStructure(const std::string& structureId);
-
-    /**
-     * @brief Get the currently selected structure
-     * @return Pointer to selected structure, or nullptr
- */
-    DataStructure* getSelectedStructure();
-    const DataStructure* getSelectedStructure() const;
-
-    /**
-     * @brief Get a specific structure by ID
-     */
-    DataStructure* getStructure(const std::string& id);
-    const DataStructure* getStructure(const std::string& id) const;
-
-    /**
-     * @brief Get all structure metadata
-     * @return Vector of metadata for all structures
-     */
-    std::vector<StructureMetadata> getAllStructures() const;
-
-    /**
-     * @brief Get currently selected structure ID
-     */
-    std::string getSelectedStructureId() const { return selectedStructureId; }
-
- /**
-     * @brief Remove a structure
-     */
-  bool removeStructure(const std::string& structureId);
-
-    /**
-   * @brief Clear all structures
-     */
-    void clearAll();
-
-    /**
-  * @brief Rename a structure
-   */
-bool renameStructure(const std::string& structureId, const std::string& newName);
-    
-    /**
-     * @brief Create sample/demo structures for each type
-     * @return Vector of created structure IDs
-     */
-    std::vector<std::string> createSampleStructures();
-    
-    // LEGACY SUPPORT - for backward compatibility
-    DataStructure* getCurrentStructure() { return getSelectedStructure(); }
-    const DataStructure* getCurrentStructure() const { return getSelectedStructure(); }
+    void clear() noexcept { currentStructure.reset(); }
 };

@@ -1,4 +1,4 @@
-#include "array_structure.h"
+﻿#include "array_structure.h"
 #include <random>
 #include <sstream>
 
@@ -69,4 +69,23 @@ oss << "<f" << i << "> " << data[i];
 
 void* ArrayStructure::getDataForRunner() {
     return static_cast<void*>(&data);
+}
+// 🔥 Session methods
+QJsonObject ArrayStructure::serialize() const {
+    QJsonObject obj;
+    obj["type"] = QString::fromStdString(getType());
+    QJsonArray arr;
+    for (int v : data) arr.append(v);
+    obj["values"] = arr;
+    return obj;
+}
+
+void ArrayStructure::deserialize(const QJsonObject& obj) {
+    data.clear();
+    QJsonArray arr = obj["values"].toArray();
+    for (auto v : arr) data.push_back(v.toInt());
+}
+
+std::string ArrayStructure::getType() const {
+    return "Array";
 }
