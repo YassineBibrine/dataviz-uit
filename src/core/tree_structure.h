@@ -20,7 +20,7 @@ private:
     void serializeEdges(TreeNode* node, std::ostringstream& oss) const;
     
     // Helper to build balanced BST from sorted array
-    TreeNode* buildBalancedTree(const std::vector<int>& sortedValues, int start, int end, TreeNode* parent);
+  void buildBalancedTree(const std::vector<int>& values, int start, int end, TreeNode* parent);
     
     // Helper for index-based node IDs
     void buildNodeIndexMap(std::map<const TreeNode*, int>& nodeToIndex) const;

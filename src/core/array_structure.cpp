@@ -1,6 +1,8 @@
 ﻿#include "array_structure.h"
 #include <random>
 #include <sstream>
+#include <QJsonArray>
+#include <QJsonObject>
 
 ArrayStructure::ArrayStructure(int size) {
     if (size > 0) {

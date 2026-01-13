@@ -8,13 +8,16 @@
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
 #include "../algorithms/frame_recorder.h"
-#include "../session/session_manager.h"
+#include "../core/session_manager.h"
 
 class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
+class StructureSelector;
 class Algorithm;
+class AlgorithmRunner;
+class TutorialOverlay;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -74,7 +77,22 @@ private:
     std::unique_ptr<DataModelManager> dataModelManager;
 
     AlgorithmManager& algoManager;
-    FrameRecorder frameRecorder;
     AlgorithmRunner* currentAlgorithm = nullptr;
     std::string selectedAlgorithm;
+    
+    // Menu actions
+    QAction* toggleMetricsAction = nullptr;
+    QAction* showTutorialAction = nullptr;
+    
+    // Tutorial
+    TutorialOverlay* tutorialOverlay = nullptr;
+    bool firstLaunchChecked = false;
+ 
+    // Session settings
+    QSettings settings;
+    
+    // Tutorial methods
+    void setupTutorial();
+    void checkFirstLaunch();
+    void showEvent(QShowEvent* event) override;
 };

@@ -1,5 +1,6 @@
 ﻿#include "graph_structure.h"
 #include <random>
+#include <sstream>
 #include <QJsonArray>
 
 GraphStructure::GraphStructure() : graph(std::make_unique<Graph>(false)) {}
@@ -9,28 +10,23 @@ void GraphStructure::generateRandom(int nodeCount, int edgeAttempts) {
     if (!graph) graph = std::make_unique<Graph>(false);
     graph->clear();
 
+    // Create all nodes first
     for (int i = 0; i < nodeCount; ++i) {
         graph->addNode("n" + std::to_string(i), { {"label", std::to_string(i)} });
     }
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> nodeDis(0, nodeCount - 1);
     std::uniform_real_distribution<> weightDis(1.0, 10.0);
 
-    int edgesAdded = 0, attempts = 0;
-    while (edgesAdded < edgeAttempts && attempts < edgeAttempts * 3) {
-        int from = nodeDis(gen);
-        int to = nodeDis(gen);
-        if (from != to) {
-            std::string fromId = "n" + std::to_string(from);
-            std::string toId = "n" + std::to_string(to);
-            if (!graph->hasEdge(fromId, toId)) {
-                graph->addEdge(fromId, toId, weightDis(gen), {});
-                edgesAdded++;
-            }
+    // Create a fully connected graph (complete graph)
+    // Connect every node to every other node
+    for (int i = 0; i < nodeCount; ++i) {
+        for (int j = i + 1; j < nodeCount; ++j) {
+            std::string fromId = "n" + std::to_string(i);
+            std::string toId = "n" + std::to_string(j);
+            graph->addEdge(fromId, toId, weightDis(gen), {});
         }
-        attempts++;
     }
 }
 

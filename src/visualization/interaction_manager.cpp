@@ -106,105 +106,100 @@ bool InteractionManager::saveToCurrentStructure() {
     }
     else if (structureType == "Binary Tree" || structureType == "Tree") {
         if (auto* tree = dynamic_cast<TreeStructure*>(structure)) {
-     TreeNode* root = const_cast<TreeNode*>(tree->getRoot());
-        
-            // Count existing tree nodes
-        int existingNodeCount = 0;
-         std::map<int, TreeNode*> indexToNode;
-       
-     if (root) {
-     std::queue<TreeNode*> bfsQueue;
-         bfsQueue.push(root);
-          
-          while (!bfsQueue.empty()) {
-      TreeNode* node = bfsQueue.front();
-      bfsQueue.pop();
-   if (node) {
-             indexToNode[existingNodeCount++] = node;
- if (node->left) bfsQueue.push(node->left);
-  if (node->right) bfsQueue.push(node->right);
-  }
-         }
+ TreeNode* root = const_cast<TreeNode*>(tree->getRoot());
+   
+   // Build map of ALL tree node values that currently exist
+    std::set<int> existingValues;
+    if (root) {
+     std::queue<TreeNode*> q;
+        q.push(root);
+         while (!q.empty()) {
+             TreeNode* node = q.front();
+             q.pop();
+ if (node) {
+      existingValues.insert(node->value);
+             if (node->left) q.push(node->left);
+           if (node->right) q.push(node->right);
+}
             }
-
-            // Update values for existing mapped nodes
-        for (const auto& canvasNode : nodes) {
-       auto mappingIt = canvasToStructureNodeId.find(canvasNode.id);
-        if (mappingIt != canvasToStructureNodeId.end()) {
-              const std::string& origId = mappingIt->second;
-        if (origId.length() > 5 && origId.substr(0, 5) == "tree_") {
-           try {
-    int nodeIndex = std::stoi(origId.substr(5));
- auto nodeIt = indexToNode.find(nodeIndex);
-       if (nodeIt != indexToNode.end()) {
-         auto valIt = nodeValues.find(canvasNode.id);
-         if (valIt != nodeValues.end()) {
-    nodeIt->second->value = valIt->second;
         }
-    }
-      } catch (...) {
-        // Invalid index, skip
-             }
- }
+
+// Update node values for ALL canvas nodes (that have values)
+   for (const auto& canvasNode : nodes) {
+      auto valIt = nodeValues.find(canvasNode.id);
+            if (valIt != nodeValues.end()) {
+       int canvasValue = valIt->second;
+  
+   // Check if this value already exists in the tree
+      if (existingValues.find(canvasValue) != existingValues.end()) {
+              // Value exists - find the tree node with this value and update it if needed
+          // (In a BST, values are unique, so we just verify it exists)
+      qDebug() << "Canvas node" << QString::fromStdString(canvasNode.id) 
+        << "value" << canvasValue << "already exists in tree";
+        } else {
+                 // Value doesn't exist - this is a NEW node, insert it
+tree->insert(canvasValue);
+        existingValues.insert(canvasValue);  // Track it
+qDebug() << "Inserted NEW node with value:" << canvasValue;
+          }
+         }
      }
-       }
-            
-            // Insert new nodes into the tree (nodes without existing mappings)
-            for (const auto& canvasNode : nodes) {
-            if (canvasToStructureNodeId.find(canvasNode.id) == canvasToStructureNodeId.end()) {
-          auto valIt = nodeValues.find(canvasNode.id);
-           int value = (valIt != nodeValues.end()) ? valIt->second : 0;
-      tree->insert(value);
-      qDebug() << "Inserted new node into tree with value:" << value;
-           }
-    }
-    
-       // Rebuild mappings after insertions
+
+        // Rebuild ALL mappings based on current tree structure
         root = const_cast<TreeNode*>(tree->getRoot());
         if (root) {
-         std::queue<TreeNode*> bfsQueue;
-     bfsQueue.push(root);
-     int index = 0;
-    std::map<int, int> valueToIndex;
-       
-      while (!bfsQueue.empty()) {
-       TreeNode* node = bfsQueue.front();
-    bfsQueue.pop();
-      if (node) {
-   valueToIndex[node->value] = index++;
-          if (node->left) bfsQueue.push(node->left);
-if (node->right) bfsQueue.push(node->right);
-      }
+            // Build BFS index -> TreeNode* mapping
+     std::map<int, TreeNode*> indexToNode;
+            std::map<TreeNode*, int> nodeToIndex;
+     std::map<int, int> valueToIndex;  // value -> BFS index
+     
+      std::queue<TreeNode*> bfsQueue;
+    bfsQueue.push(root);
+   int index = 0;
+    
+            while (!bfsQueue.empty()) {
+    TreeNode* node = bfsQueue.front();
+ bfsQueue.pop();
+                if (node) {
+              indexToNode[index] = node;
+              nodeToIndex[node] = index;
+           valueToIndex[node->value] = index;
+  index++;
+        if (node->left) bfsQueue.push(node->left);
+            if (node->right) bfsQueue.push(node->right);
     }
-      
-    // Update mappings for all canvas nodes based on their values
-    for (const auto& canvasNode : nodes) {
-        auto valIt = nodeValues.find(canvasNode.id);
-       if (valIt != nodeValues.end()) {
-         auto idxIt = valueToIndex.find(valIt->second);
-   if (idxIt != valueToIndex.end()) {
+        }
+     
+        // Clear and rebuild ALL canvas node mappings based on their values
+            for (const auto& canvasNode : nodes) {
+         auto valIt = nodeValues.find(canvasNode.id);
+  if (valIt != nodeValues.end()) {
+     int value = valIt->second;
+auto idxIt = valueToIndex.find(value);
+        if (idxIt != valueToIndex.end()) {
       std::string treeNodeId = "tree_" + std::to_string(idxIt->second);
-        canvasToStructureNodeId[canvasNode.id] = treeNodeId;
+       canvasToStructureNodeId[canvasNode.id] = treeNodeId;
+       }
+}
             }
-           }
-     }
-     }
-
+        }
+     
       // Save custom edges (user-drawn edges on canvas)
-        structure->clearCustomEdges();
-            for (const auto& edge : edges) {
+   structure->clearCustomEdges();
+for (const auto& edge : edges) {
      auto srcMapping = canvasToStructureNodeId.find(edge.source);
      auto tgtMapping = canvasToStructureNodeId.find(edge.target);
      
     std::string srcId = (srcMapping != canvasToStructureNodeId.end()) 
-        ? srcMapping->second : edge.source;
+      ? srcMapping->second : edge.source;
  std::string tgtId = (tgtMapping != canvasToStructureNodeId.end()) 
       ? tgtMapping->second : edge.target;
     
-       structure->addCustomEdge(srcId, tgtId);
-        }
-            
-            qDebug() << "saveToCurrentStructure: Tree updated, custom edges saved:" << edges.size();
+     structure->addCustomEdge(srcId, tgtId);
+      }
+
+   qDebug() << "saveToCurrentStructure: Tree saved. Nodes in tree:" << existingValues.size() 
+       << "Custom edges:" << edges.size();
      return true;
      }
     }

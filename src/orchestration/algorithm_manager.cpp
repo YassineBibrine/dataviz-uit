@@ -2,6 +2,8 @@
 #include "sorting_algorithm_factory.h"
 #include "filtering_algorithm_factory.h"
 #include "transform_algorithm_factory.h"
+#include "tree_algorithm_factory.h"
+#include "graph_algorithm_factory.h"
 #include <stdexcept>
 #include <memory>
 
@@ -17,6 +19,8 @@ AlgorithmManager::AlgorithmManager() {
     registerFactory("Sorting", std::make_unique<SortingAlgorithmFactory>());
     registerFactory("Filtering", std::make_unique<FilteringAlgorithmFactory>());
     registerFactory("Transform", std::make_unique<TransformAlgorithmFactory>());
+    registerFactory("Tree", std::make_unique<TreeAlgorithmFactory>());
+    registerFactory("Graph", std::make_unique<GraphAlgorithmFactory>());
 }
 
 void AlgorithmManager::registerFactory(const std::string& category, std::unique_ptr<AlgorithmFactory> factory) {
@@ -48,11 +52,11 @@ std::vector<std::string> AlgorithmManager::getCategories() const {
 }
 
 std::vector<std::string> AlgorithmManager::getAlgorithmNames(const std::string& category) const {
-    if (category == "Sorting") return { "BubbleSort", "QuickSort", "MergeSort" };
-    if (category == "Filtering") return { "RangeFilter" };
-    if (category == "Transform") return { "Normalize" };
-    if (category == "Graph") return { "BFS", "DFS", "Dijkstra" };
-    if (category == "Tree") return { "InOrder", "PreOrder", "PostOrder" };
+    if (category == "Sorting") return { "BubbleSort", "QuickSort", "MergeSort", "InsertionSort", "SelectionSort" };
+    if (category == "Filtering") return { "RangeFilter", "RemoveDuplicates" };
+    if (category == "Transform") return { "Normalize", "Reverse", "Map" };
+    if (category == "Graph") return { "BFS", "DFS", "Dijkstra", "DetectCycle", "TopologicalSort" };
+    if (category == "Tree") return { "InOrder", "PreOrder", "PostOrder", "LevelOrder", "FindHeight", "FindMin", "FindMax" };
     return {};
 }
 

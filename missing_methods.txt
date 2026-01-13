@@ -1,0 +1,54 @@
+// This file contains the missing method implementations for MainWindow
+
+// Add these to main_window.cpp after executeAlgorithm and before restorePreviousSession
+
+void MainWindow::onStructureRemoved(QString structureId) {
+    qDebug() << "Structure removed:" << structureId;
+    if (visualizationPane) {
+        visualizationPane->reset();
+    }
+    
+    if (dataModelManager && dataModelManager->getAllStructures().empty()) {
+        if (toolboxPanel) {
+      toolboxPanel->setVisible(false);
+        }
+    }
+}
+
+void MainWindow::onClearInteractive() {
+    if (visualizationPane && visualizationPane->getInteractionManager()) {
+    visualizationPane->getInteractionManager()->clearInteractive();
+  visualizationPane->clearNodeValues();
+        visualizationPane->refreshDisplay();
+        qDebug() << "Interactive canvas cleared";
+    }
+}
+
+void MainWindow::onSamplesCreated() {
+    if (dataModelManager) {
+        auto structures = dataModelManager->getAllStructures();
+  if (!structures.empty()) {
+            std::string firstId = structures[0].id;
+     dataModelManager->selectStructure(firstId);
+   
+      QString structureType = QString::fromStdString(structures[0].type);
+            if (toolboxPanel) {
+      toolboxPanel->setVisible(true);
+                toolboxPanel->updateTools(structureType);
+            }
+   if (controlPanel) {
+      controlPanel->updateAlgorithmList(structureType);
+            }
+       
+  loadStructureIntoCanvas(firstId);
+   
+      qDebug() << "Sample structures created, auto-selected:" << QString::fromStdString(firstId);
+    }
+    }
+}
+
+void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
+    // Implementation exists in original main_window.cpp
+  // This is a placeholder - copy the implementation from the original file
+    qDebug() << "Loading structure:" << QString::fromStdString(structureId);
+}

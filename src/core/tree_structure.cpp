@@ -4,6 +4,8 @@
 #include <set>
 #include <sstream>
 #include <algorithm>
+#include <queue>
+#include <map>
 
 TreeStructure::TreeStructure() : root(nullptr) {}
 TreeStructure::~TreeStructure() { clear(root); }
@@ -37,35 +39,127 @@ void TreeStructure::insertNode(TreeNode*& node, int value, TreeNode* parent) {
 void TreeStructure::generateRandom(int count) {
     clear(root);
     root = nullptr;
+    
+  if (count <= 0) return;
+    
+    // Generate unique small values (1 to count*2) for better readability
+    std::vector<int> values;
+    values.reserve(count);
+    
     std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(1, 1000);
+  std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, count * 2);
+    
     std::set<int> used;
-    while (used.size() < static_cast<size_t>(count)) {
-        int val = dis(gen);
-        if (used.insert(val).second) insert(val);
+    while (values.size() < static_cast<size_t>(count)) {
+int val = dis(gen);
+        if (used.insert(val).second) {
+          values.push_back(val);
+        }
+    }
+  
+    // Sort values to create a balanced BST
+    std::sort(values.begin(), values.end());
+    
+    // Build balanced tree using the sorted values
+    buildBalancedTree(values, 0, values.size() - 1, nullptr);
+}
+
+// Helper function to build a balanced tree from sorted values
+void TreeStructure::buildBalancedTree(const std::vector<int>& values, int start, int end, TreeNode* parent) {
+  if (start > end) return;
+    
+    // Find middle element
+    int mid = start + (end - start) / 2;
+    
+ // Create node with middle value
+    TreeNode* node = new TreeNode(values[mid]);
+    node->parent = parent;
+ 
+    // Set as root if no parent
+    if (parent == nullptr) {
+     root = node;
+    } else if (values[mid] < parent->value) {
+        parent->left = node;
+    } else {
+        parent->right = node;
     }
     
-    return edges;
+    // Recursively build left and right subtrees
+    buildBalancedTree(values, start, mid - 1, node);
+    buildBalancedTree(values, mid + 1, end, node);
 }
 
 void TreeStructure::collectNodes(TreeNode* node, std::vector<DSNode>& nodes) const {
     if (!node) return;
-    nodes.emplace_back("tree_" + std::to_string(node->value));
-    collectNodes(node->left, nodes);
-    collectNodes(node->right, nodes);
+    
+    // Use BFS to assign indices consistently (matches visualization loading)
+    std::queue<const TreeNode*> bfsQueue;
+    std::map<const TreeNode*, int> nodeToIndex;
+    
+    bfsQueue.push(node);
+    int index = 0;
+  
+    while (!bfsQueue.empty()) {
+ const TreeNode* current = bfsQueue.front();
+        bfsQueue.pop();
+        
+   if (current) {
+            nodeToIndex[current] = index++;
+         if (current->left) bfsQueue.push(current->left);
+            if (current->right) bfsQueue.push(current->right);
+        }
+    }
+    
+    // Now collect nodes with index-based IDs
+    for (const auto& pair : nodeToIndex) {
+        std::string nodeId = "tree_" + std::to_string(pair.second);
+        std::string nodeValue = std::to_string(pair.first->value);
+        nodes.emplace_back(nodeId, nodeValue);
+    }
 }
 
 void TreeStructure::collectEdges(TreeNode* node, std::vector<DSEdge>& edges) const {
     if (!node) return;
-    std::string id = "tree_" + std::to_string(node->value);
-    if (node->left) {
-        edges.emplace_back(id, "tree_" + std::to_string(node->left->value));
-        collectEdges(node->left, edges);
+    
+    // Use BFS to assign indices consistently
+    std::queue<const TreeNode*> bfsQueue;
+    std::map<const TreeNode*, int> nodeToIndex;
+    
+    bfsQueue.push(node);
+    int index = 0;
+    
+    while (!bfsQueue.empty()) {
+     const TreeNode* current = bfsQueue.front();
+   bfsQueue.pop();
+ 
+        if (current) {
+      nodeToIndex[current] = index++;
+            if (current->left) bfsQueue.push(current->left);
+  if (current->right) bfsQueue.push(current->right);
+        }
     }
-    if (node->right) {
-        edges.emplace_back(id, "tree_" + std::to_string(node->right->value));
-        collectEdges(node->right, edges);
+    
+    // Collect edges using index-based IDs
+    for (const auto& pair : nodeToIndex) {
+        const TreeNode* current = pair.first;
+        std::string parentId = "tree_" + std::to_string(pair.second);
+        
+     if (current->left) {
+            auto it = nodeToIndex.find(current->left);
+    if (it != nodeToIndex.end()) {
+            std::string leftId = "tree_" + std::to_string(it->second);
+   edges.emplace_back(parentId, leftId);
+            }
+        }
+    
+        if (current->right) {
+            auto it = nodeToIndex.find(current->right);
+            if (it != nodeToIndex.end()) {
+  std::string rightId = "tree_" + std::to_string(it->second);
+      edges.emplace_back(parentId, rightId);
+            }
+        }
     }
 }
 

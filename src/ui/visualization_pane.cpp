@@ -265,9 +265,9 @@ void VisualizationPane::loadStructureForEditing(const std::string& structureId) 
     std::string structureType;
     auto structures = backend->getAllStructures();
     for (const auto& meta : structures) {
-   if (meta.id == structureId) {
-   structureType = meta.type;
-       break;
+        if (meta.id == structureId) {
+            structureType = meta.type;
+            break;
         }
     }
     
