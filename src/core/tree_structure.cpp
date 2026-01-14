@@ -23,71 +23,102 @@ void TreeStructure::clearTree() {
 }
 
 void TreeStructure::insert(int value) {
-    insertNode(root, value, nullptr);
+    // For simple binary tree, just add the node without BST logic
+    // The structure will be determined by user-drawn edges, not value comparison
+    TreeNode* newNode = new TreeNode(value);
+    
+    if (!root) {
+root = newNode;
+   root->parent = nullptr;
+        return;
+    }
+    
+    // For non-BST tree, we'll just attach it as a temporary orphan
+    // The actual parent-child relationships will be established through user-drawn edges
+    // This allows manual tree construction without value-based positioning
+    
+    // Note: In a manual tree, nodes don't auto-insert based on values
+    // This method is kept for compatibility but doesn't enforce BST properties
+    delete newNode; // Don't auto-insert, user will create structure manually
+}
+
+TreeNode* TreeStructure::addChild(TreeNode* parentNode, int value, bool isLeft) {
+    if (!parentNode) return nullptr;
+    
+    TreeNode** childSlot = isLeft ? &(parentNode->left) : &(parentNode->right);
+    
+    // Check if slot is already occupied
+    if (*childSlot != nullptr) {
+        return nullptr; // Slot occupied
+ }
+    
+    // Create new child node
+  TreeNode* newChild = new TreeNode(value);
+    newChild->parent = parentNode;
+    *childSlot = newChild;
+    
+    return newChild;
 }
 
 void TreeStructure::insertNode(TreeNode*& node, int value, TreeNode* parent) {
+    // Removed BST insertion logic
+    // This is now a manual tree structure where users control the topology
     if (!node) {
         node = new TreeNode(value);
-        node->parent = parent;
-        return;
+ node->parent = parent;
+    return;
     }
-    if (value < node->value) insertNode(node->left, value, node);
-    else insertNode(node->right, value, node);
+  // Don't auto-insert based on value comparison
 }
 
 void TreeStructure::generateRandom(int count) {
-    clear(root);
+  clear(root);
     root = nullptr;
     
-  if (count <= 0) return;
+    if (count <= 0) return;
     
-    // Generate unique small values (1 to count*2) for better readability
+  // Generate unique random values (1 to count*2) for better readability
     std::vector<int> values;
     values.reserve(count);
     
     std::random_device rd;
-  std::mt19937 gen(rd());
+    std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(1, count * 2);
-    
-    std::set<int> used;
-    while (values.size() < static_cast<size_t>(count)) {
-int val = dis(gen);
-        if (used.insert(val).second) {
-          values.push_back(val);
-        }
-    }
   
-    // Sort values to create a balanced BST
-    std::sort(values.begin(), values.end());
+    std::set<int> used;
+ while (values.size() < static_cast<size_t>(count)) {
+        int val = dis(gen);
+  if (used.insert(val).second) {
+         values.push_back(val);
+        }
+  }
     
-    // Build balanced tree using the sorted values
-    buildBalancedTree(values, 0, values.size() - 1, nullptr);
+    // DON'T sort - keep values in random order for non-BST tree
+    // Build balanced tree with random values (structure is balanced, values are random)
+    root = buildBalancedTreeHelper(values, 0, values.size() - 1, nullptr);
+}
+
+void TreeStructure::generateBalanced(int count) {
+    // Same as generateRandom - always creates balanced tree
+    generateRandom(count);
 }
 
 // Helper function to build a balanced tree from sorted values
-void TreeStructure::buildBalancedTree(const std::vector<int>& values, int start, int end, TreeNode* parent) {
-  if (start > end) return;
+TreeNode* TreeStructure::buildBalancedTreeHelper(const std::vector<int>& values, int start, int end, TreeNode* parent) {
+    if (start > end) return nullptr;
     
     // Find middle element
     int mid = start + (end - start) / 2;
     
- // Create node with middle value
-    TreeNode* node = new TreeNode(values[mid]);
+    // Create node with middle value
+  TreeNode* node = new TreeNode(values[mid]);
     node->parent = parent;
- 
-    // Set as root if no parent
-    if (parent == nullptr) {
-     root = node;
-    } else if (values[mid] < parent->value) {
-        parent->left = node;
-    } else {
-        parent->right = node;
-    }
     
     // Recursively build left and right subtrees
-    buildBalancedTree(values, start, mid - 1, node);
-    buildBalancedTree(values, mid + 1, end, node);
+ node->left = buildBalancedTreeHelper(values, start, mid - 1, node);
+    node->right = buildBalancedTreeHelper(values, mid + 1, end, node);
+    
+    return node;
 }
 
 void TreeStructure::collectNodes(TreeNode* node, std::vector<DSNode>& nodes) const {

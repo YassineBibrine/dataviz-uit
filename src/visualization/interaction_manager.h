@@ -30,6 +30,11 @@ public:
      * @param sync True to sync user edits to backend, false when just displaying
      */
     void setSyncWithBackend(bool sync);
+    
+    /**
+     * @brief Check if syncing is currently enabled
+     */
+    bool isSyncEnabled() const { return syncWithBackend; }
 
     /**
      * @brief Set the ID of the structure currently being edited
@@ -70,6 +75,14 @@ public:
     
   void removeNode(const std::string& nodeId);
     void updateNodeValue(const std::string& nodeId, int value);
+    
+    /**
+     * @brief Update the position of an existing node
+     * @param nodeId Canvas node ID
+     * @param x New X position
+     * @param y New Y position
+     */
+    void updateNodePosition(const std::string& nodeId, double x, double y);
 
     void addEdge(const std::string& sourceId, const std::string& targetId);
     void removeEdge(const std::string& sourceId, const std::string& targetId);

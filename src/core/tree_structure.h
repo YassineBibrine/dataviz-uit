@@ -20,8 +20,8 @@ private:
     void serializeEdges(TreeNode* node, std::ostringstream& oss) const;
     
     // Helper to build balanced BST from sorted array
-  void buildBalancedTree(const std::vector<int>& values, int start, int end, TreeNode* parent);
-    
+    TreeNode* buildBalancedTreeHelper(const std::vector<int>& values, int start, int end, TreeNode* parent);
+
     // Helper for index-based node IDs
     void buildNodeIndexMap(std::map<const TreeNode*, int>& nodeToIndex) const;
     
@@ -53,7 +53,16 @@ public:
     void insert(int value);
     
     /**
-  * @brief Generate a balanced random tree
+     * @brief Add a child node to a parent (manual tree construction)
+     * @param parentNode Parent node
+  * @param value Child value
+     * @param isLeft True for left child, false for right child
+     * @return Pointer to new child node, or nullptr if slot is occupied
+     */
+    TreeNode* addChild(TreeNode* parentNode, int value, bool isLeft);
+    
+    /**
+   * @brief Generate a balanced random tree
      * @param count Number of nodes
    */
  void generateRandom(int count);

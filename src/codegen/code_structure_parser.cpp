@@ -102,9 +102,55 @@ ParsedStructure CodeStructureParser::parseBinaryTree(const std::string& code) {
     ParsedStructure result;
     result.type = ParsedStructure::Type::BINARY_TREE;
     
-    // Pattern: insert(root, value) or new TreeNode(value)
+    // Try to parse manual construction first (new format)
+    // Pattern: TreeNode* nodeX = new TreeNode(value);
+    std::vector<int> manualValues = extractNodeCreations(code, R"(TreeNode\s*\*\s*node\d+\s*=\s*new\s+TreeNode\s*\(\s*(\d+)\s*\))");
+    
+    if (!manualValues.empty()) {
+  // Manual construction detected
+    result.values = manualValues;
+        
+        // Try to extract edge connections: nodeX->left = nodeY; or nodeX->right = nodeY;
+        std::regex leftEdgeRegex(R"(node(\d+)\s*->\s*left\s*=\s*node(\d+))");
+     std::regex rightEdgeRegex(R"(node(\d+)\s*->\s*right\s*=\s*node(\d+))");
+        
+   std::sregex_iterator leftIter(code.begin(), code.end(), leftEdgeRegex);
+  std::sregex_iterator rightIter(code.begin(), code.end(), rightEdgeRegex);
+        std::sregex_iterator end;
+        
+        // Build node ID map for edges
+        std::map<std::string, int> nodeIdToValue;
+        for (size_t i = 0; i < manualValues.size(); ++i) {
+            std::string nodeId = "node" + std::to_string(i);
+       nodeIdToValue[nodeId] = manualValues[i];
+       result.nodeValues[nodeId] = manualValues[i];
+        }
+        
+        // Extract left edges
+     while (leftIter != end) {
+   std::string parentId = "node" + (*leftIter)[1].str();
+ std::string childId = "node" + (*leftIter)[2].str();
+      result.edges.emplace_back(parentId, childId);
+   ++leftIter;
+  }
+  
+ // Extract right edges
+   while (rightIter != end) {
+  std::string parentId = "node" + (*rightIter)[1].str();
+            std::string childId = "node" + (*rightIter)[2].str();
+       result.edges.emplace_back(parentId, childId);
+     ++rightIter;
+        }
+  
+        result.success = true;
+        return result;
+    }
+    
+    // Fall back to old formats (BST insertion or simple new TreeNode)
+    // Pattern 1: insert(root, value)
     std::vector<int> insertValues = extractNodeCreations(code, R"(insert\s*\(\s*\w+\s*,\s*(\d+)\s*\))");
     
+    // Pattern 2: new TreeNode(value) without explicit node variable
     if (insertValues.empty()) {
    insertValues = extractNodeCreations(code, R"(new\s+TreeNode\s*\(\s*(\d+)\s*\))");
 }
@@ -112,10 +158,13 @@ ParsedStructure CodeStructureParser::parseBinaryTree(const std::string& code) {
     result.values = insertValues;
     
     if (result.values.empty()) {
-        result.errorMessage = "No tree nodes found. Expected: insert(root, value) or new TreeNode(value);";
+     result.errorMessage = "No tree nodes found. Expected formats:\n"
+      "  - Manual: TreeNode* node0 = new TreeNode(value); node0->left = node1;\n"
+  "  - BST Insert: insert(root, value);\n"
+     "  - Simple: new TreeNode(value);";
         result.success = false;
     } else {
-        result.success = true;
+      result.success = true;
     }
     
     return result;
@@ -180,11 +229,11 @@ std::smatch match;
  std::string numberList = match[1].str();
  
      // Extract all numbers
-        std::regex numRegex(R"(\d+)");
+std::regex numRegex(R"(\d+)");
         std::sregex_iterator numIter(numberList.begin(), numberList.end(), numRegex);
       std::sregex_iterator end;
     
-        while (numIter != end) {
+   while (numIter != end) {
             values.push_back(std::stoi((*numIter).str()));
             ++numIter;
         }

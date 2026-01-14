@@ -4,12 +4,17 @@
 #include <QSettings>
 #include <memory>
 #include <string>
+#include <vector>
+#include <map>
 
 #include "../core/data_model_manager.h"
 #include "../orchestration/algorithm_manager.h"
 #include "../algorithms/frame_recorder.h"
 #include "../core/session_manager.h"
 
+// Forward declarations
+struct DSNode;
+struct DSEdge;
 class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
@@ -18,6 +23,9 @@ class StructureSelector;
 class Algorithm;
 class AlgorithmRunner;
 class TutorialOverlay;
+class InteractionManager;
+class TreeStructure;
+class DataStructure;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -25,6 +33,9 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
+  
+    // Public method to reposition tree nodes (called from VisualizationPane)
+    void repositionTreeNodesAfterEdit(const std::string& structureId);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -66,6 +77,16 @@ private:
     void executeAlgorithm(const std::string& algorithm);
     void updateVisualizationForStructure(const std::string& structureId);
     void loadStructureIntoCanvas(const std::string& structureId);  // NEW: Load structure into interactive canvas
+    
+    // Tree layout helper
+    void layoutTreeHierarchically(
+        TreeStructure* treeStruct,
+        const std::vector<DSNode>& nodes,
+        const std::vector<DSEdge>& edges,
+        std::map<std::string, std::string>& oldToNewId,
+        InteractionManager* interactionMgr,
+        DataStructure* structure
+    );
 
     ToolboxPanel* toolboxPanel = nullptr;
     StructureSelector* structureSelector = nullptr;

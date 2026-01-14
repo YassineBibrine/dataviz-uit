@@ -3,7 +3,10 @@
 #include "../core/tree_node.h"
 #include "../core/graph.h"
 #include <sstream>
-#include <functional>  // NEW: Add for std::function
+#include <functional>
+#include <queue>
+#include <map>
+#include <vector>
 
 std::string StructureCodeGenerator::generateCode(const DataStructure* structure, bool includeComments) {
     if (!structure) {
@@ -171,74 +174,128 @@ std::string StructureCodeGenerator::generateTreeCode(const TreeStructure* tree, 
     
     // Node structure
     if (includeComments) {
-        oss << "// Node structure for binary tree\n";
+     oss << "// Node structure for binary tree (manual construction)\n";
     }
     oss << "struct TreeNode {\n";
     oss << "    int value;\n";
     oss << "    TreeNode* left;\n";
-    oss << " TreeNode* right;\n";
-    oss << "    TreeNode(int val) : value(val), left(nullptr), right(nullptr) {}\n";
+  oss << "    TreeNode* right;\n";
+  oss << "    TreeNode(int val) : value(val), left(nullptr), right(nullptr) {}\n";
     oss << "};\n\n";
     
-    // Helper functions
+    // Helper function for traversal
     if (includeComments) {
-   oss << "// Insert into BST\n";
+        oss << "// Pre-order traversal (root, left, right)\n";
     }
-  oss << "TreeNode* insert(TreeNode* root, int value) {\n";
-    oss << "    if (root == nullptr) {\n";
-    oss << " return new TreeNode(value);\n";
-    oss << "    }\n";
-    oss << "    if (value < root->value) {\n";
-    oss << "        root->left = insert(root->left, value);\n";
-    oss << "    } else {\n";
-    oss << "    root->right = insert(root->right, value);\n";
-    oss << "    }\n";
-    oss << "    return root;\n";
+    oss << "void preorderTraversal(TreeNode* root) {\n";
+    oss << "    if (root == nullptr) return;\n";
+    oss << "    std::cout << root->value << \" \";\n";
+    oss << "    preorderTraversal(root->left);\n";
+    oss << "    preorderTraversal(root->right);\n";
     oss << "}\n\n";
     
     if (includeComments) {
-        oss << "// In-order traversal (left, root, right)\n";
+ oss << "// In-order traversal (left, root, right)\n";
     }
     oss << "void inorderTraversal(TreeNode* root) {\n";
-    oss << "    if (root == nullptr) return;\n";
+    oss << " if (root == nullptr) return;\n";
     oss << "    inorderTraversal(root->left);\n";
-    oss << "    std::cout << root->value << \" \";\n";
-    oss << " inorderTraversal(root->right);\n";
+  oss << " std::cout << root->value << \" \";\n";
+    oss << "    inorderTraversal(root->right);\n";
     oss << "}\n\n";
     
- // Main function
+    // Main function
     oss << "int main() {\n";
-    
+ 
     if (includeComments) {
-  oss << "    // Create binary search tree\n";
+oss << "    // Manually construct binary tree structure\n";
     }
-    oss << " TreeNode* root = nullptr;\n\n";
+ 
+    // Build map of tree nodes for manual construction
+    const TreeNode* root = tree->getRoot();
     
- // Collect values using in-order traversal
-    std::vector<int> values;
-    std::function<void(const TreeNode*)> collectValues = [&](const TreeNode* node) {
-      if (node == nullptr) return;
-        collectValues(node->left);
-        values.push_back(node->value);
-collectValues(node->right);
-    };
-    collectValues(tree->getRoot());
+    if (!root) {
+        oss << "    TreeNode* root = nullptr;\n";
+        oss << "std::cout << \"Empty tree\" << std::endl;\n";
+    } else {
+        // Collect all nodes using BFS
+   std::map<const TreeNode*, int> nodeToIndex;
+      std::vector<const TreeNode*> nodeList;
+        std::queue<const TreeNode*> bfsQueue;
+        
+   bfsQueue.push(root);
+        int index = 0;
+  
+     while (!bfsQueue.empty()) {
+     const TreeNode* current = bfsQueue.front();
+bfsQueue.pop();
     
-    if (includeComments) {
-  oss << "    // Insert nodes\n";
+            if (current) {
+         nodeToIndex[current] = index++;
+    nodeList.push_back(current);
+       
+ if (current->left) bfsQueue.push(current->left);
+     if (current->right) bfsQueue.push(current->right);
+  }
+        }
+        
+    // Generate node creation code
+  if (includeComments) {
+      oss << "    // Create all nodes\n";
+        }
+        
+    for (size_t i = 0; i < nodeList.size(); ++i) {
+    oss << "    TreeNode* node" << i << " = new TreeNode(" << nodeList[i]->value << ");\n";
+        }
+        
+        oss << "\n";
+     
+        // Generate edge connections
+        if (includeComments) {
+            oss << "    // Connect nodes (parent-child relationships)\n";
+        }
+        
+    for (size_t i = 0; i < nodeList.size(); ++i) {
+    const TreeNode* current = nodeList[i];
+       
+    if (current->left) {
+            int leftIdx = nodeToIndex[current->left];
+   oss << "    node" << i << "->left = node" << leftIdx << ";\n";
+          }
+            
+         if (current->right) {
+                int rightIdx = nodeToIndex[current->right];
+  oss << "    node" << i << "->right = node" << rightIdx << ";\n";
+     }
     }
-  for (int value : values) {
-        oss << "    root = insert(root, " << value << ");\n";
+ 
+        oss << "\n";
+        
+      if (includeComments) {
+  oss << "    // Set root\n";
+        }
+        oss << "    TreeNode* root = node0;\n";
     }
     
     oss << "\n";
+    
     if (includeComments) {
-   oss << "    // Display tree (in-order)\n";
+        oss << "    // Display tree structure\n";
     }
+oss << "    std::cout << \"Binary Tree (pre-order): \";\n";
+    oss << "    preorderTraversal(root);\n";
+oss << "    std::cout << std::endl;\n\n";
+
     oss << "    std::cout << \"Binary Tree (in-order): \";\n";
     oss << "    inorderTraversal(root);\n";
     oss << "    std::cout << std::endl;\n\n";
-  
+    
+    if (includeComments) {
+        oss << "    // Clean up memory (simplified - would need proper traversal in production)\n";
+    }
+    oss << " // Note: Proper cleanup would require post-order traversal\n";
+    oss << "// For demonstration purposes, cleanup is omitted\n\n";
+    
     oss << "    return 0;\n";
     oss << "}\n";
     

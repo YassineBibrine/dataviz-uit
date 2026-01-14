@@ -8,6 +8,9 @@
 #include "../visualization/interaction_manager.h"
 #include "../visualization/GraphvizLayoutEngine.h"
 
+// Forward declarations
+class MainWindow;
+
 class VisualizationPane : public QWidget {
     Q_OBJECT
 

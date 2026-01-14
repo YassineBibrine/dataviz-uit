@@ -9,9 +9,11 @@
 #include <sstream>
 #include <set>
 #include <cmath>
+#include <random>
 #include <QInputDialog>
 #include "../core/data_model_manager.h"
 #include "../core/data_structure.h"
+#include "main_window.h"
 
 VisualizationPane::VisualizationPane(QWidget* parent)
     : QWidget(parent) {
@@ -317,36 +319,36 @@ void VisualizationPane::loadStructureForEditing(const std::string& structureId) 
         }
     }
     else {
-        // Circular layout for trees and graphs
-        double centerX = 400.0;
-        double centerY = 300.0;
-        double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
+        // Random layout for trees and graphs
+        std::random_device rd;
+        std::mt19937 gen(rd());
+  std::uniform_real_distribution<> xDis(150.0, 650.0);
+  std::uniform_real_distribution<> yDis(100.0, 500.0);
         
         std::map<std::string, std::string> oldToNewId;
         
-   for (size_t i = 0; i < nodes.size(); ++i) {
-     double angle = (2.0 * 3.14159 * i) / nodeCount;
-  double x = centerX + radius * std::cos(angle);
- double y = centerY + radius * std::sin(angle);
-     
-            std::string newId = interaction->addNode(x, y, shape);
-            oldToNewId[nodes[i].id] = newId;
-            // Use value for display
-            nodeValues[newId] = nodes[i].value;
-            try {
-                interaction->updateNodeValue(newId, std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value));
- } catch (...) {
-                // If value is not a number, just use 0
-             interaction->updateNodeValue(newId, 0);
-    }
+        for (size_t i = 0; i < nodes.size(); ++i) {
+       double x = xDis(gen);
+          double y = yDis(gen);
+      
+ std::string newId = interaction->addNode(x, y, shape);
+      oldToNewId[nodes[i].id] = newId;
+   // Use value for display
+      nodeValues[newId] = nodes[i].value;
+        try {
+          interaction->updateNodeValue(newId, std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value));
+} catch (...) {
+          // If value is not a number, just use 0
+  interaction->updateNodeValue(newId, 0);
+ }
         }
-        
-  // Add edges using the mapped IDs
-  for (const auto& edge : edges) {
-            if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-      interaction->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+    
+        // Add edges using the mapped IDs
+        for (const auto& edge : edges) {
+         if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+       interaction->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
             }
-        }
+   }
     }
  
 updateDisplay();
@@ -429,31 +431,41 @@ void VisualizationPane::dragEnterEvent(QDragEnterEvent* event) { event->acceptPr
 
 void VisualizationPane::dropEvent(QDropEvent* event) {
     QListWidget* source = qobject_cast<QListWidget*>(event->source());
-    if (source) {
-   QListWidgetItem* item = source->currentItem();
-        QString type = item->data(Qt::UserRole).toString();
-        QPoint dropPoint(event->position().x(), event->position().y());
+ if (source) {
+     QListWidgetItem* item = source->currentItem();
+   QString type = item->data(Qt::UserRole).toString();
+   QPoint dropPoint(event->position().x(), event->position().y());
         QPointF logicalPos = getLogicalPosition(dropPoint);
-        double dropX = logicalPos.x();
-  double dropY = logicalPos.y();
+      double dropX = logicalPos.x();
+   double dropY = logicalPos.y();
 
-        // Enable sync for user-created nodes
-        interaction->setSyncWithBackend(true);
+        // Temporarily disable sync to prevent value overwrite
+      bool wasSyncing = interaction->isSyncEnabled();
+  interaction->setSyncWithBackend(false);
+   
+    std::string newNodeId;
+        if (type == "CREATE_NODE_CIRCLE") newNodeId = interaction->addNode(dropX, dropY, "CIRCLE");
+      else if (type == "CREATE_NODE_RECT") newNodeId = interaction->addNode(dropX, dropY, "RECT");
+
+   if (!newNodeId.empty()) {
+   bool ok;
+   QString text = QInputDialog::getText(this, "Nouvelle cellule", "Valeur :", QLineEdit::Normal, "0", &ok);
+  if (ok && !text.isEmpty()) {
+    nodeValues[newNodeId] = text.toStdString();
+   interaction->updateNodeValue(newNodeId, text.toInt());
+     }
+    }
+     
+     // Re-enable sync and save once with the correct value
+   interaction->setSyncWithBackend(wasSyncing);
+ if (wasSyncing) {
+     interaction->saveToCurrentStructure();
+ interaction->saveNodePositionsToStructure();
+     
+     // Removed automatic tree repositioning - users control node positions manually
+    }
         
-        if (type == "CREATE_NODE_CIRCLE") interaction->addNode(dropX, dropY, "CIRCLE");
-  else if (type == "CREATE_NODE_RECT") interaction->addNode(dropX, dropY, "RECT");
-
-        updateDisplay();
-     std::string newNodeId = interaction->getNodeAtPosition(dropX, dropY);
-        if (!newNodeId.empty()) {
-     bool ok;
-       QString text = QInputDialog::getText(this, "Nouvelle cellule", "Valeur :", QLineEdit::Normal, "0", &ok);
-    if (ok && !text.isEmpty()) {
-     nodeValues[newNodeId] = text.toStdString();
-              interaction->updateNodeValue(newNodeId, text.toInt());
-            }
-        }
-      updateDisplay();
+  updateDisplay();
     }
     event->acceptProposedAction();
 }

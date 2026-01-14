@@ -2,6 +2,10 @@
 #include "../codegen/structure_code_generator.h"
 #include "../codegen/code_structure_parser.h"
 #include "../core/data_model_manager.h"
+#include "../core/tree_structure.h"
+#include "../core/tree_node.h"
+#include "../core/array_structure.h"
+#include "../core/list_structure.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -201,137 +205,162 @@ void CodeGeneratorDialog::onGenerateCode() {
 void CodeGeneratorDialog::onParseCode() {
   QString code = inputCodeText->toPlainText();
     
-    if (code.trimmed().isEmpty()) {
+ if (code.trimmed().isEmpty()) {
       showError("Please enter C++ code to parse");
  return;
     }
     
-    // Parse the code
     ParsedStructure parsed = CodeStructureParser::parse(code.toStdString());
     
     if (!parsed.success) {
-        parseResultText->setPlainText(
-    "? Parse Failed\n\n" +
-    QString::fromStdString(parsed.errorMessage)
-     );
-        return;
+        parseResultText->setPlainText("? Parse Failed\n\n" + QString::fromStdString(parsed.errorMessage));
+     return;
     }
     
-    // Display parse results
     QString resultText = "? Parse Successful!\n\n";
     
-    std::string typeStr;
+ std::string typeStr;
     switch (parsed.type) {
-        case ParsedStructure::Type::ARRAY:
-            typeStr = "Array";
-break;
-        case ParsedStructure::Type::LINKED_LIST:
-     typeStr = "Linked List";
-            break;
-        case ParsedStructure::Type::BINARY_TREE:
-            typeStr = "Binary Tree";
-       break;
-        case ParsedStructure::Type::GRAPH:
-            typeStr = "Graph";
-    break;
-        default:
-            typeStr = "Unknown";
+ case ParsedStructure::Type::ARRAY: typeStr = "Array"; break;
+   case ParsedStructure::Type::LINKED_LIST: typeStr = "Linked List"; break;
+ case ParsedStructure::Type::BINARY_TREE: typeStr = "Binary Tree"; break;
+        case ParsedStructure::Type::GRAPH: typeStr = "Graph"; break;
+        default: typeStr = "Unknown";
     }
     
-    resultText += "Detected Type: " + QString::fromStdString(typeStr) + "\n\n";
+  resultText += "Detected Type: " + QString::fromStdString(typeStr) + "\n\n";
   
-    if (!parsed.values.empty()) {
-        resultText += "Values: ";
-        for (size_t i = 0; i < parsed.values.size(); ++i) {
+ if (!parsed.values.empty()) {
+   resultText += "Values: ";
+     for (size_t i = 0; i < parsed.values.size(); ++i) {
    if (i > 0) resultText += ", ";
-            resultText += QString::number(parsed.values[i]);
+     resultText += QString::number(parsed.values[i]);
         }
-        resultText += "\n\n";
+    resultText += "\n\n";
     }
     
     if (!parsed.nodeValues.empty()) {
    resultText += "Nodes:\n";
         for (const auto& [nodeId, value] : parsed.nodeValues) {
-   resultText += "  " + QString::fromStdString(nodeId) + 
-         " (value: " + QString::number(value) + ")\n";
-    }
+   resultText += "  " + QString::fromStdString(nodeId) + " (value: " + QString::number(value) + ")\n";
+  }
      resultText += "\n";
-    }
+  }
     
     if (!parsed.edges.empty()) {
         resultText += "Edges:\n";
         for (const auto& [from, to] : parsed.edges) {
-         resultText += "  " + QString::fromStdString(from) + 
-        " -> " + QString::fromStdString(to) + "\n";
-        }
+      resultText += "  " + QString::fromStdString(from) + " -> " + QString::fromStdString(to) + "\n";
+   }
         resultText += "\n";
     }
     
     parseResultText->setPlainText(resultText);
     
-    // Create structure in data manager
     if (!dataManager) {
       showError("Data manager not available");
         return;
     }
   
-    std::string structureId;
+  std::string structureId;
     
     try {
-        if (parsed.type == ParsedStructure::Type::ARRAY) {
-       // Create array structure
-    structureId = dataManager->createDataStructure("Array", parsed.values.size(), "Parsed Array");
-            if (auto* structure = dataManager->getStructure(structureId)) {
-     if (auto* arr = dynamic_cast<ArrayStructure*>(structure)) {
+      if (parsed.type == ParsedStructure::Type::ARRAY) {
+   structureId = dataManager->createDataStructure("Array", static_cast<int>(parsed.values.size()), "Parsed Array");
+        if (auto* structure = dataManager->getStructure(structureId)) {
+  if (auto* arr = dynamic_cast<ArrayStructure*>(structure)) {
   arr->getData() = parsed.values;
      }
       }
-}
+        }
         else if (parsed.type == ParsedStructure::Type::LINKED_LIST) {
-        // Create list structure
-     structureId = dataManager->createDataStructure("List", 0, "Parsed List");
-          if (auto* structure = dataManager->getStructure(structureId)) {
-          if (auto* list = dynamic_cast<ListStructure*>(structure)) {
+    structureId = dataManager->createDataStructure("List", 0, "Parsed List");
+ if (auto* structure = dataManager->getStructure(structureId)) {
+ if (auto* list = dynamic_cast<ListStructure*>(structure)) {
        for (int value : parsed.values) {
          list->append(value);
-            }
-                }
- }
-        }
-        else if (parsed.type == ParsedStructure::Type::BINARY_TREE) {
-       // Create tree structure
-       structureId = dataManager->createDataStructure("Tree", 0, "Parsed Tree");
-     if (auto* structure = dataManager->getStructure(structureId)) {
-  if (auto* tree = dynamic_cast<TreeStructure*>(structure)) {
-                  for (int value : parsed.values) {
-         tree->insert(value);
-         }
     }
-            }
-        }
-        else if (parsed.type == ParsedStructure::Type::GRAPH) {
-   // Create graph from nodes and edges
-            structureId = dataManager->buildStructureFromNodes(
-       "Graph",
-       parsed.nodeValues,
-        parsed.edges,
-                "Parsed Graph"
-            );
+     }
+         }
+     }
+     else if (parsed.type == ParsedStructure::Type::BINARY_TREE) {
+            if (!parsed.edges.empty() && !parsed.nodeValues.empty()) {
+    auto tree = std::make_unique<TreeStructure>();
+      tree->clearTree();
+ 
+             std::map<std::string, TreeNode*> nodeMap;
+     for (const auto& [nodeId, value] : parsed.nodeValues) {
+         nodeMap[nodeId] = new TreeNode(value);
+      }
+       
+  for (const auto& [parentId, childId] : parsed.edges) {
+ if (nodeMap.count(parentId) && nodeMap.count(childId)) {
+    TreeNode* parent = nodeMap[parentId];
+       TreeNode* child = nodeMap[childId];
+     if (parent->left == nullptr) {
+     parent->left = child;
+  } else if (parent->right == nullptr) {
+parent->right = child;
   }
+      child->parent = parent;
+        }
+  }
+ 
+        TreeNode* rootNode = nullptr;
+       for (const auto& [nodeId, node] : nodeMap) {
+     if (node->parent == nullptr) {
+   rootNode = node;
+    break;
+        }
+  }
+  
+        if (rootNode) {
+     tree->setRoot(rootNode);
+  } else if (!nodeMap.empty()) {
+   tree->setRoot(nodeMap.begin()->second);
+        }
+    
+    structureId = dataManager->buildStructureFromNodes("Binary Tree", parsed.nodeValues, parsed.edges, "Parsed Tree (Manual)");
+     
+    if (!structureId.empty()) {
+         if (auto* managedStruct = dataManager->getStructure(structureId)) {
+      if (auto* managedTree = dynamic_cast<TreeStructure*>(managedStruct)) {
+          managedTree->clearTree();
+           if (tree->getRoot()) {
+   managedTree->setRoot(tree->getRoot());
+   tree->setRoot(nullptr);
+       }
+  }
+        }
+         }
+    } else {
+     structureId = dataManager->createDataStructure("Tree", static_cast<int>(parsed.values.size()), "Parsed Tree");
+      if (auto* structure = dataManager->getStructure(structureId)) {
+         if (auto* tree = dynamic_cast<TreeStructure*>(structure)) {
+     tree->clearTree();
+    for (int value : parsed.values) {
+    tree->insert(value);
+         }
+      }
+   }
+     }
+   }
+     else if (parsed.type == ParsedStructure::Type::GRAPH) {
+   structureId = dataManager->buildStructureFromNodes("Graph", parsed.nodeValues, parsed.edges, "Parsed Graph");
+}
         
-  if (!structureId.empty()) {
-            dataManager->selectStructure(structureId);
+   if (!structureId.empty()) {
+      dataManager->selectStructure(structureId);
       emit structureCreatedFromCode(QString::fromStdString(structureId));
       
-            resultText += "\n? Structure created successfully!\n";
-            resultText += "ID: " + QString::fromStdString(structureId);
+resultText += "\n? Structure created successfully!\n";
+        resultText += "ID: " + QString::fromStdString(structureId);
     parseResultText->setPlainText(resultText);
-            
-            showSuccess("Structure created and selected!");
-        } else {
+  showSuccess("Structure created and selected!");
+  } else {
    showError("Failed to create structure");
-      }
-    }
+   }
+ }
     catch (const std::exception& e) {
    showError(QString("Error creating structure: ") + e.what());
  }

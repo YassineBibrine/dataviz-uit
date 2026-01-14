@@ -50,6 +50,7 @@
 #include <functional>
 #include <queue>
 #include <random>
+#include <set>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
@@ -339,17 +340,47 @@ void MainWindow::createMenuBar() {
     
     QAction* clearSessionAction = fileMenu->addAction("Clear Session");
     clearSessionAction->setToolTip("Clear saved session and start fresh");
- connect(clearSessionAction, &QAction::triggered, this, [this]() {
-     auto reply = QMessageBox::question(this, "Clear Session",
-   "This will clear all saved structures from the session. Continue?",
-   QMessageBox::Yes | QMessageBox::No);
-    
-  if (reply == QMessageBox::Yes) {
-      SessionManager::clearSession();
-            QMessageBox::information(this, "Session Cleared", 
-         "Session cleared. Changes will take effect on next restart.");
-   }
-});
+    connect(clearSessionAction, &QAction::triggered, this, [this]() {
+      auto reply = QMessageBox::question(this, "Clear Session",
+    "This will clear all structures and reset the application. Continue?",
+      QMessageBox::Yes | QMessageBox::No);
+        
+        if (reply == QMessageBox::Yes) {
+            // Clear session file
+  SessionManager::clearSession();
+        
+     // Clear all structures from data model manager
+            if (dataModelManager) {
+         auto allStructures = dataModelManager->getAllStructures();
+     for (const auto& meta : allStructures) {
+   dataModelManager->removeStructure(meta.id);
+          }
+            }
+   
+          // Clear visualization pane
+            if (visualizationPane) {
+       visualizationPane->reset();
+}
+            
+            // Hide toolbox
+            if (toolboxPanel) {
+     toolboxPanel->setVisible(false);
+      }
+            
+      // Refresh structure selector
+            if (structureSelector) {
+        structureSelector->refreshStructureList();
+            }
+       
+       // Reset control panel
+    if (controlPanel) {
+                controlPanel->setPlayingState(false);
+            }
+  
+         QMessageBox::information(this, "Session Cleared", 
+          "All structures have been cleared. You can now create new structures.");
+        }
+    });
     
     fileMenu->addSeparator();
     QAction* exitAction = fileMenu->addAction("Exit");
@@ -709,29 +740,80 @@ if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
         }
     }
     else {
-        // Generic layout for trees and graphs
-        double centerX = 400.0;
-      double centerY = 300.0;
-  double radius = std::min(200.0, 100.0 + nodeCount * 10.0);
-        
-   for (size_t i = 0; i < nodes.size(); ++i) {
-      double angle = (2.0 * 3.14159 * i) / nodeCount;
-            double x = centerX + radius * std::cos(angle);
-   double y = centerY + radius * std::sin(angle);
+     // Check if this is a tree structure for hierarchical layout
+        if (structureType == "Tree" || structureType == "Binary Tree" || structureType == "BinaryTree") {
+      // Use hierarchical tree layout for visual tree structure
+  if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
+    layoutTreeHierarchically(treeStruct, nodes, edges, oldToNewId, interactionMgr, structure);
+            }
+   } else {
+         // Random layout for graphs with collision detection
+std::uniform_real_distribution<> xDis(150.0, 650.0);
+     std::uniform_real_distribution<> yDis(100.0, 500.0);
+      
+ const double MIN_DISTANCE = 60.0;
+        const int MAX_ATTEMPTS = 50;
+       
+     for (size_t i = 0; i < nodes.size(); ++i) {
+        double x, y;
+     bool positionFound = false;
+           int attempts = 0;
      
-          std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-oldToNewId[nodes[i].id] = newId;
-    interactionMgr->updateNodeValue(newId, i);
+    do {
+            x = xDis(gen);
+  y = yDis(gen);
+  
+double savedX, savedY;
+   if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+   x = savedX;
+       y = savedY;
+positionFound = true;
+     break;
         }
-        
- // Add edges using the mapped IDs
-     for (const auto& edge : edges) {
-  if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-   interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
-      }
- }
+   
+     positionFound = true;
+   for (size_t j = 0; j < i; ++j) {
+   if (oldToNewId.count(nodes[j].id)) {
+        std::string prevId = oldToNewId[nodes[j].id];
+        auto nodePositions = interactionMgr->getAllNodePositions();
+       for (const auto& np : nodePositions) {
+        if (np.id == prevId) {
+     double dx = x - np.x;
+     double dy = y - np.y;
+ double dist = std::sqrt(dx * dx + dy * dy);
+  if (dist < MIN_DISTANCE) {
+   positionFound = false;
+    break;
+            }
     }
+  }
+       if (!positionFound) break;
+   }
+   }
+     
+     attempts++;
+  } while (!positionFound && attempts < MAX_ATTEMPTS);
+    
+       std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+    oldToNewId[nodes[i].id] = newId;
+        
+     try {
+    int nodeValue = std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value);
+     interactionMgr->updateNodeValue(newId, nodeValue);
+  } catch (...) {
+interactionMgr->updateNodeValue(newId, 0);
+      }
+         }
  
+         // Add edges using the mapped IDs
+for (const auto& edge : edges) {
+   if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+    interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+}
+       }
+    }
+    }
+
     // Save initial positions if this is a new structure without positions
     if (!useSavedPositions) {
         interactionMgr->saveNodePositionsToStructure();
@@ -759,23 +841,23 @@ void MainWindow::restorePreviousSession() {
         }
    
      // Load the selected structure into canvas
-        std::string selectedId = dataModelManager->getSelectedStructureId();
-      if (!selectedId.empty()) {
+      std::string selectedId = dataModelManager->getSelectedStructureId();
+   if (!selectedId.empty()) {
  auto structures = dataModelManager->getAllStructures();
   for (const auto& meta : structures) {
-      if (meta.id == selectedId) {
+    if (meta.id == selectedId) {
        QString structureType = QString::fromStdString(meta.type);
         
        if (toolboxPanel) {
   toolboxPanel->setVisible(true);
    toolboxPanel->updateTools(structureType);
-               }
-        
+    }
+   
  if (controlPanel) {
   controlPanel->updateAlgorithmList(structureType);
-       }
+   }
       
-  loadStructureIntoCanvas(selectedId);
+loadStructureIntoCanvas(selectedId);
     break;
      }
    }
@@ -785,12 +867,331 @@ void MainWindow::restorePreviousSession() {
     }
 }
 
+void MainWindow::layoutTreeHierarchically(
+    TreeStructure* treeStruct,
+  const std::vector<DSNode>& nodes,
+  const std::vector<DSEdge>& edges,
+    std::map<std::string, std::string>& oldToNewId,
+    InteractionManager* interactionMgr,
+    DataStructure* structure) {
+    
+    if (!treeStruct || nodes.empty()) return;
+    
+ // Build adjacency map for tree navigation
+    std::map<std::string, std::vector<std::string>> children;
+  std::map<std::string, std::string> parent;
+    
+    for (const auto& edge : edges) {
+   children[edge.from].push_back(edge.to);
+     parent[edge.to] = edge.from;
+    }
+    
+    // Find root (node with no parent)
+    std::string rootId;
+    for (const auto& node : nodes) {
+  if (parent.find(node.id) == parent.end()) {
+rootId = node.id;
+   break;
+    }
+    }
+    
+if (rootId.empty() && !nodes.empty()) {
+     rootId = nodes[0].id; // Fallback to first node
+    }
+    
+    // Calculate tree dimensions for layout
+    const double HORIZONTAL_SPACING = 80.0;
+    const double VERTICAL_SPACING = 100.0;
+    const double START_X = 400.0;
+    const double START_Y = 100.0;
+    
+    // Build subtree widths map
+    std::map<std::string, int> subtreeWidths;
+    std::function<int(const std::string&)> calculateSubtreeWidth = [&](const std::string& nodeId) -> int {
+        if (subtreeWidths.count(nodeId)) return subtreeWidths[nodeId];
+        
+  if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+   subtreeWidths[nodeId] = 1;
+     return 1;
+        }
+        
+        int totalWidth = 0;
+      for (const auto& childId : children[nodeId]) {
+   totalWidth += calculateSubtreeWidth(childId);
+  }
+      
+  subtreeWidths[nodeId] = std::max(1, totalWidth);
+      return subtreeWidths[nodeId];
+    };
+    
+    calculateSubtreeWidth(rootId);
+    
+    // Position nodes using BFS with horizontal spacing based on subtree widths
+    std::map<std::string, std::pair<double, double>> positions;
+    
+    std::function<void(const std::string&, double, double, double)> layoutNode = 
+ [&](const std::string& nodeId, double x, double y, double width) {
+        
+        // Check for saved position first
+        double savedX, savedY;
+        if (structure->getNodePosition(nodeId, savedX, savedY)) {
+    positions[nodeId] = {savedX, savedY};
+   } else {
+  positions[nodeId] = {x, y};
+        }
+    
+        if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+return;
+        }
+  
+ const auto& childList = children[nodeId];
+    double totalChildWidth = 0;
+   for (const auto& childId : childList) {
+     totalChildWidth += subtreeWidths[childId];
+        }
+        
+ double childX = x - (totalChildWidth * HORIZONTAL_SPACING) / 2.0;
+    double childY = y + VERTICAL_SPACING;
+        
+     for (const auto& childId : childList) {
+ double childWidth = subtreeWidths[childId] * HORIZONTAL_SPACING;
+            double childCenterX = childX + childWidth / 2.0;
+
+     layoutNode(childId, childCenterX, childY, childWidth);
+         childX += childWidth;
+  }
+    };
+    
+    layoutNode(rootId, START_X, START_Y, subtreeWidths[rootId] * HORIZONTAL_SPACING);
+    
+    // Create nodes with calculated positions
+    for (const auto& node : nodes) {
+        double x = START_X;
+        double y = START_Y;
+    
+        if (positions.count(node.id)) {
+   x = positions[node.id].first;
+     y = positions[node.id].second;
+ }
+  
+        std::string newId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", node.id);
+  oldToNewId[node.id] = newId;
+        
+        try {
+         int nodeValue = std::stoi(node.value.empty() ? "0" : node.value);
+  interactionMgr->updateNodeValue(newId, nodeValue);
+        } catch (...) {
+         interactionMgr->updateNodeValue(newId, 0);
+        }
+    }
+    
+    // Add edges
+    for (const auto& edge : edges) {
+      if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+     interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+        }
+    }
+}
+
+void MainWindow::repositionTreeNodesAfterEdit(const std::string& structureId) {
+    if (!dataModelManager || !visualizationPane) return;
+    
+    DataStructure* structure = dataModelManager->getStructure(structureId);
+    if (!structure) return;
+    
+    // Get structure type
+    std::string structureType;
+    auto structures = dataModelManager->getAllStructures();
+    for (const auto& meta : structures) {
+  if (meta.id == structureId) {
+      structureType = meta.type;
+            break;
+  }
+    }
+  
+    // Only proceed for tree structures
+    if (structureType != "Tree" && structureType != "Binary Tree" && structureType != "BinaryTree") {
+   return;
+    }
+    
+   auto* treeStruct = dynamic_cast<TreeStructure*>(structure);
+    if (!treeStruct) return;
+    
+    auto* interactionMgr = visualizationPane->getInteractionManager();
+  if (!interactionMgr) return;
+ 
+    // Get current nodes and edges from tree structure
+    auto nodes = structure->getNodes();
+    auto edges = structure->getEdges();
+    
+    if (nodes.empty()) return;
+    
+    // Build adjacency map for tree navigation
+    std::map<std::string, std::vector<std::string>> children;
+    std::map<std::string, std::string> parent;
+  
+    for (const auto& edge : edges) {
+        children[edge.from].push_back(edge.to);
+  parent[edge.to] = edge.from;
+    }
+    
+    // Find root (node with no parent)
+    std::string rootId;
+    for (const auto& node : nodes) {
+        if (parent.find(node.id) == parent.end()) {
+   rootId = node.id;
+break;
+   }
+    }
+    
+  if (rootId.empty() && !nodes.empty()) {
+ rootId = nodes[0].id;
+    }
+    
+    // Calculate tree dimensions for layout
+    const double HORIZONTAL_SPACING = 80.0;
+    const double VERTICAL_SPACING = 100.0;
+    const double START_X = 400.0;
+    const double START_Y = 100.0;
+    
+    // Build subtree widths map
+std::map<std::string, int> subtreeWidths;
+    std::function<int(const std::string&)> calculateSubtreeWidth = [&](const std::string& nodeId) -> int {
+        if (subtreeWidths.count(nodeId)) return subtreeWidths[nodeId];
+        
+    if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+     subtreeWidths[nodeId] = 1;
+   return 1;
+        }
+        
+        int totalWidth = 0;
+        for (const auto& childId : children[nodeId]) {
+   totalWidth += calculateSubtreeWidth(childId);
+        }
+   
+    subtreeWidths[nodeId] = std::max(1, totalWidth);
+        return subtreeWidths[nodeId];
+    };
+
+    calculateSubtreeWidth(rootId);
+    
+    // Position nodes using BFS with horizontal spacing based on subtree widths
+    std::map<std::string, std::pair<double, double>> positions;
+    
+    std::function<void(const std::string&, double, double, double)> layoutNode = 
+ [&](const std::string& nodeId, double x, double y, double width) {
+        
+        // Check for saved position first
+        double savedX, savedY;
+        if (structure->getNodePosition(nodeId, savedX, savedY)) {
+    positions[nodeId] = {savedX, savedY};
+   } else {
+  positions[nodeId] = {x, y};
+        }
+    
+        if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+return;
+        }
+  
+ const auto& childList = children[nodeId];
+    double totalChildWidth = 0;
+   for (const auto& childId : childList) {
+     totalChildWidth += subtreeWidths[childId];
+        }
+        
+ double childX = x - (totalChildWidth * HORIZONTAL_SPACING) / 2.0;
+    double childY = y + VERTICAL_SPACING;
+        
+     for (const auto& childId : childList) {
+ double childWidth = subtreeWidths[childId] * HORIZONTAL_SPACING;
+            double childCenterX = childX + childWidth / 2.0;
+
+     layoutNode(childId, childCenterX, childY, childWidth);
+         childX += childWidth;
+  }
+    };
+    
+layoutNode(rootId, START_X, START_Y, subtreeWidths[rootId] * HORIZONTAL_SPACING);
+    
+    // Update positions for EXISTING canvas nodes
+    // Build mapping from tree node IDs to canvas node IDs
+    std::map<std::string, std::string> treeToCanvasId;
+    auto canvasPositions = interactionMgr->getAllNodePositions();
+    auto nodeValuesMap = interactionMgr->getNodeValues();
+  
+    // Match canvas nodes to tree nodes by value
+    for (const auto& canvasNode : canvasPositions) {
+        auto valIt = nodeValuesMap.find(canvasNode.id);
+   if (valIt != nodeValuesMap.end()) {
+         int canvasValue = valIt->second;
+       
+            // Find matching tree node by value
+          for (const auto& treeNode : nodes) {
+    try {
+        int treeValue = std::stoi(treeNode.value);
+if (treeValue == canvasValue) {
+     treeToCanvasId[treeNode.id] = canvasNode.id;
+  break;
+          }
+      } catch (...) {}
+            }
+  }
+    }
+    
+    // Update canvas node positions to match calculated tree layout
+    interactionMgr->setSyncWithBackend(false);  // Temporarily disable sync
+    
+    for (const auto& [treeId, canvasId] : treeToCanvasId) {
+        if (positions.count(treeId)) {
+      double newX = positions[treeId].first;
+    double newY = positions[treeId].second;
+    
+      // Update node position in interaction manager
+   interactionMgr->updateNodePosition(canvasId, newX, newY);
+        }
+    }
+    
+// Add missing edges from tree structure to canvas
+    // First, get existing canvas edges
+    auto existingEdges = interactionMgr->getAllEdges();
+    std::set<std::pair<std::string, std::string>> existingEdgeSet;
+    for (const auto& edge : existingEdges) {
+  existingEdgeSet.insert({edge.source, edge.target});
+    }
+    
+    // Add edges that exist in tree but not in canvas
+    for (const auto& treeEdge : edges) {
+        // Map tree edge to canvas edge
+auto fromIt = treeToCanvasId.find(treeEdge.from);
+     auto toIt = treeToCanvasId.find(treeEdge.to);
+        
+        if (fromIt != treeToCanvasId.end() && toIt != treeToCanvasId.end()) {
+         std::string canvasFrom = fromIt->second;
+      std::string canvasTo = toIt->second;
+  
+            // Check if this edge already exists
+            if (existingEdgeSet.find({canvasFrom, canvasTo}) == existingEdgeSet.end()) {
+       // Edge doesn't exist, add it
+                interactionMgr->addEdge(canvasFrom, canvasTo);
+             qDebug() << "Added missing edge:" << QString::fromStdString(canvasFrom) 
+      << "->" << QString::fromStdString(canvasTo);
+         }
+        }
+    }
+    
+    interactionMgr->setSyncWithBackend(true);
+    interactionMgr->saveNodePositionsToStructure();
+    
+    // Refresh visualization
+    visualizationPane->refreshDisplay();
+}
+
 void MainWindow::closeEvent(QCloseEvent* event) {
     // Save complete session with all structures
     if (dataModelManager) {
         dataModelManager->saveSession();
    qDebug() << "Session saved on exit";
-    }
+}
 
     event->accept();
 }
