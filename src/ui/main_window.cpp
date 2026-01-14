@@ -699,7 +699,7 @@ void MainWindow::createMenuBar() {
 void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
     if (!dataModelManager || !visualizationPane) return;
 
- DataStructure* structure = dataModelManager->getStructure(structureId);
+    DataStructure* structure = dataModelManager->getStructure(structureId);
     if (!structure) return;
 
     std::string structureType;
@@ -942,157 +942,112 @@ qDebug() << "No previous session found";
 
 void MainWindow::layoutTreeHierarchically(
     TreeStructure* treeStruct,
-    const std::vector<DSNode>& nodes,
-    const std::vector<DSEdge>& edges,
+    const std::vector<DSNode>& /*nodes*/,
+    const std::vector<DSEdge>& /*edges*/,
     std::map<std::string, std::string>& oldToNewId,
     InteractionManager* interactionMgr,
     DataStructure* structure) {
-    
-    if (!treeStruct || nodes.empty()) return;
 
-    // Build children map using the actual TreeNode pointers to preserve left/right order
-    std::map<std::string, std::vector<std::string>> children;
-    std::map<std::string, std::string> parent;
-
-    // Map TreeNode* -> index using BFS on the actual tree to match node IDs used elsewhere
-    const TreeNode* rootPtr = treeStruct->getRoot();
-    if (!rootPtr) return;
-
-    std::queue<const TreeNode*> bfsQ;
-    std::vector<const TreeNode*> nodePtrs;
-    std::unordered_map<const TreeNode*, int> ptrToIndex;
-
-    bfsQ.push(rootPtr);
-    while (!bfsQ.empty()) {
- const TreeNode* cur = bfsQ.front(); bfsQ.pop();
- if (!cur) continue;
- int idx = static_cast<int>(nodePtrs.size());
- ptrToIndex[cur] = idx;
- nodePtrs.push_back(cur);
- if (cur->left) bfsQ.push(cur->left);
- if (cur->right) bfsQ.push(cur->right);
- }
-
- // Build children map using BFS indices and preserving left/right order
- for (size_t i =0; i < nodePtrs.size(); ++i) {
- const TreeNode* cur = nodePtrs[i];
- std::string id = "tree_" + std::to_string(static_cast<int>(i));
- if (cur->left) {
- int li = ptrToIndex[cur->left];
- std::string lid = "tree_" + std::to_string(li);
- children[id].push_back(lid);
- parent[lid] = id;
- }
- if (cur->right) {
- int ri = ptrToIndex[cur->right];
- std::string rid = "tree_" + std::to_string(ri);
- children[id].push_back(rid);
- parent[rid] = id;
- }
- }
-
- // Find rootId (should be tree_0)
- std::string rootId = "tree_0";
+ if (!treeStruct) return;
+ TreeNode* root = treeStruct->getRoot();
+ if (!root) return;
 
  // Layout parameters
- const double HORIZONTAL_SPACING =100.0;
+ const double HORIZONTAL_SPACING =90.0; // reduced space between inorder nodes
  const double VERTICAL_SPACING =120.0;
- const double START_X =400.0;
+ const double START_X =200.0;
  const double START_Y =80.0;
 
- // Compute subtree widths (in units)
- std::map<std::string, double> subtreeWidths;
- std::function<double(const std::string&)> calculateSubtreeWidth = [&](const std::string& nodeId) -> double {
- if (subtreeWidths.count(nodeId)) return subtreeWidths[nodeId];
- if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
- subtreeWidths[nodeId] =1.0;
- return 1.0;
- }
- double total =0.0;
- for (const auto& c : children[nodeId]) total += calculateSubtreeWidth(c);
- subtreeWidths[nodeId] = std::max(1.0, total);
- return subtreeWidths[nodeId];
- };
-
- calculateSubtreeWidth(rootId);
-
- // Position nodes recursively: center each parent above its children span
+ // We will perform inorder traversal to assign x positions (true binary tree layout)
+ std::map<const TreeNode*, std::string> nodePtrToId;
  std::map<std::string, std::pair<double,double>> positions;
- std::function<void(const std::string&, double, double)> layoutNode =
- [&](const std::string& nodeId, double x, double y) {
- positions[nodeId] = {x,y};
- auto it = children.find(nodeId);
- if (it == children.end() || it->second.empty()) return;
- const auto& childList = it->second;
- double totalChildWidth =0.0;
- for (const auto& c : childList) totalChildWidth += subtreeWidths[c];
- double childStartX = x - ((totalChildWidth -1.0) * HORIZONTAL_SPACING) /2.0;
- double childY = y + VERTICAL_SPACING;
- for (const auto& c : childList) {
- double w = subtreeWidths[c];
- double childCenter = childStartX + (w -1.0) * HORIZONTAL_SPACING /2.0;
- layoutNode(c, childCenter, childY);
- childStartX += w * HORIZONTAL_SPACING;
+ std::map<std::string, std::pair<std::string, std::string>> edgesMap; // parent -> (left,right)
+
+ int counter =0;
+ // First pass: assign inorder indices and depths
+ std::function<void(TreeNode*, int)> inorder = [&](TreeNode* node, int depth) {
+ if (!node) return;
+ inorder(node->left, depth +1);
+ std::string id = "tree_" + std::to_string(counter++);
+ nodePtrToId[node] = id;
+ double x = static_cast<double>(counter -1) * HORIZONTAL_SPACING; // temporary x, will be shifted later
+ double y = START_Y + depth * VERTICAL_SPACING;
+ positions[id] = { x, y };
+ if (node->left) {
+ // placeholder, will fill using nodePtrToId after whole traversal
+ edgesMap[id].first = "";
  }
+ if (node->right) {
+ edgesMap[id].second = "";
+ }
+ inorder(node->right, depth +1);
  };
 
- // Start layout with root at x =0.0 to compute bounding box, then re-center
- layoutNode(rootId,0.0, START_Y);
+ inorder(root,0);
 
- // Debug: print children map
- qDebug() << "[TreeLayout] Children map:";
- for (const auto& kv : children) {
- QString line = QString::fromStdString(kv.first) + ": ";
- for (const auto& c : kv.second) line += QString::fromStdString(c) + " ";
- qDebug() << line;
+ // Now fill left/right ids in edgesMap by scanning ptr->id map
+ for (const auto& p : nodePtrToId) {
+ const TreeNode* node = p.first;
+ std::string id = p.second;
+ if (node->left) {
+ auto it = nodePtrToId.find(node->left);
+ if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
+ }
+ if (node->right) {
+ auto it = nodePtrToId.find(node->right);
+ if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
+ }
  }
 
- // Compute bounding box of x positions
+ // Center the tree horizontally by computing bounding box
  double minX =1e9, maxX = -1e9;
- for (const auto& p : positions) {
- minX = std::min(minX, p.second.first);
- maxX = std::max(maxX, p.second.first);
+ for (const auto& kv : positions) {
+ minX = std::min(minX, kv.second.first);
+ maxX = std::max(maxX, kv.second.first);
  }
- if (minX ==1e9 && maxX == -1e9) {
- // Fallback: no positions computed, nothing to do
- } else {
  double centerX = (minX + maxX) /2.0;
  double shiftX = START_X - centerX;
- // Shift all positions to center them at START_X
- for (auto& kv : positions) {
- kv.second.first += shiftX;
- }
- }
+ for (auto& kv : positions) kv.second.first += shiftX;
 
- // Debug: print computed positions
- qDebug() << "[TreeLayout] Computed positions (id -> x,y):";
- for (const auto& kv : positions) {
- qDebug() << QString::fromStdString(kv.first) << "-> (" << kv.second.first << "," << kv.second.second << ")";
- }
+ // Create nodes on canvas using positions and set values from tree nodes
+ // We iterate over nodePtrToId to preserve the tree mapping
+ for (const auto& p : nodePtrToId) {
+ const TreeNode* node = p.first;
+ const std::string id = p.second;
+ auto posIt = positions.find(id);
+ double x = START_X;
+ double y = START_Y;
+ if (posIt != positions.end()) { x = posIt->second.first; y = posIt->second.second; }
 
- // Create nodes on canvas using positions
- for (const auto& n : nodes) {
- double x = START_X, y = START_Y;
- auto itPos = positions.find(n.id);
- if (itPos != positions.end()) {
- x = itPos->second.first;
- y = itPos->second.second;
- }
- std::string newId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", n.id);
- oldToNewId[n.id] = newId;
+ std::string newId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", id);
+ oldToNewId[id] = newId;
  try {
- int nodeValue = std::stoi(n.value.empty() ? "0" : n.value);
- interactionMgr->updateNodeValue(newId, nodeValue);
+ interactionMgr->updateNodeValue(newId, node->value);
  } catch (...) {
  interactionMgr->updateNodeValue(newId,0);
  }
  }
 
- // Add edges
- for (const auto& e : edges) {
- if (oldToNewId.count(e.from) && oldToNewId.count(e.to)) {
- interactionMgr->addEdge(oldToNewId[e.from], oldToNewId[e.to]);
+ // Add edges according to left/right mapping
+ for (const auto& kv : edgesMap) {
+ const std::string parentId = kv.first;
+ const std::string leftId = kv.second.first;
+ const std::string rightId = kv.second.second;
+ if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
+ interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
  }
+ if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
+ interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
+ }
+ }
+
+ // Save positions into the structure for persistence
+ structure->clearNodePositions();
+ for (const auto& kv : positions) {
+ const std::string& treeId = kv.first;
+ double x = kv.second.first;
+ double y = kv.second.second;
+ structure->setNodePosition(treeId, x, y);
  }
 }
 
@@ -1152,10 +1107,10 @@ std::map<std::string, std::vector<std::string>> children;
     }
     
     // Calculate tree dimensions for layout
-    const double HORIZONTAL_SPACING = 100.0;
-    const double VERTICAL_SPACING = 120.0;
-    const double START_X = 400.0;
-    const double START_Y = 80.0;
+    const double HORIZONTAL_SPACING =90.0;
+    const double VERTICAL_SPACING =120.0;
+    const double START_X =400.0;
+    const double START_Y =80.0;
     
     // Build subtree widths map - width in units (not pixels)
    std::map<std::string, double> subtreeWidths;

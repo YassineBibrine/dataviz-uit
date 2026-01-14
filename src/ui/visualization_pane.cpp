@@ -16,80 +16,90 @@
 #include "main_window.h"
 
 VisualizationPane::VisualizationPane(QWidget* parent)
-    : QWidget(parent) {
+ : QWidget(parent) {
 
-    setAcceptDrops(true);
-    setMouseTracking(true);
+ setAcceptDrops(true);
+ setMouseTracking(true);
 
-    auto layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
+ auto layout = new QVBoxLayout(this);
+ layout->setContentsMargins(0,0,0,0);
 
-    renderer = std::make_unique<VisualizationRenderer>(this);
-    layout->addWidget(renderer.get());
+ renderer = std::make_unique<VisualizationRenderer>(this);
+ layout->addWidget(renderer.get());
 
-    // Set minimum size for the rendering area
-    setMinimumSize(600, 400);
+ // Set minimum size for the rendering area
+ setMinimumSize(600,400);
 
-    interaction = std::make_unique<InteractionManager>();
-    layoutEngine = std::make_unique<GraphvizLayoutEngine>();
+ interaction = std::make_unique<InteractionManager>();
+ layoutEngine = std::make_unique<GraphvizLayoutEngine>();
 
-    updateDisplay();
+ updateDisplay();
 }
 
 VisualizationPane::~VisualizationPane() = default;
 
 // --- MÉTHODE ANTI-CRASH ---
 void VisualizationPane::reset() {
-    // 1. On vide les valeurs stockées localement
-    nodeValues.clear();
-    currentHighlights.clear();
-    tempSourceNodeId = "";
-    isLinkingMode = false;
-    isEraserMode = false;
-    setCursor(Qt::ArrowCursor);
+ //1. On vide les valeurs stockées localement
+ nodeValues.clear();
+ currentHighlights.clear();
+ tempSourceNodeId = "";
+ isLinkingMode = false;
+ isEraserMode = false;
+ setCursor(Qt::ArrowCursor);
 
-    // 2. On dit au manager de tout oublier (Nœuds, Arêtes)
-    if (interaction) {
-        interaction->clearInteractive();
-    }
+ //2. On dit au manager de tout oublier (Nœuds, Arêtes)
+ if (interaction) {
+ interaction->clearInteractive();
+ }
 
-    // 3. On force un rendu vide pour effacer l'écran
-    AnimationFrame emptyFrame;
-    renderer->renderFrame(emptyFrame);
+ //3. On force un rendu vide pour effacer l'écran
+ AnimationFrame emptyFrame;
+ renderer->renderFrame(emptyFrame);
 }
 // ---------------------------
 
 void VisualizationPane::setRenderSize(int size) {
-    if (renderer) {
-        float scale = (float)size / 20.0f;
-        renderer->setZoomFactor(scale);
-    }
+ if (renderer) {
+ float scale = (float)size /20.0f;
+ renderer->setZoomFactor(scale);
+ }
 }
 
 void VisualizationPane::wheelEvent(QWheelEvent* event) {
-    if (renderer) {
-        float currentZoom = renderer->getZoomFactor();
-        if (event->angleDelta().y() > 0) currentZoom *= 1.1f;
-        else currentZoom *= 0.9f;
-
-        if (currentZoom < 0.1f) currentZoom = 0.1f;
-        if (currentZoom > 5.0f) currentZoom = 5.0f;
-
-        renderer->setZoomFactor(currentZoom);
-        event->accept();
-    }
+ if (renderer) {
+ float currentZoom = renderer->getZoomFactor();
+ double delta = event->angleDelta().y();
+ if (event->modifiers() & Qt::ControlModifier) {
+ // Ctrl+wheel -> pan vertically
+ double dy = -(delta /8.0) *0.5; // adjust sensitivity
+ renderer->panBy(0.0, dy);
+ } else if (event->modifiers() & Qt::ShiftModifier) {
+ // Shift+wheel -> pan horizontally
+ double dx = -(delta /8.0) *0.5;
+ renderer->panBy(dx,0.0);
+ } else {
+ if (delta >0) currentZoom *=1.1f;
+ else currentZoom *=0.9f;
+ if (currentZoom <0.1f) currentZoom =0.1f;
+ if (currentZoom >5.0f) currentZoom =5.0f;
+ renderer->setZoomFactor(currentZoom);
+ }
+ event->accept();
+ }
 }
 
 QPointF VisualizationPane::getLogicalPosition(QPoint mousePos) {
-    if (!renderer) return mousePos;
-    float zoom = renderer->getZoomFactor();
-    double centerX = width() / 2.0;
-    double centerY = height() / 2.0;
-    double dx = mousePos.x() - centerX;
-    double dy = mousePos.y() - centerY;
-    dx /= zoom;
-    dy /= zoom;
-    return QPointF(dx + centerX, dy + centerY);
+ if (!renderer) return mousePos;
+ float zoom = renderer->getZoomFactor();
+ double centerX = width() /2.0;
+ double centerY = height() /2.0;
+ double dx = mousePos.x() - centerX;
+ double dy = mousePos.y() - centerY;
+ dx /= zoom;
+ dy /= zoom;
+ QPointF pan = renderer->getPanOffset();
+ return QPointF(dx + centerX - pan.x(), dy + centerY - pan.y());
 }
 
 void VisualizationPane::updateDisplay() {
@@ -492,60 +502,90 @@ void VisualizationPane::mouseDoubleClickEvent(QMouseEvent* event) {
 }
 
 void VisualizationPane::mousePressEvent(QMouseEvent* event) {
-    QPointF logicalPos = getLogicalPosition(event->pos());
-    double x = logicalPos.x();
-    double y = logicalPos.y();
+ // Middle button or right button starts panning
+ if (event->button() == Qt::MiddleButton || event->button() == Qt::RightButton) {
+ isPanning = true;
+ lastPanPoint = event->pos();
+ setCursor(Qt::ClosedHandCursor);
+ event->accept();
+ return;
+ }
 
-    if (isEraserMode) {
-        std::string nodeId = interaction->getNodeAtPosition(x, y);
-        if (!nodeId.empty()) {
-            interaction->removeNode(nodeId);
-     nodeValues.erase(nodeId);
-            updateDisplay();
-            return;
-     }
-        auto edge = interaction->getEdgeAtPosition(x, y);
-      if (!edge.first.empty()) {
-   interaction->removeEdge(edge.first, edge.second);
-            updateDisplay();
-            return;
-     }
-        return;
-    }
+ QPointF logicalPos = getLogicalPosition(event->pos());
+ double x = logicalPos.x();
+ double y = logicalPos.y();
 
-    if (isLinkingMode) {
-        std::string clickedId = interaction->getNodeAtPosition(x, y);
-  if (clickedId.empty()) return;
-        if (tempSourceNodeId.empty()) {
-            tempSourceNodeId = clickedId;
-      highlightNodes({ tempSourceNodeId }, "red");
-  }
-    else {
-         if (clickedId != tempSourceNodeId) {
-    interaction->addEdge(tempSourceNodeId, clickedId);
-          tempSourceNodeId = "";
-    highlightNodes({}, "");
+ // existing logic for eraser/linking/drags
+ if (isEraserMode) {
+ std::string nodeId = interaction->getNodeAtPosition(x, y);
+ if (!nodeId.empty()) {
+ interaction->removeNode(nodeId);
+ nodeValues.erase(nodeId);
  updateDisplay();
-      }
-        }
-        return;
-    }
+ return;
+ }
+ auto edge = interaction->getEdgeAtPosition(x, y);
+ if (!edge.first.empty()) {
+ interaction->removeEdge(edge.first, edge.second);
+ updateDisplay();
+ return;
+ }
+ return;
+ }
 
-    if (interaction->startDragging(x, y)) setCursor(Qt::ClosedHandCursor);
+ if (isLinkingMode) {
+ std::string clickedId = interaction->getNodeAtPosition(x, y);
+ if (clickedId.empty()) return;
+ if (tempSourceNodeId.empty()) {
+ tempSourceNodeId = clickedId;
+ highlightNodes({ tempSourceNodeId }, "red");
+ }
+ else {
+ if (clickedId != tempSourceNodeId) {
+ interaction->addEdge(tempSourceNodeId, clickedId);
+ tempSourceNodeId = "";
+ highlightNodes({}, "");
+ updateDisplay();
+ }
+ }
+ return;
+ }
+
+ if (interaction->startDragging(x, y)) setCursor(Qt::ClosedHandCursor);
 }
 
 void VisualizationPane::mouseMoveEvent(QMouseEvent* event) {
-    QPointF logicalPos = getLogicalPosition(event->pos());
-    interaction->updateDragging(logicalPos.x(), logicalPos.y());
-    updateDisplay();
+ if (isPanning) {
+ QPoint current = event->pos();
+ QPoint delta = current - lastPanPoint;
+ lastPanPoint = current;
+ // Convert pixel delta to logical delta considering zoom
+ float zoom = renderer->getZoomFactor();
+ double dx = delta.x() / zoom;
+ double dy = delta.y() / zoom;
+ renderer->panBy(dx, dy);
+ updateDisplay();
+ return;
+ }
+
+ QPointF logicalPos = getLogicalPosition(event->pos());
+ interaction->updateDragging(logicalPos.x(), logicalPos.y());
+ updateDisplay();
 }
 
 void VisualizationPane::mouseReleaseEvent(QMouseEvent* event) {
-    (void)event;
-    interaction->endDrag();
-    if (isEraserMode) setCursor(Qt::ForbiddenCursor);
-    else if (isLinkingMode) setCursor(Qt::CrossCursor);
-    else setCursor(Qt::ArrowCursor);
+ if (isPanning && (event->button() == Qt::MiddleButton || event->button() == Qt::RightButton)) {
+ isPanning = false;
+ setCursor(Qt::ArrowCursor);
+ event->accept();
+ return;
+ }
+
+ (void)event;
+ interaction->endDrag();
+ if (isEraserMode) setCursor(Qt::ForbiddenCursor);
+ else if (isLinkingMode) setCursor(Qt::CrossCursor);
+ else setCursor(Qt::ArrowCursor);
 }
 
 void VisualizationPane::dragEnterEvent(QDragEnterEvent* event) { event->acceptProposedAction(); }

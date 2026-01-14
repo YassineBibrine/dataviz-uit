@@ -29,6 +29,16 @@ void VisualizationRenderer::setNodeRadius(int radius) {
     update();
 }
 
+void VisualizationRenderer::panBy(double dx, double dy) {
+    panOffset += QPointF(dx, dy);
+    update();
+}
+
+void VisualizationRenderer::setPanOffset(const QPointF& offset) {
+    panOffset = offset;
+    update();
+}
+
 void VisualizationRenderer::paintEvent(QPaintEvent*) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
@@ -41,22 +51,24 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
     // ==========================
     // 2. CAMÉRA ET GRILLE
     // ==========================
+    // Apply zoom and pan around center (translate to center, scale, then translate)
     p.translate(width() / 2.0, height() / 2.0);
     p.scale(zoomLevel, zoomLevel);
+    p.translate(-width() / 2.0 + panOffset.x(), -height() / 2.0 + panOffset.y());
 
-    // --- DESSIN DE LA GRILLE  ---
+    // --- DESSIN DE LA GRILLE ---
     double visibleW = width() / zoomLevel;
     double visibleH = height() / zoomLevel;
-    double startX = -visibleW * 2;
-    double startY = -visibleH * 2;
-    double endX = visibleW * 2;
-    double endY = visibleH * 2;
+    double startX = -visibleW *2;
+    double startY = -visibleH *2;
+    double endX = visibleW *2;
+    double endY = visibleH *2;
 
-    QPen gridPen(QColor("#E0E0E0"), 1, Qt::SolidLine); // Gris clair
+    QPen gridPen(QColor("#E0E0E0"),1, Qt::SolidLine); // Gris clair
     gridPen.setCosmetic(true);
     p.setPen(gridPen);
 
-    int gridSize = 50;
+    int gridSize =50;
 
     // Verticales
     for (double i = startX; i < endX; i += gridSize) {
@@ -70,8 +82,10 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
     }
     // -----------------------------------------------
 
-    // On remet l'origine pour dessiner les objets
-    p.translate(-width() / 2.0, -height() / 2.0);
+    // Note: Do NOT apply an additional translation here. The painter already contains the
+    // translation and scaling to map logical coordinates to device coordinates:
+    // translate(cx,cy) -> scale -> translate(-cx + pan). Applying another translate would
+    // break the coordinate mapping used by getLogicalPosition and make node interactions fail.
 
     int r = baseNodeRadius;
 

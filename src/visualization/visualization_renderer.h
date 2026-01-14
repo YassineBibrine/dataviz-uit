@@ -24,6 +24,11 @@ public:
 
     void setNodeRadius(int radius);
 
+    // PAN controls
+    void panBy(double dx, double dy); // in logical coordinates (will be scaled appropriately)
+    void setPanOffset(const QPointF& offset);
+    QPointF getPanOffset() const { return panOffset; }
+
 protected:
     void paintEvent(QPaintEvent* event) override;
 
@@ -31,9 +36,10 @@ private:
     float zoomLevel{ 1.0f };
     int baseNodeRadius = 20; // Ta variable de taille
 
-    // On garde cette variable du main pour le futur (Déplacement/Panning)
-    // Même si on ne l'utilise pas tout de suite, c'est bien de l'avoir.
+    // Pan offset in logical coordinates (pixels)
     QPointF panOffset{0, 0};
 
+    // On garde cette variable du main pour le futur (Déplacement/Panning)
+    // Même si on ne l'utilise pas tout de suite, c'est bien de l'avoir.
     AnimationFrame currentFrame;
 };

@@ -77,4 +77,8 @@ private:
     std::string tempSourceNodeId = "";
 
     std::map<std::string, std::string> nodeValues;
+
+    // Panning state
+    bool isPanning = false;
+    QPoint lastPanPoint;
 };
