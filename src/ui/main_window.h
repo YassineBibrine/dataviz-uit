@@ -104,10 +104,12 @@ private:
     // Menu actions
     QAction* toggleMetricsAction = nullptr;
     QAction* showTutorialAction = nullptr;
+    QAction* autoSaveAction = nullptr;  // NEW: Auto-save toggle action
     
     // Tutorial
     TutorialOverlay* tutorialOverlay = nullptr;
     bool firstLaunchChecked = false;
+    bool autoSaveEnabled = true;  // NEW: Auto-save session preference (enabled by default)
  
     // Session settings
     QSettings settings;

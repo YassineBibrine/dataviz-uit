@@ -66,22 +66,29 @@ MainWindow::MainWindow(QWidget* parent)
     currentAlgorithm(nullptr),
  toggleMetricsAction(nullptr),
     showTutorialAction(nullptr),
+    autoSaveAction(nullptr),
+    autoSaveEnabled(true),
     settings("DataVizUIT", "DataVizUIT")
 {
-    setWindowTitle("DataViz UIT - Data Structure Visualization");
+ setWindowTitle("DataViz UIT - Data Structure Visualization");
     resize(1350, 900);
     setMinimumSize(1200, 750);
+
+    // Load auto-save preference from settings
+    autoSaveEnabled = settings.value("autoSaveSession", true).toBool();
 
     if (visualizationPane && visualizationPane->getInteractionManager()) {
         visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
 }
 
-    setupUI();
+ setupUI();
     connectSignals();
     createMenuBar();
     setupTutorial();  // Initialize tutorial
-    // ✅ RESTAURATION SESSION
-    restorePreviousSession();
+  // ✅ RESTAURATION SESSION
+    if (autoSaveEnabled) {
+        restorePreviousSession();
+    }
 }
 
 MainWindow::~MainWindow() = default;
@@ -338,47 +345,20 @@ void MainWindow::onSpeedChanged(int speed) {
 void MainWindow::createMenuBar() {
     QMenu* fileMenu = menuBar()->addMenu("File");
     
-    QAction* clearSessionAction = fileMenu->addAction("Clear Session");
-    clearSessionAction->setToolTip("Clear saved session and start fresh");
-    connect(clearSessionAction, &QAction::triggered, this, [this]() {
-      auto reply = QMessageBox::question(this, "Clear Session",
-    "This will clear all structures and reset the application. Continue?",
-      QMessageBox::Yes | QMessageBox::No);
+    autoSaveAction = fileMenu->addAction("Auto-save Session");
+    autoSaveAction->setCheckable(true);
+    autoSaveAction->setChecked(autoSaveEnabled);
+    autoSaveAction->setToolTip("Automatically save and restore session on startup");
+    connect(autoSaveAction, &QAction::toggled, this, [this](bool enabled) {
+        autoSaveEnabled = enabled;
+    settings.setValue("autoSaveSession", enabled);
         
-        if (reply == QMessageBox::Yes) {
-            // Clear session file
-  SessionManager::clearSession();
-        
-     // Clear all structures from data model manager
-            if (dataModelManager) {
-         auto allStructures = dataModelManager->getAllStructures();
-     for (const auto& meta : allStructures) {
-   dataModelManager->removeStructure(meta.id);
-          }
-            }
-   
-          // Clear visualization pane
-            if (visualizationPane) {
-       visualizationPane->reset();
-}
-            
-            // Hide toolbox
-            if (toolboxPanel) {
-     toolboxPanel->setVisible(false);
-      }
-            
-      // Refresh structure selector
-            if (structureSelector) {
-        structureSelector->refreshStructureList();
-            }
-       
-       // Reset control panel
-    if (controlPanel) {
-                controlPanel->setPlayingState(false);
-            }
-  
-         QMessageBox::information(this, "Session Cleared", 
-          "All structures have been cleared. You can now create new structures.");
+ if (enabled) {
+            QMessageBox::information(this, "Auto-save Enabled", 
+              "Session will be automatically saved on exit and restored on startup.");
+        } else {
+    QMessageBox::information(this, "Auto-save Disabled", 
+  "Session will NOT be saved automatically. You can still manually save structures.");
         }
     });
     
@@ -1187,11 +1167,13 @@ auto fromIt = treeToCanvasId.find(treeEdge.from);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-    // Save complete session with all structures
-    if (dataModelManager) {
+    // Save complete session with all structures (only if auto-save is enabled)
+  if (dataModelManager && autoSaveEnabled) {
         dataModelManager->saveSession();
-   qDebug() << "Session saved on exit";
-}
+        qDebug() << "Session saved on exit (auto-save enabled)";
+    } else if (!autoSaveEnabled) {
+        qDebug() << "Session NOT saved (auto-save disabled)";
+    }
 
     event->accept();
 }
