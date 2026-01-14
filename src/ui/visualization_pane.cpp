@@ -179,9 +179,21 @@ void VisualizationPane::updateDisplay() {
     }
 
     if (isTree && layoutEngine && layoutEngine->isAvailable()) {
-        // Build DOT string for the tree and ask Graphviz for layout
-        std::ostringstream oss;
-        oss << "digraph BinaryTree {\n";
+        // If structure already has saved positions, prefer them over Graphviz layout
+        bool preferSavedPositions = false;
+        if (interaction && interaction->getBackend()) {
+            DataModelManager* backend = interaction->getBackend();
+            std::string curId = interaction->getCurrentStructureId();
+            if (!curId.empty()) {
+                DataStructure* structPtr = backend->getStructure(curId);
+                if (structPtr && structPtr->hasAnyPositions()) preferSavedPositions = true;
+            }
+        }
+
+        if (!preferSavedPositions) {
+            // Build DOT string for the tree and ask Graphviz for layout
+            std::ostringstream oss;
+            oss << "digraph BinaryTree {\n";
     oss << "  node [shape=circle];\n";
         for (const auto& id : nodeIds) {
             oss << "  " << id << " [label=\"" << id << "\"];\n";
@@ -192,7 +204,7 @@ void VisualizationPane::updateDisplay() {
         oss << "}\n";
 
  auto posMap = layoutEngine->computeLayout(oss.str());
-        if (!posMap.empty()) {
+            if (!posMap.empty()) {
      f.nodePositions = posMap;
         for (const auto& nt : nodeTypeMap) {
     f.nodeShapes[nt.first] = nt.second;
@@ -205,6 +217,13 @@ void VisualizationPane::updateDisplay() {
          f.nodeShapes[np.id] = np.type;
          }
        }
+        } else {
+         // Use saved/canvas positions when available
+  for (const auto& np : positions) {
+  f.nodePositions[np.id] = { np.x, np.y };
+            f.nodeShapes[np.id] = np.type;
+        }
+    }
     }
     else {
    // Not a tree or graphviz not available: use positions from interaction manager

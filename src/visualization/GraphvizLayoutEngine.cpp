@@ -18,8 +18,8 @@
 #    pragma warning(push)
 #    pragma warning(disable: 4996)
 #  endif
-#  include <gvc.h>
-#  include <cgraph.h>
+#  include <graphviz/gvc.h>
+#  include <graphviz/cgraph.h>
 #  if defined(_MSC_VER)
 #    pragma warning(pop)
 #  endif
@@ -33,6 +33,10 @@ GraphvizLayoutEngine::GraphvizLayoutEngine()
         graphvizAvailable = (gvc != nullptr);
     } catch (...) {
         graphvizAvailable = false;
+        if (gvc) {
+            try { gvFreeContext(static_cast<GVC_t*>(gvc)); } catch (...) {}
+            gvc = nullptr;
+        }
     }
 #endif
 }
@@ -58,7 +62,12 @@ std::map<std::string, std::pair<double, double>> GraphvizLayoutEngine::computeLa
         Agraph_t* g = agmemread(dotString.c_str());
         if (!g) return computeFallbackLayout(dotString);
 
-        if (gvLayout(ctx, g, layoutAlgorithm.c_str()) != 0) {
+        // Attempt layout - if it fails, silently fall back
+        // Note: Graphviz may print errors to stderr if plugins are not loaded
+        // We suppress these by falling back gracefully
+        int layoutResult = gvLayout(ctx, g, layoutAlgorithm.c_str());
+        if (layoutResult != 0) {
+            // Layout failed - use fallback
             agclose(g);
             return computeFallbackLayout(dotString);
         }
@@ -81,7 +90,11 @@ std::map<std::string, std::pair<double, double>> GraphvizLayoutEngine::computeLa
         gvFreeLayout(ctx, g);
         agclose(g);
         if (!positions.empty()) return positions;
-    } catch (...) {}
+        else
+            return computeFallbackLayout(dotString);
+    } catch (...) {
+        // Silently fall back to fallback layout on any exception
+    }
 #endif
     return computeFallbackLayout(dotString);
 }

@@ -215,108 +215,6 @@ if(NOT QT_FOUND)
 endif()
 
 # ===================================================================
-# Graphviz Configuration - Optional dependency (BEFORE executable creation)
-# ===================================================================
-option(USE_GRAPHVIZ "Enable Graphviz for advanced graph layouts" ON)
-
-set(GRAPHVIZ_FOUND OFF)
-set(GRAPHVIZ_ROOT_DIR "")
-set(GRAPHVIZ_LIBRARIES "")
-
-if(USE_GRAPHVIZ)
-    if(WIN32)
-        # Windows: Search for Graphviz
-  set(GRAPHVIZ_SEARCH_PATHS
-            "$ENV{GRAPHVIZ_ROOT}"
- "$ENV{GRAPHVIZ_HOME}"
-      "$ENV{GRAPHVIZ_DIR}"
-       "C:/Program Files/Graphviz"
-  "C:/Program Files (x86)/Graphviz"
-            "C:/Graphviz"
-        )
-
-        foreach(candidate_path IN LISTS GRAPHVIZ_SEARCH_PATHS)
-            if(candidate_path)
-    if(EXISTS "${candidate_path}/include/graphviz/gvc.h" OR EXISTS "${candidate_path}/include/gvc.h")
-          set(GRAPHVIZ_ROOT_DIR "${candidate_path}")
-          set(GRAPHVIZ_FOUND ON)
-         break()
-          endif()
-            endif()
-        endforeach()
-
-  if(GRAPHVIZ_FOUND)
-       message(STATUS "Found Graphviz at: ${GRAPHVIZ_ROOT_DIR}")
-        
- # Find libraries - search in lib directory
-            set(GRAPHVIZ_LIBS_FOUND ON)
- foreach(lib_name gvc cgraph cdt)
-                find_library(GRAPHVIZ_${lib_name}_LIB
-                    NAMES ${lib_name}
-  PATHS "${GRAPHVIZ_ROOT_DIR}/lib" "${GRAPHVIZ_ROOT_DIR}/lib64"
-         NO_DEFAULT_PATH
-     )
-       if(GRAPHVIZ_${lib_name}_LIB)
-         list(APPEND GRAPHVIZ_LIBRARIES "${GRAPHVIZ_${lib_name}_LIB}")
-       message(STATUS "Found Graphviz library: ${GRAPHVIZ_${lib_name}_LIB}")
-             else()
-      set(GRAPHVIZ_LIBS_FOUND OFF)
-           message(STATUS "Graphviz library ${lib_name} not found at ${GRAPHVIZ_ROOT_DIR}/lib")
-      endif()
-       endforeach()
-            
- if(NOT GRAPHVIZ_LIBS_FOUND)
-                set(GRAPHVIZ_FOUND OFF)
-          set(GRAPHVIZ_LIBRARIES "")
-      message(STATUS "Graphviz libraries incomplete - disabling Graphviz support")
-  else()
-     message(STATUS "Graphviz enabled with libraries: ${GRAPHVIZ_LIBRARIES}")
-            endif()
-        endif()
-
-    elseif(APPLE OR UNIX)
- # macOS/Linux: Use pkg-config or find_library
-        find_package(PkgConfig QUIET)
-        if(PkgConfig_FOUND)
-      pkg_check_modules(GRAPHVIZ QUIET libgvc)
-            if(GRAPHVIZ_FOUND)
-       set(GRAPHVIZ_LIBRARIES ${GRAPHVIZ_LIBRARIES})
-    message(STATUS "Found Graphviz via pkg-config")
-      endif()
-    endif()
-
-        if(NOT GRAPHVIZ_FOUND)
-# Try manual search
-         find_path(GRAPHVIZ_INCLUDE_DIR graphviz/gvc.h
-   PATHS /usr/include /usr/local/include /opt/homebrew/include
-            )
-      find_library(GRAPHVIZ_GVC_LIB gvc
-            PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
-            )
-  find_library(GRAPHVIZ_CGRAPH_LIB cgraph
-     PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
-    )
-        find_library(GRAPHVIZ_CDT_LIB cdt
-      PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
-          )
-
-if(GRAPHVIZ_INCLUDE_DIR AND GRAPHVIZ_GVC_LIB AND GRAPHVIZ_CGRAPH_LIB AND GRAPHVIZ_CDT_LIB)
-        set(GRAPHVIZ_FOUND ON)
-       set(GRAPHVIZ_ROOT_DIR ${GRAPHVIZ_INCLUDE_DIR})
-        list(APPEND GRAPHVIZ_LIBRARIES ${GRAPHVIZ_GVC_LIB} ${GRAPHVIZ_CGRAPH_LIB} ${GRAPHVIZ_CDT_LIB})
- message(STATUS "Found Graphviz manually")
-     endif()
-      endif()
-    endif()
-
-    if(NOT GRAPHVIZ_FOUND)
-   message(STATUS "Graphviz not found - Using fallback layout engine (this is OK)")
-    endif()
-else()
-    message(STATUS "Graphviz disabled by user")
-endif()
-
-# ===================================================================
 # Source Files
 # ===================================================================
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -331,32 +229,123 @@ add_executable(${PROJECT_NAME} ${DATAVIZ_SOURCES} ${DATAVIZ_HEADERS})
 target_include_directories(${PROJECT_NAME} PRIVATE ${SRC_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${QT_LIBRARIES})
 
-# Add Graphviz includes and libs if found
-if(GRAPHVIZ_FOUND)
-    target_include_directories(${PROJECT_NAME} PRIVATE "${GRAPHVIZ_ROOT_DIR}/include")
-    if(GRAPHVIZ_LIBRARIES)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${GRAPHVIZ_LIBRARIES})
-    endif()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE GRAPHVIZ_AVAILABLE=1)
-    message(STATUS "Graphviz enabled for project")
-    
-    # Copy DLLs to output directory on Windows
+# ===================================================================
+# Graphviz Configuration - Optional dependency
+# ===================================================================
+option(USE_GRAPHVIZ "Enable Graphviz for advanced graph layouts" ON)
+
+set(GRAPHVIZ_FOUND OFF)
+set(GRAPHVIZ_ROOT_DIR "")
+
+if(USE_GRAPHVIZ)
     if(WIN32)
-        foreach(dll_name gvc.dll cgraph.dll cdt.dll)
-           set(dll_path "${GRAPHVIZ_ROOT_DIR}/bin/${dll_name}")
+        # Windows: Search for Graphviz
+        set(GRAPHVIZ_SEARCH_PATHS
+   "$ENV{GRAPHVIZ_ROOT}"
+          "$ENV{GRAPHVIZ_HOME}"
+            "$ENV{GRAPHVIZ_DIR}"
+  "C:/Program Files/Graphviz"
+      "C:/Program Files (x86)/Graphviz"
+      "C:/Graphviz"
+      )
+
+     foreach(candidate_path IN LISTS GRAPHVIZ_SEARCH_PATHS)
+          if(candidate_path AND EXISTS "${candidate_path}/include/graphviz/gvc.h")
+   set(GRAPHVIZ_ROOT_DIR "${candidate_path}")
+              set(GRAPHVIZ_FOUND ON)
+           break()
+            endif()
+    endforeach()
+
+      if(GRAPHVIZ_FOUND)
+        message(STATUS "Found Graphviz at: ${GRAPHVIZ_ROOT_DIR}")
+
+            target_include_directories(${PROJECT_NAME} PRIVATE "${GRAPHVIZ_ROOT_DIR}/include")
+
+       # Find libraries
+            set(GRAPHVIZ_LIBS_FOUND ON)
+            set(GRAPHVIZ_LIBRARIES "")
+       foreach(lib_name gvc cgraph cdt)
+              find_library(GRAPHVIZ_${lib_name}_LIB
+               NAMES ${lib_name}
+      PATHS "${GRAPHVIZ_ROOT_DIR}/lib"
+        NO_DEFAULT_PATH
+     )
+      if(GRAPHVIZ_${lib_name}_LIB)
+     list(APPEND GRAPHVIZ_LIBRARIES "${GRAPHVIZ_${lib_name}_LIB}")
+          else()
+            set(GRAPHVIZ_LIBS_FOUND OFF)
+  message(STATUS "Graphviz library ${lib_name} not found")
+         endif()
+      endforeach()
+
+      if(GRAPHVIZ_LIBS_FOUND)
+ target_link_libraries(${PROJECT_NAME} PRIVATE ${GRAPHVIZ_LIBRARIES})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE GRAPHVIZ_AVAILABLE=1)
+
+      # Copy DLLs
+             foreach(dll_name gvc.dll cgraph.dll cdt.dll)
+          set(dll_path "${GRAPHVIZ_ROOT_DIR}/bin/${dll_name}")
    if(EXISTS "${dll_path}")
      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-         "${dll_path}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMENT "Copying ${dll_name}"
+       "${dll_path}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+       COMMENT "Copying ${dll_name}"
+           )
+ endif()
+  endforeach()
+            else()
+       set(GRAPHVIZ_FOUND OFF)
+   endif()
+   endif()
+
+    elseif(APPLE OR UNIX)
+        # macOS/Linux: Use pkg-config or find_library
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+ pkg_check_modules(GRAPHVIZ QUIET libgvc)
+        if(GRAPHVIZ_FOUND)
+ target_include_directories(${PROJECT_NAME} PRIVATE ${GRAPHVIZ_INCLUDE_DIRS})
+             target_link_libraries(${PROJECT_NAME} PRIVATE ${GRAPHVIZ_LIBRARIES})
+ target_compile_definitions(${PROJECT_NAME} PRIVATE GRAPHVIZ_AVAILABLE=1)
+ message(STATUS "Found Graphviz via pkg-config")
+    endif()
+   endif()
+
+        if(NOT GRAPHVIZ_FOUND)
+            # Try manual search
+       find_path(GRAPHVIZ_INCLUDE_DIR graphviz/gvc.h
+   PATHS /usr/include /usr/local/include /opt/homebrew/include
       )
-   message(STATUS "Will copy DLL: ${dll_path}")
+ find_library(GRAPHVIZ_GVC_LIB gvc
+       PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
+            )
+     find_library(GRAPHVIZ_CGRAPH_LIB cgraph
+        PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
+            )
+         find_library(GRAPHVIZ_CDT_LIB cdt
+       PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
+            )
+
+          if(GRAPHVIZ_INCLUDE_DIR AND GRAPHVIZ_GVC_LIB AND GRAPHVIZ_CGRAPH_LIB AND GRAPHVIZ_CDT_LIB)
+                set(GRAPHVIZ_FOUND ON)
+       target_include_directories(${PROJECT_NAME} PRIVATE ${GRAPHVIZ_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+       ${GRAPHVIZ_GVC_LIB} ${GRAPHVIZ_CGRAPH_LIB} ${GRAPHVIZ_CDT_LIB}
+    )
+       target_compile_definitions(${PROJECT_NAME} PRIVATE GRAPHVIZ_AVAILABLE=1)
+       message(STATUS "Found Graphviz manually")
      endif()
-        endforeach()
+        endif()
+    endif()
+
+    if(NOT GRAPHVIZ_FOUND)
+   message(STATUS "Graphviz not found - Using fallback layout engine (this is OK)")
+ target_compile_definitions(${PROJECT_NAME} PRIVATE GRAPHVIZ_AVAILABLE=0)
     endif()
 else()
+    message(STATUS "Graphviz disabled by user")
     target_compile_definitions(${PROJECT_NAME} PRIVATE GRAPHVIZ_AVAILABLE=0)
-    message(STATUS "Graphviz disabled for project")
 endif()
 
 # ===================================================================
@@ -381,3 +370,51 @@ install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
     BUNDLE DESTINATION .
 )
+
+# ===================================================================
+# Qt Deployment (Windows)
+# ===================================================================
+if(WIN32 AND QT_FOUND)
+    get_target_property(_qmake_executable Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
+    get_filename_component(_qt_bin_dir "${_qmake_executable}" DIRECTORY)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin_dir}" NO_DEFAULT_PATH)
+
+    if(WINDEPLOYQT_EXECUTABLE)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+     COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+                --no-translations
+  --no-system-d3d-compiler
+             --no-opengl-sw
+         "$<TARGET_FILE:${PROJECT_NAME}>"
+            COMMENT "Running windeployqt..."
+        )
+    endif()
+endif()
+
+# ===================================================================
+# Copy compile_commands.json to source dir for IDEs (Ninja/Makefile only)
+# ===================================================================
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND EXISTS "${CMAKE_BINARY_DIR}/compile_commands.json")
+    file(COPY "${CMAKE_BINARY_DIR}/compile_commands.json" DESTINATION "${CMAKE_SOURCE_DIR}")
+endif()
+
+# ===================================================================
+# Configuration Summary
+# ===================================================================
+message(STATUS "")
+message(STATUS "================================================================================")
+message(STATUS "  DataViz-UIT Build Configuration")
+message(STATUS "================================================================================")
+message(STATUS "  CMake Version:        ${CMAKE_VERSION}")
+message(STATUS "  CMake Generator:      ${CMAKE_GENERATOR}")
+message(STATUS "  C++ Compiler:         ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "  C++ Standard:    C++${CMAKE_CXX_STANDARD}")
+message(STATUS "  Build Type:      ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Qt Version:           Qt${QT_VERSION_MAJOR} (${QT_VERSION_STRING})")
+message(STATUS "  Graphviz:      ${GRAPHVIZ_FOUND}")
+if(GRAPHVIZ_FOUND AND GRAPHVIZ_ROOT_DIR)
+    message(STATUS "  Graphviz Location:    ${GRAPHVIZ_ROOT_DIR}")
+endif()
+message(STATUS "  Output Directory:     ${CMAKE_BINARY_DIR}/bin")
+message(STATUS "================================================================================")
+message(STATUS "")
