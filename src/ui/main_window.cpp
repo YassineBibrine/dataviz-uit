@@ -3,6 +3,7 @@
 #include "control_panel.h"
 #include "metrics_panel.h"
 #include "toolbox_panel.h"
+#include "color_legend_panel.h"
 #include "structure_selector.h"
 #include "code_generator_dialog.h"
 #include "tutorial_overlay.h"
@@ -141,13 +142,13 @@ toolboxPanel->setVisible(false);
     rightScrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
 
     QWidget* rightContainer = new QWidget();
-    QVBoxLayout* rightLayout = new QVBoxLayout(rightContainer);
+ QVBoxLayout* rightLayout = new QVBoxLayout(rightContainer);
     rightLayout->setContentsMargins(5, 5, 10, 5);
     rightLayout->setSpacing(15);
 
-    // Structure Selector
+  // Structure Selector
     structureSelector = new StructureSelector(this);
-    structureSelector->setDataModelManager(dataModelManager.get());
+  structureSelector->setDataModelManager(dataModelManager.get());
     structureSelector->setObjectName("borderedPanel");
     rightLayout->addWidget(structureSelector);
 
@@ -155,7 +156,13 @@ toolboxPanel->setVisible(false);
     controlPanel->setObjectName("borderedPanel");
     rightLayout->addWidget(controlPanel.get());
 
-// Metrics Panel - HIDDEN BY DEFAULT
+    // Color Legend Panel - Shows during animation instead of toolbox
+    colorLegendPanel = new ColorLegendPanel(this);
+    colorLegendPanel->setObjectName("borderedPanel");
+    colorLegendPanel->setVisible(false);  // Hidden initially
+ rightLayout->addWidget(colorLegendPanel);
+
+    // Metrics Panel - HIDDEN BY DEFAULT
     metricsPanel->setObjectName("borderedPanel");
     metricsPanel->setVisible(false);  // Hidden by default
     rightLayout->addWidget(metricsPanel.get());
@@ -175,7 +182,7 @@ void MainWindow::setupTutorial() {
   tutorialOverlay = new TutorialOverlay(this);
   tutorialOverlay->hide();  // Hide initially until tutorial is started
     
-    // Define tutorial steps
+    // Definition of tutorial steps
     tutorialOverlay->addStep(
      structureSelector,
      "Welcome to DataViz UIT!",
@@ -302,56 +309,80 @@ toolboxPanel->updateTools(structureType);
 
 void MainWindow::onAlgorithmSelected(QString algorithm) {
     selectedAlgorithm = algorithm.toStdString();
-
-    if (!dataModelManager->getSelectedStructure()) {
-        QMessageBox::warning(this, "No Structure Selected",
-        "Please select or create a data structure before choosing an algorithm.\n\n"
-"You can:\n"
-            "- Create a structure from the Structure Manager\n"
-            "- Click 'Create Sample Structures' for quick examples\n"
-            "- Select an existing structure from the list");
-        selectedAlgorithm = "";
-      return;
-    }
-
+    
+    // Just store the selection without showing warnings here
+// Warnings will only show when actually trying to execute (Play click)
     qDebug() << "Algorithm selected:" << algorithm
       << "for structure:" << QString::fromStdString(dataModelManager->getSelectedStructureId());
 }
 
 void MainWindow::onPlayClicked() {
-    if (selectedAlgorithm.empty()) {
-        QMessageBox::warning(this, "No Algorithm", "Please select an algorithm first.");
-    return;
+    // Check algorithm first
+if (selectedAlgorithm.empty()) {
+        QMessageBox::warning(this, "No Algorithm Selected", 
+     "Please select an algorithm from the Algorithm dropdown before clicking Play.");
+      return;
     }
 
+    // Check structure second
     if (!dataModelManager->getSelectedStructure()) {
-        QMessageBox::warning(this, "No Structure", "Please select a data structure first.");
-  return;
-  }
+        QMessageBox::warning(this, "No Structure Selected",
+       "Please select or create a data structure before running an algorithm.\n\n"
+   "You can:\n"
+"- Create a structure from the Structure Manager\n"
+        "- Click 'Create Sample Structures' for quick examples\n"
+     "- Select an existing structure from the list");
+   return;
+    }
+
+    // NEW: Hide toolbox and show color legend during animation
+    if (toolboxPanel) {
+        toolboxPanel->setVisible(false);
+    }
+    if (colorLegendPanel) {
+colorLegendPanel->setAlgorithmLegend(selectedAlgorithm);
+  colorLegendPanel->setVisible(true);
+    }
 
     controlPanel->setPlayingState(true);
-    isAnimationPlaying = true;  // NEW: Set animation state
+    isAnimationPlaying = true;
     executeAlgorithm(selectedAlgorithm);
 }
 
 void MainWindow::onPauseClicked() {
     controlPanel->setPlayingState(false);
     isAnimationPlaying = false;  // NEW: Clear animation state
-    if (playbackController) {
+  if (playbackController) {
         playbackController->pause();
+    }
+    
+  // NEW: Hide color legend and show toolbox when paused
+    if (colorLegendPanel) {
+  colorLegendPanel->setVisible(false);
+    }
+    if (toolboxPanel) {
+      toolboxPanel->setVisible(true);
     }
 }
 
 void MainWindow::onResetClicked() {
     controlPanel->setPlayingState(false);
     isAnimationPlaying = false;  // NEW: Clear animation state
-    if (playbackController) {
+  if (playbackController) {
         playbackController->pause();
         // Reload structure to reset to initial state
-      std::string structId = dataModelManager->getSelectedStructureId();
-        if (!structId.empty()) {
-          loadStructureIntoCanvas(structId);
+std::string structId = dataModelManager->getSelectedStructureId();
+   if (!structId.empty()) {
+   loadStructureIntoCanvas(structId);
         }
+    }
+    
+    // NEW: Hide color legend and show toolbox when reset
+    if (colorLegendPanel) {
+        colorLegendPanel->setVisible(false);
+ }
+    if (toolboxPanel) {
+        toolboxPanel->setVisible(true);
     }
 }
 
@@ -368,11 +399,14 @@ void MainWindow::onStepBackwardClicked() {
 }
 
 void MainWindow::onSpeedChanged(int speed) {
-    qDebug() << "Speed:" << speed;
+    qDebug() << "MainWindow::onSpeedChanged - Slider value:" << speed;
     if (playbackController) {
-   // Convert slider value (1-100) to playback speed (0.1x - 5.0x)
- float playbackSpeed = speed / 20.0f;  // 1->0.05, 50->2.5, 100->5.0
-      playbackController->setSpeed(playbackSpeed);
+ // Slider range is 1-100
+        // Convert to playback speed: 1->0.1x, 50->1.0x, 100->2.0x
+        // Using formula: speed = (sliderValue / 50.0f)
+        float playbackSpeed = speed / 50.0f;  
+     qDebug() << "MainWindow::onSpeedChanged - Converted speed:" << playbackSpeed << "x";
+ playbackController->setSpeed(playbackSpeed);
     }
 }
 
@@ -468,7 +502,7 @@ algo = std::make_unique<Reverse>(targetStructure);
      
               std::string structId = dataModelManager->getSelectedStructureId();
     if (!structId.empty()) {
-  loadStructureIntoCanvas(structId);
+      loadStructureIntoCanvas(structId);
          }
        controlPanel->setPlayingState(false);
     isAnimationPlaying = false;
@@ -570,7 +604,7 @@ void MainWindow::onStructureCreatedFromCode(QString structureId) {
             toolboxPanel->setVisible(true);
          toolboxPanel->updateTools(structureType);
    }
-          
+  
       if (controlPanel) {
             controlPanel->updateAlgorithmList(structureType);
      }
@@ -1227,7 +1261,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         dataModelManager->saveSession();
         qDebug() << "Session saved on exit (auto-save enabled)";
     } else if (!autoSaveEnabled) {
-        qDebug() << "Session NOT saved (auto-save disabled)";
+ qDebug() << "Session NOT saved (auto-save disabled)";
     }
 
     event->accept();

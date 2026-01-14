@@ -87,98 +87,160 @@ int key = data[i];
         FrameRecorder recorder;
         auto& data = arr->getData();
         int n = data.size();
-    
+        
         // Frame 0: Initial state - show all elements in blue
         AnimationFrame initialFrame;
         initialFrame.operationType = "Initial State";
-        for (int i = 0; i < n; i++) {
-    std::string nodeId = "arr_" + std::to_string(i);
-            initialFrame.addHighlightedNode(nodeId, "blue");
-    }
-      initialFrame.addAnnotation("Array before sorting: showing all elements");
-        recorder.recordFrame(initialFrame);
-        
-      // Main sorting loop
-     for (int i = 1; i < n; i++) {
-     int key = data[i];
-    
-   // Frame: Highlight the key element being inserted
-     AnimationFrame selectKeyFrame;
- selectKeyFrame.operationType = "Select Key";
-            selectKeyFrame.addHighlightedNode("arr_" + std::to_string(i), "yellow");
-    // Show sorted portion in green
-         for (int k = 0; k < i; k++) {
-       selectKeyFrame.addHighlightedNode("arr_" + std::to_string(k), "green");
-         }
-  selectKeyFrame.addAnnotation("Selecting key = " + std::to_string(key) + " at index " + std::to_string(i));
-         recorder.recordFrame(selectKeyFrame);
-     
-        int j = i - 1;
-            
-    // Compare and shift elements
-            while (j >= 0 && data[j] > key) {
-      // Frame: Show comparison
-        AnimationFrame compareFrame;
-        compareFrame.operationType = "Compare";
-   compareFrame.addHighlightedNode("arr_" + std::to_string(j), "red");
-     compareFrame.addHighlightedNode("arr_" + std::to_string(i), "yellow");
-  // Show already sorted portion
-         for (int k = 0; k < j; k++) {
-     compareFrame.addHighlightedNode("arr_" + std::to_string(k), "green");
-       }
- compareFrame.addAnnotation("Comparing: " + std::to_string(data[j]) + " > " + std::to_string(key) + " ? YES");
-    recorder.recordFrame(compareFrame);
-            
-    // Frame: Show shifting
-                AnimationFrame shiftFrame;
-                shiftFrame.operationType = "Shift Right";
-   shiftFrame.addHighlightedNode("arr_" + std::to_string(j), "orange");
-        shiftFrame.addHighlightedNode("arr_" + std::to_string(j + 1), "orange");
-    shiftFrame.addAnnotation("Shifting " + std::to_string(data[j]) + " one position right");
-    recorder.recordFrame(shiftFrame);
- 
-     data[j + 1] = data[j];
-     j = j - 1;
-            }
-   
-      // Frame: Insert the key at correct position
-       AnimationFrame insertFrame;
-            insertFrame.operationType = "Insert";
-        insertFrame.addHighlightedNode("arr_" + std::to_string(j + 1), "cyan");
-    // Show sorted portion
- for (int k = 0; k <= i; k++) {
-   if (k != j + 1) {
-     insertFrame.addHighlightedNode("arr_" + std::to_string(k), "green");
-                }
+   for (int i = 0; i < n; i++) {
+     std::string nodeId = "node_" + std::to_string(i);
+     initialFrame.addHighlightedNode(nodeId, "blue");
+       // Set initial values
+        initialFrame.nodeLabels[nodeId] = std::to_string(data[i]);
      }
-    insertFrame.addAnnotation("Inserting key = " + std::to_string(key) + " at position " + std::to_string(j + 1));
-            recorder.recordFrame(insertFrame);
-     
-      data[j + 1] = key;
-         
-// Frame: Show updated sorted portion
-    AnimationFrame sortedFrame;
-       sortedFrame.operationType = "Sorted Portion";
- for (int k = 0; k <= i; k++) {
-                sortedFrame.addHighlightedNode("arr_" + std::to_string(k), "green");
-            }
-// Show unsorted portion
-     for (int k = i + 1; k < n; k++) {
-   sortedFrame.addHighlightedNode("arr_" + std::to_string(k), "lightgray");
-            }
- sortedFrame.addAnnotation("Elements 0-" + std::to_string(i) + " are now sorted");
-        recorder.recordFrame(sortedFrame);
-        }
+        initialFrame.addAnnotation("Starting Insertion Sort on array of " + std::to_string(n) + " elements");
+recorder.recordFrame(initialFrame);
         
+        // Main sorting loop
+        for (int i = 1; i < n; i++) {
+            int key = data[i];
+            
+            // Frame: Highlight the key element being inserted
+            AnimationFrame selectKeyFrame;
+            selectKeyFrame.operationType = "Select Key";
+    selectKeyFrame.addHighlightedNode("node_" + std::to_string(i), "yellow");
+            
+      // Show sorted portion in green
+    for (int k = 0; k < i; k++) {
+         selectKeyFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+            }
+  
+   // Add current array state to frame
+  for (int k = 0; k < n; k++) {
+              selectKeyFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+        }
+         
+    selectKeyFrame.addAnnotation("Iteration " + std::to_string(i) + ": Selected key = " + std::to_string(key));
+    recorder.recordFrame(selectKeyFrame);
+            
+            int j = i - 1;
+
+    // Compare and shift elements
+    while (j >= 0 && data[j] > key) {
+           // Frame: Show comparison
+         AnimationFrame compareFrame;
+       compareFrame.operationType = "Compare";
+     compareFrame.addHighlightedNode("node_" + std::to_string(j), "red");
+     compareFrame.addHighlightedNode("node_" + std::to_string(j+1), "orange");
+    
+                // Show already sorted portion
+        for (int k = 0; k < j; k++) {
+     compareFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+           }
+             
+           // Add current array state
+      for (int k = 0; k < n; k++) {
+     compareFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+             }
+       
+compareFrame.addAnnotation("Comparing: arr[" + std::to_string(j) + "]=" + std::to_string(data[j]) + 
+           " > key=" + std::to_string(key) + " ? YES - Shift needed");
+                recorder.recordFrame(compareFrame);
+     
+       // Frame: Show shifting
+     AnimationFrame shiftFrame;
+                shiftFrame.operationType = "Shift Right";
+         shiftFrame.addHighlightedNode("node_" + std::to_string(j), "orange");
+        shiftFrame.addHighlightedNode("node_" + std::to_string(j + 1), "orange");
+      
+    // Show sorted portion
+             for (int k = 0; k < j; k++) {
+      shiftFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+       }
+
+                // Add array state BEFORE shift for clarity
+          for (int k = 0; k < n; k++) {
+        shiftFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+                }
+       
+      shiftFrame.addAnnotation("Shifting arr[" + std::to_string(j) + "]=" + std::to_string(data[j]) + 
+           " to position " + std::to_string(j + 1));
+           recorder.recordFrame(shiftFrame);
+   
+                // Perform the shift
+           data[j + 1] = data[j];
+     j = j - 1;
+         
+    // Frame: Show array AFTER shift
+ AnimationFrame afterShiftFrame;
+          afterShiftFrame.operationType = "After Shift";
+    afterShiftFrame.addHighlightedNode("node_" + std::to_string(j+1), "orange");
+      
+         // Show sorted portion
+     for (int k = 0; k < j; k++) {
+      afterShiftFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+  }
+    
+           // Add updated array state showing the shift result
+    for (int k = 0; k < n; k++) {
+             afterShiftFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+           }
+      
+    afterShiftFrame.addAnnotation("Element shifted to position " + std::to_string(j+1));
+recorder.recordFrame(afterShiftFrame);
+    }
+            
+        // Frame: Insert the key at correct position
+      AnimationFrame insertFrame;
+            insertFrame.operationType = "Insert";
+            insertFrame.addHighlightedNode("node_" + std::to_string(j + 1), "cyan");
+            
+      // Show sorted portion
+            for (int k = 0; k <= i; k++) {
+ if (k != j + 1) {
+                    insertFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+   }
+            }
+         
+            // Add array state BEFORE insertion
+            for (int k = 0; k < n; k++) {
+ insertFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+   }
+       
+            insertFrame.addAnnotation("Inserting key=" + std::to_string(key) + " at position " + std::to_string(j + 1));
+recorder.recordFrame(insertFrame);
+ 
+            // Perform the insertion
+    data[j + 1] = key;
+         
+  // Frame: Show array AFTER insertion
+          AnimationFrame afterInsertFrame;
+          afterInsertFrame.operationType = "After Insert";
+     for (int k = 0; k <= i; k++) {
+  afterInsertFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+            }
+     for (int k = i + 1; k < n; k++) {
+          afterInsertFrame.addHighlightedNode("node_" + std::to_string(k), "lightgray");
+      }
+       
+      // Add updated array state showing the final position
+      for (int k = 0; k < n; k++) {
+                afterInsertFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+  }
+            
+       afterInsertFrame.addAnnotation("Elements 0-" + std::to_string(i) + " are now sorted");
+            recorder.recordFrame(afterInsertFrame);
+        }
+
         // Final frame: Everything sorted
         AnimationFrame finalFrame;
         finalFrame.operationType = "Complete";
-     for (int i = 0; i < n; i++) {
- finalFrame.addHighlightedNode("arr_" + std::to_string(i), "green");
+ for (int i = 0; i < n; i++) {
+       finalFrame.addHighlightedNode("node_" + std::to_string(i), "green");
+            finalFrame.nodeLabels["node_" + std::to_string(i)] = std::to_string(data[i]);
         }
-        finalFrame.addAnnotation("? Array is completely sorted!");
-     recorder.recordFrame(finalFrame);
-   
+      finalFrame.addAnnotation("? Array is completely sorted!");
+   recorder.recordFrame(finalFrame);
+      
         qDebug() << "InsertionSort generated" << recorder.getAllFrames().size() << "animation frames";
         return recorder.getAllFrames();
     }

@@ -230,46 +230,103 @@ void VisualizationPane::refreshDisplay() {
 
 // NEW: Render an animation frame with highlights and annotations
 void VisualizationPane::renderAnimationFrame(const AnimationFrame& frame) {
-    // Instead of just updating highlights, we need to pass the FULL frame to the renderer
-    // so it can use the node colors specified in the frame
+    // Create a complete frame with current positions and the animation's highlights/colors
+  AnimationFrame displayFrame = frame;
     
-    // Build a complete frame with current positions and the animation's highlights/colors
-    AnimationFrame displayFrame = frame;
-    
-    // Get current node positions from interaction manager
+    // Get current node positions and information from interaction manager
     if (interaction) {
-auto positions = interaction->getAllNodePositions();
-        auto nodeVals = interaction->getNodeValues();
-        auto edges = interaction->getAllEdges();
+ auto positions = interaction->getAllNodePositions();
+     auto nodeVals = interaction->getNodeValues();
+      auto edges = interaction->getAllEdges();
         
-        // Add positions and labels
+        // Build a mapping from frame node IDs to actual canvas node IDs
+        // For arrays: the frame uses "node_0", "node_1", etc., which should match canvas nodes
+        std::map<std::string, std::string> frameIdToCanvasId;
+   
+        // Try to map frame node IDs to actual canvas node IDs
+   // First, check if the nodes are already in the correct format
+        for (size_t idx = 0; idx < positions.size(); ++idx) {
+        std::string expectedFrameId = "node_" + std::to_string(idx);
+         frameIdToCanvasId[expectedFrameId] = positions[idx].id;
+    }
+        
+   // Add node positions from canvas
         for (const auto& np : positions) {
-            displayFrame.nodePositions[np.id] = {np.x, np.y};
-      displayFrame.nodeShapes[np.id] = np.type;
-      
-         // Set label
-       if (nodeValues.count(np.id)) {
-              displayFrame.nodeLabels[np.id] = nodeValues[np.id];
-          } else if (nodeVals.count(np.id)) {
-    displayFrame.nodeLabels[np.id] = std::to_string(nodeVals[np.id]);
-       } else {
-     displayFrame.nodeLabels[np.id] = np.id;
+       displayFrame.nodePositions[np.id] = {np.x, np.y};
+    displayFrame.nodeShapes[np.id] = np.type;
+}
+
+        // Remap highlighted nodes and colors from frame IDs to canvas IDs
+        std::vector<std::string> remappedHighlights;
+        std::map<std::string, std::string> remappedColors;
+    
+        for (const auto& frameNodeId : frame.highlightedNodes) {
+       // Try to find the canvas node ID for this frame node ID
+       if (frameIdToCanvasId.count(frameNodeId)) {
+                std::string canvasNodeId = frameIdToCanvasId[frameNodeId];
+      remappedHighlights.push_back(canvasNodeId);
+
+         // Copy the color if it exists in the original frame
+     if (frame.nodeColors.count(frameNodeId)) {
+       remappedColors[canvasNodeId] = frame.nodeColors.at(frameNodeId);
+      }
+ } else {
+        // If no mapping found, use the frame node ID as-is
+              remappedHighlights.push_back(frameNodeId);
+         
+      // Copy the color if it exists in the original frame
+         if (frame.nodeColors.count(frameNodeId)) {
+            remappedColors[frameNodeId] = frame.nodeColors.at(frameNodeId);
+         }
             }
         }
-
-        // Add edges
-        for (const auto& e : edges) {
-     displayFrame.edges.push_back({e.source, e.target});
+    
+        displayFrame.highlightedNodes = remappedHighlights;
+        displayFrame.nodeColors = remappedColors;
+        
+   // Remap node labels from frame node IDs to canvas node IDs
+        std::map<std::string, std::string> remappedLabels;
+   for (const auto& [frameNodeId, label] : frame.nodeLabels) {
+     if (frameIdToCanvasId.count(frameNodeId)) {
+         std::string canvasNodeId = frameIdToCanvasId[frameNodeId];
+        remappedLabels[canvasNodeId] = label;
+         qDebug() << "Remapped label:" << QString::fromStdString(frameNodeId) 
+           << "→" << QString::fromStdString(canvasNodeId) 
+         << "=" << QString::fromStdString(label);
+     } else {
+          // Use as-is if no mapping
+          remappedLabels[frameNodeId] = label;
+     }
         }
-  }
+     displayFrame.nodeLabels = remappedLabels;
+        
+// If the frame doesn't have labels for all nodes, use canvas values
+        for (const auto& np : positions) {
+ if (!displayFrame.nodeLabels.count(np.id)) {
+        // Use value from interaction manager if frame doesn't specify
+      if (nodeVals.count(np.id)) {
+ displayFrame.nodeLabels[np.id] = std::to_string(nodeVals[np.id]);
+ } else if (nodeValues.count(np.id)) {
+    displayFrame.nodeLabels[np.id] = nodeValues[np.id];
+     } else {
+         displayFrame.nodeLabels[np.id] = np.id;
+        }
+    }
+    }
+
+    // Add edges
+        for (const auto& e : edges) {
+  displayFrame.edges.push_back({e.source, e.target});
+        }
+ }
     
     // Render the complete frame with animation data
     renderer->renderFrame(displayFrame);
   
-    // Log annotations for debugging
+  // Log annotations for debugging
     if (!frame.annotations.empty()) {
         qDebug() << "Frame:" << QString::fromStdString(frame.operationType)
-        << "-" << QString::fromStdString(frame.annotations[0]);
+             << "-" << QString::fromStdString(frame.annotations[0]);
     }
 }
 

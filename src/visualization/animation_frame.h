@@ -12,7 +12,7 @@ struct AnimationFrame {
     std::vector<std::pair<std::string, std::string>> highlightedEdges;
 
     std::map<std::string, std::pair<double, double>> nodePositions;
-    std::map<std::string, std::string> nodeColors;
+    std::map<std::string, std::string> nodeColors;  // nodeId -> color
     std::map<std::string, std::string> edgeColors;
 
     // --- NOS AJOUTS ---

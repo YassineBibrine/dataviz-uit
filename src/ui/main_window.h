@@ -20,6 +20,7 @@ class VisualizationPane;
 class ControlPanel;
 class MetricsPanel;
 class ToolboxPanel;
+class ColorLegendPanel;
 class StructureSelector;
 class Algorithm;
 class AlgorithmRunner;
@@ -97,6 +98,7 @@ private:
     std::unique_ptr<VisualizationPane> visualizationPane;
     std::unique_ptr<ControlPanel> controlPanel;
     std::unique_ptr<MetricsPanel> metricsPanel;
+    ColorLegendPanel* colorLegendPanel = nullptr;  // NEW: Color legend panel
 
     FrameRecorder frameRecorder;
     std::unique_ptr<DataModelManager> dataModelManager;
