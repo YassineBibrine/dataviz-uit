@@ -131,8 +131,24 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
         std::string type = "CIRCLE";
         if (currentFrame.nodeShapes.count(id)) type = currentFrame.nodeShapes.at(id);
 
+        // NEW: Get node color from frame (if specified)
+        QColor nodeColor = QColor("#3498db"); // Default blue
+        if (currentFrame.nodeColors.count(id)) {
+            std::string colorName = currentFrame.nodeColors.at(id);
+            // Map color names to Qt colors
+            if (colorName == "red") nodeColor = QColor("#e74c3c");
+            else if (colorName == "green") nodeColor = QColor("#2ecc71");
+            else if (colorName == "yellow") nodeColor = QColor("#f39c12");
+            else if (colorName == "orange") nodeColor = QColor("#e67e22");
+            else if (colorName == "blue") nodeColor = QColor("#3498db");
+            else if (colorName == "cyan") nodeColor = QColor("#1abc9c");
+            else if (colorName == "purple") nodeColor = QColor("#9b59b6");
+            else if (colorName == "lightgray") nodeColor = QColor("#bdc3c7");
+            else nodeColor = QColor(QString::fromStdString(colorName));
+        }
+
         if (type == "RECT") {
-            p.setBrush(QColor("#e67e22"));
+            p.setBrush(nodeColor);
             p.setPen(QPen(Qt::black, 2));
             float w = r * 3.0f;
             float h = r * 1.5f;
@@ -142,7 +158,7 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
             p.drawLine(barX, y - h / 2, barX, y + h / 2);
         }
         else {
-            p.setBrush(QColor("#3498db"));
+            p.setBrush(nodeColor);
             p.setPen(QPen(Qt::black, 2));
             p.drawEllipse(QPointF(x, y), r, r);
         }
@@ -160,9 +176,10 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
     }
 
     // ==========================
-    // 5. HIGHLIGHTS
+    // 5. HIGHLIGHTS (Optional border glow)
     // ==========================
-    p.setPen(QPen(Qt::red, 3));
+    // This adds an extra visual emphasis on highlighted nodes
+    p.setPen(QPen(Qt::white, 4));
     p.setBrush(Qt::NoBrush);
 
     for (const auto& id : currentFrame.highlightedNodes) {

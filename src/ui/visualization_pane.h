@@ -19,7 +19,7 @@ public:
     ~VisualizationPane();
 
     void setRenderSize(int size);
-    void highlightNodes(const std::vector<std::string>& ids, const std::string& color);
+    void highlightNodes(const std::vector<std::string>& ids, const std::string& color = "red");
     void setInteractionMode(const QString& mode);
     void reset();
     InteractionManager* getInteractionManager() const { return interaction.get(); }
@@ -39,6 +39,9 @@ public:
      * @brief Clear local node values map
      */
     void clearNodeValues() { nodeValues.clear(); }
+
+    // NEW: Render an animation frame with highlights and annotations
+    void renderAnimationFrame(const AnimationFrame& frame);
 
 protected:
     void paintEvent(QPaintEvent* event) override;

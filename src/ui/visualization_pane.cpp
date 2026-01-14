@@ -228,6 +228,51 @@ void VisualizationPane::refreshDisplay() {
     updateDisplay();
 }
 
+// NEW: Render an animation frame with highlights and annotations
+void VisualizationPane::renderAnimationFrame(const AnimationFrame& frame) {
+    // Instead of just updating highlights, we need to pass the FULL frame to the renderer
+    // so it can use the node colors specified in the frame
+    
+    // Build a complete frame with current positions and the animation's highlights/colors
+    AnimationFrame displayFrame = frame;
+    
+    // Get current node positions from interaction manager
+    if (interaction) {
+auto positions = interaction->getAllNodePositions();
+        auto nodeVals = interaction->getNodeValues();
+        auto edges = interaction->getAllEdges();
+        
+        // Add positions and labels
+        for (const auto& np : positions) {
+            displayFrame.nodePositions[np.id] = {np.x, np.y};
+      displayFrame.nodeShapes[np.id] = np.type;
+      
+         // Set label
+       if (nodeValues.count(np.id)) {
+              displayFrame.nodeLabels[np.id] = nodeValues[np.id];
+          } else if (nodeVals.count(np.id)) {
+    displayFrame.nodeLabels[np.id] = std::to_string(nodeVals[np.id]);
+       } else {
+     displayFrame.nodeLabels[np.id] = np.id;
+            }
+        }
+
+        // Add edges
+        for (const auto& e : edges) {
+     displayFrame.edges.push_back({e.source, e.target});
+        }
+  }
+    
+    // Render the complete frame with animation data
+    renderer->renderFrame(displayFrame);
+  
+    // Log annotations for debugging
+    if (!frame.annotations.empty()) {
+        qDebug() << "Frame:" << QString::fromStdString(frame.operationType)
+        << "-" << QString::fromStdString(frame.annotations[0]);
+    }
+}
+
 void VisualizationPane::setInteractionMode(const QString& mode) {
     isLinkingMode = false;
     isEraserMode = false;

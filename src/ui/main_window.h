@@ -11,6 +11,7 @@
 #include "../orchestration/algorithm_manager.h"
 #include "../algorithms/frame_recorder.h"
 #include "../core/session_manager.h"
+#include "../visualization/playback_controller.h"  // NEW: Add playback controller
 
 // Forward declarations
 struct DSNode;
@@ -49,6 +50,9 @@ private slots:
 
     void onSpeedChanged(int speed);
     void onAlgorithmSelected(QString algorithm);
+    
+    // NEW: Animation frame handling
+    void onFrameReady(const AnimationFrame& frame);
     
     // --- Structure Selector slots ---
     void onStructureSelected(QString structureId);
@@ -96,10 +100,15 @@ private:
 
     FrameRecorder frameRecorder;
     std::unique_ptr<DataModelManager> dataModelManager;
+    std::unique_ptr<PlaybackController> playbackController;  // NEW: Playback controller for animations
 
     AlgorithmManager& algoManager;
     AlgorithmRunner* currentAlgorithm = nullptr;
     std::string selectedAlgorithm;
+    
+    // Animation state
+    bool isAnimationPlaying = false;  // NEW: Track if animation is currently playing
+    std::vector<AnimationFrame> currentAnimationFrames;  // NEW: Current animation frames
     
     // Menu actions
     QAction* toggleMetricsAction = nullptr;

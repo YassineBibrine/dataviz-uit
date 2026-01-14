@@ -58,6 +58,7 @@ MainWindow::MainWindow(QWidget* parent)
     visualizationPane(std::make_unique<VisualizationPane>(this)),
     controlPanel(std::make_unique<ControlPanel>(this)),
     metricsPanel(std::make_unique<MetricsPanel>(this)),
+    playbackController(std::make_unique<PlaybackController>(this)),  // NEW: Initialize playback controller
     toolboxPanel(nullptr),
     structureSelector(nullptr),
     tutorialOverlay(nullptr),
@@ -68,7 +69,8 @@ MainWindow::MainWindow(QWidget* parent)
     showTutorialAction(nullptr),
     autoSaveAction(nullptr),
     autoSaveEnabled(true),
-    settings("DataVizUIT", "DataVizUIT")
+ isAnimationPlaying(false),  // NEW: Initialize animation state
+  settings("DataVizUIT", "DataVizUIT")
 {
  setWindowTitle("DataViz UIT - Data Structure Visualization");
     resize(1350, 900);
@@ -80,6 +82,10 @@ MainWindow::MainWindow(QWidget* parent)
     if (visualizationPane && visualizationPane->getInteractionManager()) {
         visualizationPane->getInteractionManager()->setBackend(dataModelManager.get());
 }
+
+    // NEW: Connect playback controller to visualization pane
+    connect(playbackController.get(), &PlaybackController::frameReady,
+    this, &MainWindow::onFrameReady);
 
  setupUI();
     connectSignals();
@@ -324,148 +330,64 @@ void MainWindow::onPlayClicked() {
   }
 
     controlPanel->setPlayingState(true);
+    isAnimationPlaying = true;  // NEW: Set animation state
     executeAlgorithm(selectedAlgorithm);
 }
 
 void MainWindow::onPauseClicked() {
     controlPanel->setPlayingState(false);
+    isAnimationPlaying = false;  // NEW: Clear animation state
+    if (playbackController) {
+        playbackController->pause();
+    }
 }
 
 void MainWindow::onResetClicked() {
     controlPanel->setPlayingState(false);
+    isAnimationPlaying = false;  // NEW: Clear animation state
+    if (playbackController) {
+        playbackController->pause();
+        // Reload structure to reset to initial state
+      std::string structId = dataModelManager->getSelectedStructureId();
+        if (!structId.empty()) {
+          loadStructureIntoCanvas(structId);
+        }
+    }
 }
 
-void MainWindow::onStepForwardClicked() {}
-void MainWindow::onStepBackwardClicked() {}
+void MainWindow::onStepForwardClicked() {
+    if (playbackController && !currentAnimationFrames.empty()) {
+      playbackController->stepForward();
+    }
+}
+
+void MainWindow::onStepBackwardClicked() {
+    if (playbackController && !currentAnimationFrames.empty()) {
+        playbackController->stepBackward();
+    }
+}
 
 void MainWindow::onSpeedChanged(int speed) {
     qDebug() << "Speed:" << speed;
-}
-
-void MainWindow::createMenuBar() {
-    QMenu* fileMenu = menuBar()->addMenu("File");
-    
-    autoSaveAction = fileMenu->addAction("Auto-save Session");
-    autoSaveAction->setCheckable(true);
-    autoSaveAction->setChecked(autoSaveEnabled);
-    autoSaveAction->setToolTip("Automatically save and restore session on startup");
-    connect(autoSaveAction, &QAction::toggled, this, [this](bool enabled) {
-        autoSaveEnabled = enabled;
-    settings.setValue("autoSaveSession", enabled);
-        
- if (enabled) {
-            QMessageBox::information(this, "Auto-save Enabled", 
-              "Session will be automatically saved on exit and restored on startup.");
-        } else {
-    QMessageBox::information(this, "Auto-save Disabled", 
-  "Session will NOT be saved automatically. You can still manually save structures.");
-        }
-    });
-    
-    fileMenu->addSeparator();
-    QAction* exitAction = fileMenu->addAction("Exit");
-    connect(exitAction, &QAction::triggered, this, &QMainWindow::close);
-
-    QMenu* toolsMenu = menuBar()->addMenu("Tools");
-  QAction* codeGenAction = toolsMenu->addAction("Code Generator && Parser...");
-    codeGenAction->setToolTip("Generate C++ code from structures or parse code to create structures");
-    connect(codeGenAction, &QAction::triggered, this, &MainWindow::onShowCodeGenerator);
-
-    toolsMenu->addSeparator();
-    toggleMetricsAction = toolsMenu->addAction("Show Algorithm Metrics");
-    toggleMetricsAction->setCheckable(true);
-  toggleMetricsAction->setChecked(false);  // Unchecked by default (metrics hidden)
-  toggleMetricsAction->setToolTip("Toggle algorithm metrics panel visibility");
-  connect(toggleMetricsAction, &QAction::toggled, this, &MainWindow::onToggleMetricsPanel);
-
-    QMenu* helpMenu = menuBar()->addMenu("Help");
-    showTutorialAction = helpMenu->addAction("Show Tutorial");
-    showTutorialAction->setToolTip("Show the welcome tutorial again");
-  connect(showTutorialAction, &QAction::triggered, this, &MainWindow::onShowTutorial);
-    
-    helpMenu->addSeparator();
- QAction* aboutAction = helpMenu->addAction("About");
-    connect(aboutAction, &QAction::triggered, this, [this]() {
-        QMessageBox::about(this, "About DataViz UIT",
-     "<h2>DataViz UIT</h2>"
-            "<p>Version 1.0</p>"
-   "<p>A modern data structure visualization tool.</p>"
-     "<p>Create, visualize, and run algorithms on various data structures including:</p>"
-    "<ul>"
-            "<li>Arrays</li>"
-            "<li>Linked Lists</li>"
-            "<li>Binary Trees</li>"
-          "<li>Graphs</li>"
-  "</ul>");
-    });
-}
-
-void MainWindow::onTutorialCompleted() {
-    qDebug() << "Tutorial completed";
-}
-
-void MainWindow::onTutorialSkipped() {
-    qDebug() << "Tutorial skipped";
-}
-
-void MainWindow::onShowTutorial() {
-    if (tutorialOverlay) {
-        tutorialOverlay->setGeometry(rect());
-        tutorialOverlay->start();
- }
-}
-
-void MainWindow::onShowCodeGenerator() {
-    CodeGeneratorDialog dialog(dataModelManager.get(), this);
-    connect(&dialog, &CodeGeneratorDialog::structureCreatedFromCode,
-      this, &MainWindow::onStructureCreatedFromCode);
-    dialog.exec();
-}
-
-void MainWindow::onStructureCreatedFromCode(QString structureId) {
-    qDebug() << "Structure created from code:" << structureId;
-    
-    if (structureSelector) {
- structureSelector->refreshStructureList();
-    }
-    
-    std::string id = structureId.toStdString();
-    if (dataModelManager) {
-        dataModelManager->selectStructure(id);
-        
-        auto structures = dataModelManager->getAllStructures();
-        for (const auto& meta : structures) {
-   if (meta.id == id) {
-            QString structureType = QString::fromStdString(meta.type);
-       
-     if (toolboxPanel) {
-  toolboxPanel->setVisible(true);
-   toolboxPanel->updateTools(structureType);
-        }
-          
-         if (controlPanel) {
-          controlPanel->updateAlgorithmList(structureType);
-     }
-   break;
-            }
-        }
-        
-  loadStructureIntoCanvas(id);
+    if (playbackController) {
+   // Convert slider value (1-100) to playback speed (0.1x - 5.0x)
+ float playbackSpeed = speed / 20.0f;  // 1->0.05, 50->2.5, 100->5.0
+      playbackController->setSpeed(playbackSpeed);
     }
 }
 
-void MainWindow::onToggleMetricsPanel(bool show) {
-    if (metricsPanel) {
-        metricsPanel->setVisible(show);
-        qDebug() << "Metrics panel" << (show ? "shown" : "hidden");
+// NEW: Handle animation frame rendering
+void MainWindow::onFrameReady(const AnimationFrame& frame) {
+ if (visualizationPane) {
+      visualizationPane->renderAnimationFrame(frame);
     }
 }
-
+ 
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
     DataStructure* targetStructure = dataModelManager->getSelectedStructure();
     if (!targetStructure) {
   QMessageBox::warning(this, "No Structure",
-       "Please select a data structure from the Structure Selector.");
+    "Please select a data structure from the Structure Selector.");
  controlPanel->setPlayingState(false);
     return;
     }
@@ -511,7 +433,7 @@ algo = std::make_unique<BFSAlgorithm>(graphStruct);
  } else if (algorithm == "DetectCycle") {
  algo = std::make_unique<GraphDetectCycle>(graphStruct);
  } else if (algorithm == "TopologicalSort") {
-      algo = std::make_unique<GraphTopologicalSort>(graphStruct);
+  algo = std::make_unique<GraphTopologicalSort>(graphStruct);
       }
   }
     }
@@ -532,32 +454,46 @@ algo = std::make_unique<Reverse>(targetStructure);
    algo = algoManager.createAlgorithm(category, algorithm);
     }
  }
-        
+      
  if (algo) {
-       qDebug() << "Executing:" << QString::fromStdString(algorithm);
-     algo->execute();
-  
- std::string structId = dataModelManager->getSelectedStructureId();
-  if (!structId.empty()) {
- loadStructureIntoCanvas(structId);
-    }
+    qDebug() << "Executing:" << QString::fromStdString(algorithm);
+       
+          // NEW: Execute with animation frames
+     currentAnimationFrames = algo->executeWithFrames();
      
-     controlPanel->setPlayingState(false);
-  // Success message removed to avoid double popups from algorithms
+      if (currentAnimationFrames.empty()) {
+  // Fallback: algorithm doesn't support animation yet
+    qDebug() << "Algorithm doesn't generate frames yet, executing directly";
+      algo->execute();
+     
+              std::string structId = dataModelManager->getSelectedStructureId();
+    if (!structId.empty()) {
+  loadStructureIntoCanvas(structId);
+         }
+       controlPanel->setPlayingState(false);
+    isAnimationPlaying = false;
+         } else {
+    // NEW: Load frames into playback controller and start animation
+             qDebug() << "Loaded" << currentAnimationFrames.size() << "animation frames";
+              playbackController->loadFrames(currentAnimationFrames);
+         playbackController->play();
+            }
  }
-        else {
+      else {
     qDebug() << "Algorithm not found:" << QString::fromStdString(algorithm);
   controlPanel->setPlayingState(false);
+    isAnimationPlaying = false;
  QMessageBox::warning(this, "Algorithm Not Implemented",
     QString("The algorithm '%1' could not be created.")
  .arg(QString::fromStdString(algorithm)));
    }
     } catch (const std::exception& e) {
-        qDebug() << "Algorithm execution error:" << e.what();
+   qDebug() << "Algorithm execution error:" << e.what();
  controlPanel->setPlayingState(false);
+    isAnimationPlaying = false;
   QMessageBox::critical(this, "Execution Error",
-     QString("Error executing algorithm '%1':\n%2")
-       .arg(QString::fromStdString(algorithm))
+ QString("Error executing algorithm '%1':\n%2")
+     .arg(QString::fromStdString(algorithm))
      .arg(e.what()));
   }
 }
@@ -569,16 +505,16 @@ void MainWindow::onStructureRemoved(QString structureId) {
     }
  
     if (dataModelManager && dataModelManager->getAllStructures().empty()) {
-     if (toolboxPanel) {
-    toolboxPanel->setVisible(false);
+        if (toolboxPanel) {
+      toolboxPanel->setVisible(false);
         }
     }
 }
 
 void MainWindow::onClearInteractive() {
     if (visualizationPane && visualizationPane->getInteractionManager()) {
-        visualizationPane->getInteractionManager()->clearInteractive();
-        visualizationPane->clearNodeValues();
+ visualizationPane->getInteractionManager()->clearInteractive();
+  visualizationPane->clearNodeValues();
         visualizationPane->refreshDisplay();
         qDebug() << "Interactive canvas cleared";
     }
@@ -586,25 +522,144 @@ void MainWindow::onClearInteractive() {
 
 void MainWindow::onSamplesCreated() {
     if (dataModelManager) {
-    auto structures = dataModelManager->getAllStructures();
+        auto structures = dataModelManager->getAllStructures();
         if (!structures.empty()) {
-       std::string firstId = structures[0].id;
-            dataModelManager->selectStructure(firstId);
+            std::string firstId = structures[0].id;
+      dataModelManager->selectStructure(firstId);
    
-            QString structureType = QString::fromStdString(structures[0].type);
-        if (toolboxPanel) {
-            toolboxPanel->setVisible(true);
-             toolboxPanel->updateTools(structureType);
- }
-            if (controlPanel) {
-           controlPanel->updateAlgorithmList(structureType);
-  }
+   QString structureType = QString::fromStdString(structures[0].type);
+            if (toolboxPanel) {
+      toolboxPanel->setVisible(true);
+  toolboxPanel->updateTools(structureType);
+            }
+    if (controlPanel) {
+        controlPanel->updateAlgorithmList(structureType);
+    }
          
    loadStructureIntoCanvas(firstId);
    
-       qDebug() << "Sample structures created, auto-selected:" << QString::fromStdString(firstId);
-        }
+            qDebug() << "Sample structures created, auto-selected:" << QString::fromStdString(firstId);
+     }
+  }
+}
+
+void MainWindow::onShowCodeGenerator() {
+    CodeGeneratorDialog dialog(dataModelManager.get(), this);
+connect(&dialog, &CodeGeneratorDialog::structureCreatedFromCode,
+         this, &MainWindow::onStructureCreatedFromCode);
+    dialog.exec();
+}
+
+void MainWindow::onStructureCreatedFromCode(QString structureId) {
+    qDebug() << "Structure created from code:" << structureId;
+    
+    if (structureSelector) {
+        structureSelector->refreshStructureList();
     }
+  
+    std::string id = structureId.toStdString();
+    if (dataModelManager) {
+        dataModelManager->selectStructure(id);
+        
+        auto structures = dataModelManager->getAllStructures();
+   for (const auto& meta : structures) {
+            if (meta.id == id) {
+  QString structureType = QString::fromStdString(meta.type);
+   
+       if (toolboxPanel) {
+            toolboxPanel->setVisible(true);
+         toolboxPanel->updateTools(structureType);
+   }
+          
+      if (controlPanel) {
+            controlPanel->updateAlgorithmList(structureType);
+     }
+       break;
+         }
+        }
+        
+    loadStructureIntoCanvas(id);
+    }
+}
+
+void MainWindow::onToggleMetricsPanel(bool show) {
+    if (metricsPanel) {
+  metricsPanel->setVisible(show);
+        qDebug() << "Metrics panel" << (show ? "shown" : "hidden");
+    }
+}
+
+void MainWindow::onTutorialCompleted() {
+    qDebug() << "Tutorial completed";
+}
+
+void MainWindow::onTutorialSkipped() {
+    qDebug() << "Tutorial skipped";
+}
+
+void MainWindow::onShowTutorial() {
+    if (tutorialOverlay) {
+  tutorialOverlay->setGeometry(rect());
+        tutorialOverlay->start();
+    }
+}
+
+void MainWindow::createMenuBar() {
+    QMenu* fileMenu = menuBar()->addMenu("File");
+    
+    autoSaveAction = fileMenu->addAction("Auto-save Session");
+    autoSaveAction->setCheckable(true);
+    autoSaveAction->setChecked(autoSaveEnabled);
+    autoSaveAction->setToolTip("Automatically save and restore session on startup");
+    connect(autoSaveAction, &QAction::toggled, this, [this](bool enabled) {
+        autoSaveEnabled = enabled;
+        settings.setValue("autoSaveSession", enabled);
+        
+        if (enabled) {
+      QMessageBox::information(this, "Auto-save Enabled", 
+       "Session will be automatically saved on exit and restored on startup.");
+        } else {
+        QMessageBox::information(this, "Auto-save Disabled", 
+         "Session will NOT be saved automatically. You can still manually save structures.");
+        }
+    });
+    
+    fileMenu->addSeparator();
+    QAction* exitAction = fileMenu->addAction("Exit");
+    connect(exitAction, &QAction::triggered, this, &QMainWindow::close);
+
+    QMenu* toolsMenu = menuBar()->addMenu("Tools");
+    QAction* codeGenAction = toolsMenu->addAction("Code Generator && Parser...");
+    codeGenAction->setToolTip("Generate C++ code from structures or parse code to create structures");
+    connect(codeGenAction, &QAction::triggered, this, &MainWindow::onShowCodeGenerator);
+
+ toolsMenu->addSeparator();
+    toggleMetricsAction = toolsMenu->addAction("Show Algorithm Metrics");
+    toggleMetricsAction->setCheckable(true);
+    toggleMetricsAction->setChecked(false);
+    toggleMetricsAction->setToolTip("Toggle algorithm metrics panel visibility");
+    connect(toggleMetricsAction, &QAction::toggled, this, &MainWindow::onToggleMetricsPanel);
+
+    QMenu* helpMenu = menuBar()->addMenu("Help");
+    showTutorialAction = helpMenu->addAction("Show Tutorial");
+    showTutorialAction->setToolTip("Show the welcome tutorial again");
+    connect(showTutorialAction, &QAction::triggered, this, &MainWindow::onShowTutorial);
+    
+    helpMenu->addSeparator();
+ QAction* aboutAction = helpMenu->addAction("About");
+    connect(aboutAction, &QAction::triggered, this, [this]() {
+        QMessageBox::about(this, "About DataViz UIT",
+    "<h2>DataViz UIT</h2>"
+      "<p>Version 1.0</p>"
+ "<p>A modern data structure visualization tool.</p>"
+   "<p>Create, visualize, and run algorithms on various data structures including:</p>"
+            "<ul>"
+            "<li>Arrays</li>"
+  "<li>Linked Lists</li>"
+            "<li>Binary Trees</li>"
+            "<li>Graphs</li>"
+       "</ul>");
+  });
 }
 
 void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
@@ -617,37 +672,37 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
     auto structures = dataModelManager->getAllStructures();
     for (const auto& meta : structures) {
         if (meta.id == structureId) {
-       structureType = meta.type;
+   structureType = meta.type;
             break;
         }
     }
 
     auto nodes = structure->getNodes();
-  auto edges = structure->getEdges();
-    
+    auto edges = structure->getEdges();
+ 
     qDebug() << "Loading structure into canvas:" << QString::fromStdString(structureId)
-  << "Type:" << QString::fromStdString(structureType)
-             << "Nodes:" << nodes.size() << "Edges:" << edges.size()
-             << "Has saved positions:" << structure->hasAnyPositions();
+    << "Type:" << QString::fromStdString(structureType)
+     << "Nodes:" << nodes.size() << "Edges:" << edges.size()
+         << "Has saved positions:" << structure->hasAnyPositions();
 
     auto* interactionMgr = visualizationPane->getInteractionManager();
     if (!interactionMgr) return;
-    
+
     interactionMgr->setSyncWithBackend(false);
-    interactionMgr->setCurrentStructureId(structureId);
+  interactionMgr->setCurrentStructureId(structureId);
     interactionMgr->clearInteractive();
-    interactionMgr->setCurrentStructureId(structureId);
+  interactionMgr->setCurrentStructureId(structureId);
     
     visualizationPane->clearNodeValues();
     
-  int nodeCount = static_cast<int>(nodes.size());
+    int nodeCount = static_cast<int>(nodes.size());
     if (nodeCount == 0) {
         visualizationPane->refreshDisplay();
-      interactionMgr->setSyncWithBackend(true);
-      return;
+  interactionMgr->setSyncWithBackend(true);
+        return;
     }
 
- std::string shape = (structureType == "Array" || structureType == "List") ? "RECT" : "CIRCLE";
+    std::string shape = (structureType == "Array" || structureType == "List") ? "RECT" : "CIRCLE";
     std::map<std::string, std::string> oldToNewId;
     
     bool useSavedPositions = structure->hasAnyPositions();
@@ -656,147 +711,147 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
     std::mt19937 gen(rd());
     
     if (structureType == "Array") {
-    if (auto* arrayStruct = dynamic_cast<ArrayStructure*>(structure)) {
-      const auto& arrayData = arrayStruct->getData();
+ if (auto* arrayStruct = dynamic_cast<ArrayStructure*>(structure)) {
+     const auto& arrayData = arrayStruct->getData();
             double startX = 200.0;
             double y = 300.0;
-            double spacing = 80.0;
+   double spacing = 80.0;
  
-  for (size_t i = 0; i < nodes.size(); ++i) {
-      double x = startX + i * spacing;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+   double x = startX + i * spacing;
       
-// Check for saved position using original node ID
-                double savedX, savedY;
-        if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-      x = savedX;
-       y = savedY;
-          }
+   // Check for saved position using original node ID
+ double savedX, savedY;
+                if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+    x = savedX;
+   y = savedY;
+                }
           
-  // Use addNodeWithMapping to track original node ID
-  std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-            oldToNewId[nodes[i].id] = newId;
+      // Use addNodeWithMapping to track original node ID
+      std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+           oldToNewId[nodes[i].id] = newId;
      
-                if (i < arrayData.size()) {
-         interactionMgr->updateNodeValue(newId, arrayData[i]);
+        if (i < arrayData.size()) {
+      interactionMgr->updateNodeValue(newId, arrayData[i]);
     }
- }
-        }
+    }
+  }
     }
     else if (structureType == "List") {
-if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
-     std::vector<int> listValues;
-    const ListNode* current = listStruct->getHead();
+    if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
+      std::vector<int> listValues;
+            const ListNode* current = listStruct->getHead();
             while (current != nullptr) {
-     listValues.push_back(current->value);
-        current = current->next;
-   }
+listValues.push_back(current->value);
+       current = current->next;
+            }
             
-   double startX = 150.0;
-        double y = 300.0;
- double spacing = 100.0;
+            double startX = 150.0;
+      double y = 300.0;
+            double spacing = 100.0;
   
     std::vector<std::string> newNodeIds;
-   for (size_t i = 0; i < nodes.size(); ++i) {
- double x = startX + i * spacing;
+            for (size_t i = 0; i < nodes.size(); ++i) {
+  double x = startX + i * spacing;
     
-         double savedX, savedY;
-  if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-           x = savedX;
-          y = savedY;
+        double savedX, savedY;
+   if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+      x = savedX;
+      y = savedY;
          }
      
-      std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-     oldToNewId[nodes[i].id] = newId;
-         newNodeIds.push_back(newId);
+       std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+           oldToNewId[nodes[i].id] = newId;
+                newNodeIds.push_back(newId);
+    
+             if (i < listValues.size()) {
+        interactionMgr->updateNodeValue(newId, listValues[i]);
+}
+            }
       
-     if (i < listValues.size()) {
-             interactionMgr->updateNodeValue(newId, listValues[i]);
-          }
-  }
-      
-   for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
-  interactionMgr->addEdge(newNodeIds[i], newNodeIds[i + 1]);
-    }
+            for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
+         interactionMgr->addEdge(newNodeIds[i], newNodeIds[i + 1]);
+            }
         }
-    }
+  }
     else {
-     // Check if this is a tree structure for hierarchical layout
+        // Check if this is a tree structure for hierarchical layout
         if (structureType == "Tree" || structureType == "Binary Tree" || structureType == "BinaryTree") {
       // Use hierarchical tree layout for visual tree structure
-  if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
-    layoutTreeHierarchically(treeStruct, nodes, edges, oldToNewId, interactionMgr, structure);
-            }
-   } else {
-         // Random layout for graphs with collision detection
-std::uniform_real_distribution<> xDis(150.0, 650.0);
-     std::uniform_real_distribution<> yDis(100.0, 500.0);
+            if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
+            layoutTreeHierarchically(treeStruct, nodes, edges, oldToNewId, interactionMgr, structure);
+   }
+     } else {
+            // Random layout for graphs with collision detection
+         std::uniform_real_distribution<> xDis(150.0, 650.0);
+ std::uniform_real_distribution<> yDis(100.0, 500.0);
       
- const double MIN_DISTANCE = 60.0;
-        const int MAX_ATTEMPTS = 50;
+  const double MIN_DISTANCE = 60.0;
+            const int MAX_ATTEMPTS = 50;
        
-     for (size_t i = 0; i < nodes.size(); ++i) {
-        double x, y;
-     bool positionFound = false;
-           int attempts = 0;
-     
-    do {
-            x = xDis(gen);
-  y = yDis(gen);
+            for (size_t i = 0; i < nodes.size(); ++i) {
+           double x, y;
+         bool positionFound = false;
+          int attempts = 0;
   
-double savedX, savedY;
-   if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-   x = savedX;
-       y = savedY;
-positionFound = true;
-     break;
-        }
-   
-     positionFound = true;
-   for (size_t j = 0; j < i; ++j) {
-   if (oldToNewId.count(nodes[j].id)) {
-        std::string prevId = oldToNewId[nodes[j].id];
-        auto nodePositions = interactionMgr->getAllNodePositions();
-       for (const auto& np : nodePositions) {
-        if (np.id == prevId) {
-     double dx = x - np.x;
-     double dy = y - np.y;
- double dist = std::sqrt(dx * dx + dy * dy);
-  if (dist < MIN_DISTANCE) {
-   positionFound = false;
+   do {
+         x = xDis(gen);
+     y = yDis(gen);
+  
+      double savedX, savedY;
+               if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+     x = savedX;
+   y = savedY;
+          positionFound = true;
     break;
-            }
-    }
-  }
-       if (!positionFound) break;
-   }
-   }
-     
-     attempts++;
-  } while (!positionFound && attempts < MAX_ATTEMPTS);
-    
-       std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-    oldToNewId[nodes[i].id] = newId;
-        
-     try {
-    int nodeValue = std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value);
-     interactionMgr->updateNodeValue(newId, nodeValue);
-  } catch (...) {
-interactionMgr->updateNodeValue(newId, 0);
+          }
+   
+       positionFound = true;
+         for (size_t j = 0; j < i; ++j) {
+                  if (oldToNewId.count(nodes[j].id)) {
+    std::string prevId = oldToNewId[nodes[j].id];
+    auto nodePositions = interactionMgr->getAllNodePositions();
+   for (const auto& np : nodePositions) {
+if (np.id == prevId) {
+         double dx = x - np.x;
+        double dy = y - np.y;
+         double dist = std::sqrt(dx * dx + dy * dy);
+   if (dist < MIN_DISTANCE) {
+         positionFound = false;
+        break;
+                   }
       }
-         }
+      }
+     if (!positionFound) break;
+        }
+          }
+  
+          attempts++;
+    } while (!positionFound && attempts < MAX_ATTEMPTS);
+    
+     std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+        oldToNewId[nodes[i].id] = newId;
+        
+      try {
+      int nodeValue = std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value);
+        interactionMgr->updateNodeValue(newId, nodeValue);
+     } catch (...) {
+        interactionMgr->updateNodeValue(newId, 0);
+   }
+            }
  
          // Add edges using the mapped IDs
-for (const auto& edge : edges) {
-   if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-    interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+        for (const auto& edge : edges) {
+                if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+     interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+   }
 }
-       }
-    }
+   }
     }
 
     // Save initial positions if this is a new structure without positions
     if (!useSavedPositions) {
-        interactionMgr->saveNodePositionsToStructure();
+interactionMgr->saveNodePositionsToStructure();
     }
     
     interactionMgr->setSyncWithBackend(true);
@@ -806,104 +861,104 @@ for (const auto& edge : edges) {
 void MainWindow::restorePreviousSession() {
     if (!dataModelManager) {
         qDebug() << "No data model manager";
-  return;
+        return;
     }
 
     // Try to load complete session
     bool sessionLoaded = dataModelManager->loadSession();
   
     if (sessionLoaded) {
-    qDebug() << "Session restored successfully";
+   qDebug() << "Session restored successfully";
   
-     // Refresh UI
+        // Refresh UI
         if (structureSelector) {
-   structureSelector->refreshStructureList();
+      structureSelector->refreshStructureList();
         }
    
-     // Load the selected structure into canvas
-      std::string selectedId = dataModelManager->getSelectedStructureId();
-   if (!selectedId.empty()) {
- auto structures = dataModelManager->getAllStructures();
-  for (const auto& meta : structures) {
-    if (meta.id == selectedId) {
-       QString structureType = QString::fromStdString(meta.type);
-        
-       if (toolboxPanel) {
-  toolboxPanel->setVisible(true);
-   toolboxPanel->updateTools(structureType);
-    }
+        // Load the selected structure into canvas
+        std::string selectedId = dataModelManager->getSelectedStructureId();
+        if (!selectedId.empty()) {
+       auto structures = dataModelManager->getAllStructures();
+   for (const auto& meta : structures) {
+                if (meta.id == selectedId) {
+          QString structureType = QString::fromStdString(meta.type);
+  
+          if (toolboxPanel) {
+    toolboxPanel->setVisible(true);
+  toolboxPanel->updateTools(structureType);
+         }
    
- if (controlPanel) {
-  controlPanel->updateAlgorithmList(structureType);
-   }
-      
-loadStructureIntoCanvas(selectedId);
+        if (controlPanel) {
+    controlPanel->updateAlgorithmList(structureType);
+      }
+   
+        loadStructureIntoCanvas(selectedId);
     break;
-     }
    }
-  }
- } else {
- qDebug() << "No previous session found";
+       }
+    }
+    } else {
+qDebug() << "No previous session found";
     }
 }
 
 void MainWindow::layoutTreeHierarchically(
     TreeStructure* treeStruct,
-  const std::vector<DSNode>& nodes,
-  const std::vector<DSEdge>& edges,
+    const std::vector<DSNode>& nodes,
+    const std::vector<DSEdge>& edges,
     std::map<std::string, std::string>& oldToNewId,
     InteractionManager* interactionMgr,
     DataStructure* structure) {
     
     if (!treeStruct || nodes.empty()) return;
     
- // Build adjacency map for tree navigation
+    // Build adjacency map for tree navigation
     std::map<std::string, std::vector<std::string>> children;
-  std::map<std::string, std::string> parent;
+    std::map<std::string, std::string> parent;
     
     for (const auto& edge : edges) {
-   children[edge.from].push_back(edge.to);
-     parent[edge.to] = edge.from;
+        children[edge.from].push_back(edge.to);
+      parent[edge.to] = edge.from;
     }
     
     // Find root (node with no parent)
     std::string rootId;
     for (const auto& node : nodes) {
-  if (parent.find(node.id) == parent.end()) {
-rootId = node.id;
-   break;
-    }
+      if (parent.find(node.id) == parent.end()) {
+  rootId = node.id;
+            break;
+   }
     }
     
-if (rootId.empty() && !nodes.empty()) {
-     rootId = nodes[0].id; // Fallback to first node
+    if (rootId.empty() && !nodes.empty()) {
+        rootId = nodes[0].id; // Fallback to first node
     }
     
     // Calculate tree dimensions for layout
-    const double HORIZONTAL_SPACING = 80.0;
+ const double HORIZONTAL_SPACING = 80.0;
     const double VERTICAL_SPACING = 100.0;
     const double START_X = 400.0;
     const double START_Y = 100.0;
     
     // Build subtree widths map
-    std::map<std::string, int> subtreeWidths;
+ std::map<std::string, int> subtreeWidths;
     std::function<int(const std::string&)> calculateSubtreeWidth = [&](const std::string& nodeId) -> int {
         if (subtreeWidths.count(nodeId)) return subtreeWidths[nodeId];
-        
-  if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+     
+        if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
    subtreeWidths[nodeId] = 1;
-     return 1;
+        return 1;
         }
-        
-        int totalWidth = 0;
-      for (const auto& childId : children[nodeId]) {
-   totalWidth += calculateSubtreeWidth(childId);
-  }
       
-  subtreeWidths[nodeId] = std::max(1, totalWidth);
+        int totalWidth = 0;
+        for (const auto& childId : children[nodeId]) {
+   totalWidth += calculateSubtreeWidth(childId);
+        }
+      
+        subtreeWidths[nodeId] = std::max(1, totalWidth);
       return subtreeWidths[nodeId];
     };
-    
+ 
     calculateSubtreeWidth(rootId);
     
     // Position nodes using BFS with horizontal spacing based on subtree widths
@@ -911,35 +966,35 @@ if (rootId.empty() && !nodes.empty()) {
     
     std::function<void(const std::string&, double, double, double)> layoutNode = 
  [&](const std::string& nodeId, double x, double y, double width) {
-        
+  
         // Check for saved position first
-        double savedX, savedY;
+double savedX, savedY;
         if (structure->getNodePosition(nodeId, savedX, savedY)) {
-    positions[nodeId] = {savedX, savedY};
-   } else {
+ positions[nodeId] = {savedX, savedY};
+  } else {
   positions[nodeId] = {x, y};
-        }
+   }
     
         if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
-return;
+            return;
         }
   
- const auto& childList = children[nodeId];
-    double totalChildWidth = 0;
-   for (const auto& childId : childList) {
-     totalChildWidth += subtreeWidths[childId];
-        }
+        const auto& childList = children[nodeId];
+        double totalChildWidth = 0;
+        for (const auto& childId : childList) {
+   totalChildWidth += subtreeWidths[childId];
+      }
+    
+        double childX = x - (totalChildWidth * HORIZONTAL_SPACING) / 2.0;
+        double childY = y + VERTICAL_SPACING;
         
- double childX = x - (totalChildWidth * HORIZONTAL_SPACING) / 2.0;
-    double childY = y + VERTICAL_SPACING;
-        
-     for (const auto& childId : childList) {
+ for (const auto& childId : childList) {
  double childWidth = subtreeWidths[childId] * HORIZONTAL_SPACING;
-            double childCenterX = childX + childWidth / 2.0;
+   double childCenterX = childX + childWidth / 2.0;
 
      layoutNode(childId, childCenterX, childY, childWidth);
-         childX += childWidth;
-  }
+          childX += childWidth;
+        }
     };
     
     layoutNode(rootId, START_X, START_Y, subtreeWidths[rootId] * HORIZONTAL_SPACING);
@@ -950,26 +1005,26 @@ return;
         double y = START_Y;
     
         if (positions.count(node.id)) {
-   x = positions[node.id].first;
-     y = positions[node.id].second;
- }
+            x = positions[node.id].first;
+y = positions[node.id].second;
+  }
   
         std::string newId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", node.id);
-  oldToNewId[node.id] = newId;
+    oldToNewId[node.id] = newId;
         
-        try {
-         int nodeValue = std::stoi(node.value.empty() ? "0" : node.value);
-  interactionMgr->updateNodeValue(newId, nodeValue);
+    try {
+  int nodeValue = std::stoi(node.value.empty() ? "0" : node.value);
+     interactionMgr->updateNodeValue(newId, nodeValue);
         } catch (...) {
-         interactionMgr->updateNodeValue(newId, 0);
-        }
+        interactionMgr->updateNodeValue(newId, 0);
+    }
     }
     
     // Add edges
     for (const auto& edge : edges) {
-      if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-     interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
-        }
+        if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+ interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+ }
     }
 }
 
@@ -983,22 +1038,22 @@ void MainWindow::repositionTreeNodesAfterEdit(const std::string& structureId) {
     std::string structureType;
     auto structures = dataModelManager->getAllStructures();
     for (const auto& meta : structures) {
-  if (meta.id == structureId) {
-      structureType = meta.type;
+      if (meta.id == structureId) {
+          structureType = meta.type;
             break;
-  }
+        }
     }
   
     // Only proceed for tree structures
     if (structureType != "Tree" && structureType != "Binary Tree" && structureType != "BinaryTree") {
-   return;
+ return;
     }
     
-   auto* treeStruct = dynamic_cast<TreeStructure*>(structure);
+    auto* treeStruct = dynamic_cast<TreeStructure*>(structure);
     if (!treeStruct) return;
     
     auto* interactionMgr = visualizationPane->getInteractionManager();
-  if (!interactionMgr) return;
+ if (!interactionMgr) return;
  
     // Get current nodes and edges from tree structure
     auto nodes = structure->getNodes();
@@ -1007,25 +1062,25 @@ void MainWindow::repositionTreeNodesAfterEdit(const std::string& structureId) {
     if (nodes.empty()) return;
     
     // Build adjacency map for tree navigation
-    std::map<std::string, std::vector<std::string>> children;
+std::map<std::string, std::vector<std::string>> children;
     std::map<std::string, std::string> parent;
   
     for (const auto& edge : edges) {
         children[edge.from].push_back(edge.to);
-  parent[edge.to] = edge.from;
+        parent[edge.to] = edge.from;
     }
     
-    // Find root (node with no parent)
+ // Find root (node with no parent)
     std::string rootId;
     for (const auto& node : nodes) {
         if (parent.find(node.id) == parent.end()) {
-   rootId = node.id;
-break;
-   }
+  rootId = node.id;
+         break;
+        }
     }
     
-  if (rootId.empty() && !nodes.empty()) {
- rootId = nodes[0].id;
+    if (rootId.empty() && !nodes.empty()) {
+      rootId = nodes[0].id;
     }
     
     // Calculate tree dimensions for layout
@@ -1035,21 +1090,21 @@ break;
     const double START_Y = 100.0;
     
     // Build subtree widths map
-std::map<std::string, int> subtreeWidths;
+    std::map<std::string, int> subtreeWidths;
     std::function<int(const std::string&)> calculateSubtreeWidth = [&](const std::string& nodeId) -> int {
-        if (subtreeWidths.count(nodeId)) return subtreeWidths[nodeId];
-        
-    if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+      if (subtreeWidths.count(nodeId)) return subtreeWidths[nodeId];
+   
+        if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
      subtreeWidths[nodeId] = 1;
-   return 1;
+     return 1;
         }
         
-        int totalWidth = 0;
-        for (const auto& childId : children[nodeId]) {
-   totalWidth += calculateSubtreeWidth(childId);
+ int totalWidth = 0;
+      for (const auto& childId : children[nodeId]) {
+    totalWidth += calculateSubtreeWidth(childId);
         }
    
-    subtreeWidths[nodeId] = std::max(1, totalWidth);
+        subtreeWidths[nodeId] = std::max(1, totalWidth);
         return subtreeWidths[nodeId];
     };
 
@@ -1059,39 +1114,39 @@ std::map<std::string, int> subtreeWidths;
     std::map<std::string, std::pair<double, double>> positions;
     
     std::function<void(const std::string&, double, double, double)> layoutNode = 
- [&](const std::string& nodeId, double x, double y, double width) {
-        
+        [&](const std::string& nodeId, double x, double y, double width) {
+ 
         // Check for saved position first
         double savedX, savedY;
-        if (structure->getNodePosition(nodeId, savedX, savedY)) {
-    positions[nodeId] = {savedX, savedY};
-   } else {
-  positions[nodeId] = {x, y};
-        }
-    
-        if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
-return;
+    if (structure->getNodePosition(nodeId, savedX, savedY)) {
+            positions[nodeId] = {savedX, savedY};
+        } else {
+            positions[nodeId] = {x, y};
         }
   
- const auto& childList = children[nodeId];
-    double totalChildWidth = 0;
-   for (const auto& childId : childList) {
-     totalChildWidth += subtreeWidths[childId];
+        if (children.find(nodeId) == children.end() || children[nodeId].empty()) {
+            return;
+        }
+  
+      const auto& childList = children[nodeId];
+        double totalChildWidth = 0;
+        for (const auto& childId : childList) {
+          totalChildWidth += subtreeWidths[childId];
         }
         
- double childX = x - (totalChildWidth * HORIZONTAL_SPACING) / 2.0;
-    double childY = y + VERTICAL_SPACING;
-        
-     for (const auto& childId : childList) {
- double childWidth = subtreeWidths[childId] * HORIZONTAL_SPACING;
-            double childCenterX = childX + childWidth / 2.0;
+        double childX = x - (totalChildWidth * HORIZONTAL_SPACING) / 2.0;
+        double childY = y + VERTICAL_SPACING;
+  
+        for (const auto& childId : childList) {
+            double childWidth = subtreeWidths[childId] * HORIZONTAL_SPACING;
+     double childCenterX = childX + childWidth / 2.0;
 
-     layoutNode(childId, childCenterX, childY, childWidth);
-         childX += childWidth;
+      layoutNode(childId, childCenterX, childY, childWidth);
+          childX += childWidth;
   }
     };
     
-layoutNode(rootId, START_X, START_Y, subtreeWidths[rootId] * HORIZONTAL_SPACING);
+    layoutNode(rootId, START_X, START_Y, subtreeWidths[rootId] * HORIZONTAL_SPACING);
     
     // Update positions for EXISTING canvas nodes
     // Build mapping from tree node IDs to canvas node IDs
@@ -1102,60 +1157,60 @@ layoutNode(rootId, START_X, START_Y, subtreeWidths[rootId] * HORIZONTAL_SPACING)
     // Match canvas nodes to tree nodes by value
     for (const auto& canvasNode : canvasPositions) {
         auto valIt = nodeValuesMap.find(canvasNode.id);
-   if (valIt != nodeValuesMap.end()) {
-         int canvasValue = valIt->second;
+        if (valIt != nodeValuesMap.end()) {
+ int canvasValue = valIt->second;
        
-            // Find matching tree node by value
+     // Find matching tree node by value
           for (const auto& treeNode : nodes) {
-    try {
-        int treeValue = std::stoi(treeNode.value);
-if (treeValue == canvasValue) {
+     try {
+  int treeValue = std::stoi(treeNode.value);
+         if (treeValue == canvasValue) {
      treeToCanvasId[treeNode.id] = canvasNode.id;
-  break;
-          }
-      } catch (...) {}
-            }
-  }
+        break;
+       }
+     } catch (...) {}
+     }
+        }
     }
     
     // Update canvas node positions to match calculated tree layout
     interactionMgr->setSyncWithBackend(false);  // Temporarily disable sync
     
     for (const auto& [treeId, canvasId] : treeToCanvasId) {
-        if (positions.count(treeId)) {
-      double newX = positions[treeId].first;
-    double newY = positions[treeId].second;
+     if (positions.count(treeId)) {
+         double newX = positions[treeId].first;
+            double newY = positions[treeId].second;
     
-      // Update node position in interaction manager
-   interactionMgr->updateNodePosition(canvasId, newX, newY);
+            // Update node position in interaction manager
+    interactionMgr->updateNodePosition(canvasId, newX, newY);
         }
-    }
+  }
     
-// Add missing edges from tree structure to canvas
+    // Add missing edges from tree structure to canvas
     // First, get existing canvas edges
     auto existingEdges = interactionMgr->getAllEdges();
     std::set<std::pair<std::string, std::string>> existingEdgeSet;
     for (const auto& edge : existingEdges) {
-  existingEdgeSet.insert({edge.source, edge.target});
+        existingEdgeSet.insert({edge.source, edge.target});
     }
     
     // Add edges that exist in tree but not in canvas
     for (const auto& treeEdge : edges) {
         // Map tree edge to canvas edge
-auto fromIt = treeToCanvasId.find(treeEdge.from);
-     auto toIt = treeToCanvasId.find(treeEdge.to);
+     auto fromIt = treeToCanvasId.find(treeEdge.from);
+        auto toIt = treeToCanvasId.find(treeEdge.to);
         
-        if (fromIt != treeToCanvasId.end() && toIt != treeToCanvasId.end()) {
-         std::string canvasFrom = fromIt->second;
-      std::string canvasTo = toIt->second;
+      if (fromIt != treeToCanvasId.end() && toIt != treeToCanvasId.end()) {
+  std::string canvasFrom = fromIt->second;
+            std::string canvasTo = toIt->second;
   
             // Check if this edge already exists
-            if (existingEdgeSet.find({canvasFrom, canvasTo}) == existingEdgeSet.end()) {
-       // Edge doesn't exist, add it
-                interactionMgr->addEdge(canvasFrom, canvasTo);
-             qDebug() << "Added missing edge:" << QString::fromStdString(canvasFrom) 
-      << "->" << QString::fromStdString(canvasTo);
-         }
+  if (existingEdgeSet.find({canvasFrom, canvasTo}) == existingEdgeSet.end()) {
+        // Edge doesn't exist, add it
+     interactionMgr->addEdge(canvasFrom, canvasTo);
+ qDebug() << "Added missing edge:" << QString::fromStdString(canvasFrom) 
+        << "->" << QString::fromStdString(canvasTo);
+   }
         }
     }
     
@@ -1168,7 +1223,7 @@ auto fromIt = treeToCanvasId.find(treeEdge.from);
 
 void MainWindow::closeEvent(QCloseEvent* event) {
     // Save complete session with all structures (only if auto-save is enabled)
-  if (dataModelManager && autoSaveEnabled) {
+    if (dataModelManager && autoSaveEnabled) {
         dataModelManager->saveSession();
         qDebug() << "Session saved on exit (auto-save enabled)";
     } else if (!autoSaveEnabled) {
