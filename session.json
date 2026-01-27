@@ -1,0 +1,260 @@
+{
+    "selectedStructureId": "struct_9",
+    "structures": [
+        {
+            "creationType": "generated",
+            "id": "struct_1",
+            "name": "Array",
+            "type": "Array",
+            "values": [
+                65,
+                89,
+                17,
+                51,
+                81,
+                0,
+                0
+            ]
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_2",
+            "name": "List",
+            "type": "LinkedList",
+            "values": [
+                35,
+                31,
+                20,
+                86,
+                90,
+                11
+            ]
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_3",
+            "name": "Binary Tree",
+            "type": "Tree",
+            "values": [
+                5,
+                6,
+                null,
+                9,
+                null,
+                null,
+                2,
+                4,
+                null,
+                null,
+                12,
+                null,
+                null
+            ]
+        },
+        {
+            "creationType": "generated",
+            "edges": [
+                {
+                    "from": "n0",
+                    "to": "n1",
+                    "weight": 5.955008852170022
+                },
+                {
+                    "from": "n0",
+                    "to": "n2",
+                    "weight": 6.2284507894383765
+                },
+                {
+                    "from": "n0",
+                    "to": "n3",
+                    "weight": 1.173248520687736
+                },
+                {
+                    "from": "n0",
+                    "to": "n4",
+                    "weight": 1.044125691324389
+                },
+                {
+                    "from": "n0",
+                    "to": "n5",
+                    "weight": 2.399231544097372
+                },
+                {
+                    "from": "n1",
+                    "to": "n2",
+                    "weight": 5.888076064301113
+                },
+                {
+                    "from": "n1",
+                    "to": "n3",
+                    "weight": 6.4576617158389755
+                },
+                {
+                    "from": "n1",
+                    "to": "n4",
+                    "weight": 9.726816179422006
+                },
+                {
+                    "from": "n1",
+                    "to": "n5",
+                    "weight": 4.479784759167109
+                },
+                {
+                    "from": "n2",
+                    "to": "n3",
+                    "weight": 5.068499447486642
+                },
+                {
+                    "from": "n2",
+                    "to": "n4",
+                    "weight": 9.801282616364574
+                },
+                {
+                    "from": "n2",
+                    "to": "n5",
+                    "weight": 4.74970545778006
+                },
+                {
+                    "from": "n3",
+                    "to": "n4",
+                    "weight": 9.798906928581642
+                },
+                {
+                    "from": "n3",
+                    "to": "n5",
+                    "weight": 8.06409354282219
+                },
+                {
+                    "from": "n4",
+                    "to": "n5",
+                    "weight": 5.53106092292416
+                }
+            ],
+            "id": "struct_4",
+            "name": "Graph",
+            "nodes": [
+                {
+                    "id": "n0",
+                    "properties": {
+                        "label": "25",
+                        "value": "25"
+                    }
+                },
+                {
+                    "id": "n1",
+                    "properties": {
+                        "label": "13",
+                        "value": "13"
+                    }
+                },
+                {
+                    "id": "n2",
+                    "properties": {
+                        "label": "26",
+                        "value": "26"
+                    }
+                },
+                {
+                    "id": "n3",
+                    "properties": {
+                        "label": "1",
+                        "value": "1"
+                    }
+                },
+                {
+                    "id": "n4",
+                    "properties": {
+                        "label": "18",
+                        "value": "18"
+                    }
+                },
+                {
+                    "id": "n5",
+                    "properties": {
+                        "label": "23",
+                        "value": "23"
+                    }
+                }
+            ],
+            "type": "Graph"
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_5",
+            "name": "Array",
+            "type": "Array",
+            "values": [
+                65,
+                40,
+                82,
+                56,
+                46,
+                86
+            ]
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_6",
+            "name": "List",
+            "type": "LinkedList",
+            "values": [
+                98,
+                50,
+                63,
+                99,
+                68,
+                73
+            ]
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_7",
+            "name": "Binary Tree",
+            "type": "Tree",
+            "values": [
+                2,
+                9,
+                null,
+                10,
+                null,
+                null,
+                4,
+                12,
+                null,
+                null,
+                3,
+                null,
+                null
+            ]
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_8",
+            "name": "List",
+            "type": "LinkedList",
+            "values": [
+                27,
+                62,
+                25,
+                35,
+                63,
+                20
+            ]
+        },
+        {
+            "creationType": "generated",
+            "id": "struct_9",
+            "name": "Array",
+            "type": "Array",
+            "values": [
+                3,
+                0,
+                49,
+                10,
+                52,
+                92
+            ]
+        }
+    ],
+    "version": "2.0"
+}
