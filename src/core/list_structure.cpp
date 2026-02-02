@@ -43,7 +43,8 @@ std::vector<DSNode> ListStructure::getNodes() const {
     ListNode* cur = head;
     int idx = 0;
     while (cur) {
-        nodes.emplace_back("list_" + std::to_string(idx));
+        // **FIX**: Include the value in the node
+        nodes.emplace_back("list_" + std::to_string(idx), std::to_string(cur->value));
         cur = cur->next;
         idx++;
     }
@@ -89,13 +90,25 @@ void* ListStructure::getDataForRunner() { return static_cast<void*>(head); }
 QJsonObject ListStructure::serialize() const {
     QJsonObject obj;
     obj["type"] = QString::fromStdString(getType());
+    
     QJsonArray arr;
     ListNode* cur = head;
     while (cur) {
         arr.append(cur->value);
-        cur = cur->next;
+  cur = cur->next;
     }
     obj["values"] = arr;
+    
+    // **FIX**: Serialize node positions
+    QJsonObject positionsObj;
+    for (const auto& pair : nodePositions) {
+        QJsonObject posObj;
+        posObj["x"] = pair.second.x;
+    posObj["y"] = pair.second.y;
+      positionsObj[QString::fromStdString(pair.first)] = posObj;
+    }
+obj["nodePositions"] = positionsObj;
+    
     return obj;
 }
 
@@ -103,6 +116,19 @@ void ListStructure::deserialize(const QJsonObject& obj) {
     clearList();
     QJsonArray arr = obj["values"].toArray();
     for (auto v : arr) append(v.toInt());
+  
+    // **FIX**: Deserialize node positions
+  nodePositions.clear();
+    if (obj.contains("nodePositions")) {
+        QJsonObject positionsObj = obj["nodePositions"].toObject();
+ for (auto it = positionsObj.begin(); it != positionsObj.end(); ++it) {
+            std::string nodeId = it.key().toStdString();
+            QJsonObject posObj = it.value().toObject();
+double x = posObj["x"].toDouble();
+      double y = posObj["y"].toDouble();
+            nodePositions[nodeId] = DSNodePosition(x, y);
+     }
+    }
 }
 
 std::string ListStructure::getType() const { return "LinkedList"; }

@@ -791,7 +791,7 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
 
     std::string shape = "CIRCLE";
     if (structureType == "Array") shape = "ARRAY";
-    else if (structureType == "List") shape = "RECT";
+    else if (structureType == "List" || structureType == "LinkedList") shape = "RECT";  // **FIX**: Check both variants
 
  std::map<std::string, std::string> oldToNewId;
 
@@ -831,9 +831,9 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
      }
         }
     }
-    else if (structureType == "List") {
-  if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
-       std::vector<int> listValues;
+    else if (structureType == "List" || structureType == "LinkedList") {
+        if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
+            std::vector<int> listValues;
             const ListNode* current = listStruct->getHead();
             while (current != nullptr) {
       listValues.push_back(current->value);

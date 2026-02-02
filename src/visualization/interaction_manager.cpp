@@ -83,7 +83,7 @@ bool InteractionManager::saveToCurrentStructure() {
             return true;
         }
     }
-    else if (structureType == "List") {
+    else if (structureType == "List" || structureType == "LinkedList") {
         if (auto* list = dynamic_cast<ListStructure*>(structure)) {
             std::vector<size_t> sortedIndices(nodes.size());
             for (size_t i = 0; i < nodes.size(); ++i) sortedIndices[i] = i;
@@ -353,73 +353,130 @@ if (indexIt != nodeToIndex.end()) {
     }
     else if (structureType == "Graph") {
         if (auto* graphStruct = dynamic_cast<GraphStructure*>(structure)) {
-            if (auto* g = graphStruct->getGraph()) {
-                // Process all nodes
-                for (const auto& node : nodes) {
-                    auto mappingIt = canvasToStructureNodeId.find(node.id);
-                    std::string origNodeId;
+         if (auto* g = graphStruct->getGraph()) {
+                qDebug() << "Syncing graph structure";
+                
+         // **FIX**: Build set of current canvas node IDs for deletion detection
+       std::set<std::string> canvasNodeIds;
+       for (const auto& node : nodes) {
+        canvasNodeIds.insert(node.id);
+}
+         
+     // **FIX**: Build set of current canvas edges for deletion detection
+     std::set<std::pair<std::string, std::string>> canvasEdgeSet;
+            for (const auto& edge : edges) {
+         canvasEdgeSet.insert({edge.source, edge.target});
+     }
+         
+  // **FIX**: Find and remove deleted nodes from graph
+                std::vector<std::string> nodesToRemove;
+       for (const auto& graphNodeId : g->getAllNodeIds()) {
+    // Find which canvas node maps to this graph node
+   bool foundInCanvas = false;
+                 for (const auto& [canvasId, structId] : canvasToStructureNodeId) {
+             if (structId == graphNodeId && canvasNodeIds.count(canvasId)) {
+     foundInCanvas = true;
+ break;
+ }
+       }
+         if (!foundInCanvas) {
+      nodesToRemove.push_back(graphNodeId);
+      }
+      }
+    
+      for (const auto& nodeId : nodesToRemove) {
+ qDebug() << "Removing deleted node from graph:" << QString::fromStdString(nodeId);
+  g->removeNode(nodeId);
+           }
+            
+        // **FIX**: Find and remove deleted edges from graph
+                std::vector<std::pair<std::string, std::string>> edgesToRemove;
+             for (const auto& graphEdge : g->getAllEdges()) {
+       // Map graph edge to canvas edge
+    std::string canvasFrom, canvasTo;
+           for (const auto& [canvasId, structId] : canvasToStructureNodeId) {
+   if (structId == graphEdge.from) canvasFrom = canvasId;
+            if (structId == graphEdge.to) canvasTo = canvasId;
+         }
+  
+        if (!canvasFrom.empty() && !canvasTo.empty()) {
+         if (!canvasEdgeSet.count({canvasFrom, canvasTo})) {
+       edgesToRemove.push_back({graphEdge.from, graphEdge.to});
+        }
+          } else {
+    // Edge references deleted node - remove it
+   edgesToRemove.push_back({graphEdge.from, graphEdge.to});
+     }
+  }
+     
+         for (const auto& [from, to] : edgesToRemove) {
+  qDebug() << "Removing deleted edge from graph:" 
+  << QString::fromStdString(from) << "->" << QString::fromStdString(to);
+          g->removeEdge(from, to);
+       }
+       
+     // Process all canvas nodes (add new or update existing)
+      for (const auto& node : nodes) {
+        auto mappingIt = canvasToStructureNodeId.find(node.id);
+       std::string origNodeId;
 
-                    if (mappingIt != canvasToStructureNodeId.end()) {
-                        origNodeId = mappingIt->second;
-                    }
-                    else {
-                        int counter = g->getNodeCount();
-                        do {
-                            origNodeId = "n" + std::to_string(counter++);
-                        } while (g->hasNode(origNodeId));
-                        canvasToStructureNodeId[node.id] = origNodeId;
-                    }
+            if (mappingIt != canvasToStructureNodeId.end()) {
+     origNodeId = mappingIt->second;
+             }
+            else {
+               int counter = g->getNodeCount();
+           do {
+    origNodeId = "n" + std::to_string(counter++);
+      } while (g->hasNode(origNodeId));
+    canvasToStructureNodeId[node.id] = origNodeId;
+      }
 
-                    if (!g->hasNode(origNodeId)) {
-                        std::map<std::string, std::string> props;
-                        auto valIt = nodeValues.find(node.id);
-                        int value = (valIt != nodeValues.end()) ? valIt->second : 0;
-                        props["value"] = std::to_string(value);
-                        props["label"] = std::to_string(value);
-                        g->addNode(origNodeId, props);
-                        qDebug() << "Added new node to graph:" << QString::fromStdString(origNodeId)
-                            << "with value:" << value;
-                    }
-                    else {
-                        // Node exists - update its value ONLY if we have a value for it
-                        auto valIt = nodeValues.find(node.id);
-                        if (valIt != nodeValues.end()) {
-                            Graph::Node* graphNode = g->getNode(origNodeId);
-                            if (graphNode) {
-                                graphNode->properties["value"] = std::to_string(valIt->second);
-                                graphNode->properties["label"] = std::to_string(valIt->second);
-                                qDebug() << "Updated existing node" << QString::fromStdString(origNodeId)
-                                    << "value to:" << valIt->second;
-                            }
-                        }
-                        else {
-                            // No value in nodeValues, keep existing graph node value
-                            qDebug() << "Keeping existing value for node" << QString::fromStdString(origNodeId);
-                        }
-                    }
-                }
+         if (!g->hasNode(origNodeId)) {
+             std::map<std::string, std::string> props;
+         auto valIt = nodeValues.find(node.id);
+            int value = (valIt != nodeValues.end()) ? valIt->second : 0;
+       props["value"] = std::to_string(value);
+         props["label"] = std::to_string(value);
+     g->addNode(origNodeId, props);
+  qDebug() << "Added new node to graph:" << QString::fromStdString(origNodeId)
+     << "with value:" << value;
+ }
+   else {
+     // Node exists - update its value ONLY if we have a value for it
+         auto valIt = nodeValues.find(node.id);
+              if (valIt != nodeValues.end()) {
+         Graph::Node* graphNode = g->getNode(origNodeId);
+                if (graphNode) {
+           graphNode->properties["value"] = std::to_string(valIt->second);
+     graphNode->properties["label"] = std::to_string(valIt->second);
+           qDebug() << "Updated existing node" << QString::fromStdString(origNodeId)
+       << "value to:" << valIt->second;
+              }
+     }
+       }
+       }
 
-                // Process all edges
-                for (const auto& edge : edges) {
-                    auto srcMapping = canvasToStructureNodeId.find(edge.source);
-                    auto tgtMapping = canvasToStructureNodeId.find(edge.target);
+                // Process all canvas edges (add new ones)
+       for (const auto& edge : edges) {
+                auto srcMapping = canvasToStructureNodeId.find(edge.source);
+              auto tgtMapping = canvasToStructureNodeId.find(edge.target);
 
-                    std::string srcId = (srcMapping != canvasToStructureNodeId.end())
-                        ? srcMapping->second : edge.source;
-                    std::string tgtId = (tgtMapping != canvasToStructureNodeId.end())
-                        ? tgtMapping->second : edge.target;
+std::string srcId = (srcMapping != canvasToStructureNodeId.end())
+       ? srcMapping->second : edge.source;
+         std::string tgtId = (tgtMapping != canvasToStructureNodeId.end())
+     ? tgtMapping->second : edge.target;
 
-                    if (g->hasNode(srcId) && g->hasNode(tgtId) && !g->hasEdge(srcId, tgtId)) {
-                        g->addEdge(srcId, tgtId);
-                        qDebug() << "Added new edge to graph:" << QString::fromStdString(srcId)
-                            << "->" << QString::fromStdString(tgtId);
-                    }
-                }
+       if (g->hasNode(srcId) && g->hasNode(tgtId) && !g->hasEdge(srcId, tgtId)) {
+        g->addEdge(srcId, tgtId);
+     qDebug() << "Added new edge to graph:" << QString::fromStdString(srcId)
+         << "->" << QString::fromStdString(tgtId);
+   }
+      }
 
-                qDebug() << "saveToCurrentStructure: Graph saved, nodes=" << g->getNodeCount()
-                    << "edges=" << g->getEdgeCount();
-                return true;
-            }
+             qDebug() << "saveToCurrentStructure: Graph saved, nodes=" << g->getNodeCount()
+  << "edges=" << g->getEdgeCount();
+          return true;
+      }
         }
     }
 

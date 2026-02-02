@@ -274,15 +274,16 @@ void CodeGeneratorDialog::onParseCode() {
       }
         }
         else if (parsed.type == ParsedStructure::Type::LINKED_LIST) {
-    structureId = dataManager->createDataStructure("List", 0, "Parsed List");
- if (auto* structure = dataManager->getStructure(structureId)) {
- if (auto* list = dynamic_cast<ListStructure*>(structure)) {
-       for (int value : parsed.values) {
-         list->append(value);
-    }
-     }
-         }
-     }
+      // **FIX**: Build the list structure properly from parsed values
+            // Can't use createDataStructure with size=0, so build from nodes
+      std::map<std::string, int> nodeData;
+      for (size_t i = 0; i < parsed.values.size(); ++i) {
+ std::string nodeId = "list_" + std::to_string(i);
+   nodeData[nodeId] = parsed.values[i];
+  }
+
+     structureId = dataManager->buildStructureFromNodes("List", nodeData, {}, "Parsed List");
+        }
      else if (parsed.type == ParsedStructure::Type::BINARY_TREE) {
             if (!parsed.edges.empty() && !parsed.nodeValues.empty()) {
     auto tree = std::make_unique<TreeStructure>();
