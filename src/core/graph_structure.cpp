@@ -2,6 +2,9 @@
 #include <random>
 #include <sstream>
 #include <QJsonArray>
+#include <QDataStream>
+#include <QDebug>
+#include <QJsonObject>
 
 GraphStructure::GraphStructure() : graph(std::make_unique<Graph>(false)) {}
 GraphStructure::GraphStructure(bool directed) : graph(std::make_unique<Graph>(directed)) {}

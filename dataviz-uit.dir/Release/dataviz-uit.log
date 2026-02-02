@@ -1,0 +1,31 @@
+﻿  Automatic MOC and UIC for target dataviz-uit
+  toolbox_panel.cpp
+  visualization_pane.cpp
+  Génération de code en cours...
+LIBCMT.lib(initializers.obj) : warning LNK4098: conflit entre la bibliothèque par défaut 'msvcrt.lib' et les autres bibliothèques ; utilisez /NODEFAULTLIB:library
+  dataviz-uit.vcxproj -> C:\Users\Mouad\source\repos\dataviz-uit-old\bin\dataviz-uit.exe
+  Copying gvc.dll	Copying cgraph.dll	Copying cdt.dll	Running windeployqt...
+  C:\Users\Mouad\source\repos\dataviz-uit-old\bin\dataviz-uit.exe 64 bit, debug executable
+  Adding Qt6Network for qtuiotouchplugind.dll
+  Adding Qt6Svg for qsvgicond.dll
+  Direct dependencies: Qt6Core Qt6Gui Qt6Widgets
+  All dependencies   : Qt6Core Qt6Gui Qt6Widgets
+  To be deployed     : Qt6Core Qt6Gui Qt6Network Qt6Svg Qt6Widgets
+EXEC : warning : Cannot find Visual Studio installation directory, VCINSTALLDIR is not set.
+  Qt6Cored.dll is up to date.
+  Qt6Guid.dll is up to date.
+  Qt6Networkd.dll is up to date.
+  Qt6Svgd.dll is up to date.
+  Qt6Widgetsd.dll is up to date.
+  qtuiotouchplugind.dll is up to date.
+  qsvgicond.dll is up to date.
+  qgifd.dll is up to date.
+  qicod.dll is up to date.
+  qjpegd.dll is up to date.
+  qsvgd.dll is up to date.
+  qnetworklistmanagerd.dll is up to date.
+  qwindowsd.dll is up to date.
+  qwindowsvistastyled.dll is up to date.
+  qcertonlybackendd.dll is up to date.
+  qopensslbackendd.dll is up to date.
+  qschannelbackendd.dll is up to date.
