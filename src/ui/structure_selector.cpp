@@ -202,7 +202,7 @@ void StructureSelector::onRemoveClicked() {
 void StructureSelector::onFinalizeClicked() {
     if (!dataManager) {
         QMessageBox::warning(this, "Error", "Data manager not initialized.");
-        return;
+    return;
     }
   QString type = typeCombo->currentText();
     QString name = nameEdit->text().trimmed();
@@ -210,13 +210,17 @@ void StructureSelector::onFinalizeClicked() {
     std::string structId = dataManager->createDataStructure(type.toStdString(), size, name.isEmpty() ? "" : name.toStdString());
     if (!structId.empty()) {
         refreshStructureList();
-        dataManager->selectStructure(structId);
-        currentSelectedId = structId;
-        emit structureSelected(QString::fromStdString(structId));
-        nameEdit->clear();
-        qDebug() << "Created new structure:" << QString::fromStdString(structId) << "Type:" << type << "Size:" << size;
+      dataManager->selectStructure(structId);
+      currentSelectedId = structId;
+        
+  // **NEW**: Save session after creating structure
+     dataManager->saveSession();
+    qDebug() << "Structure created and session saved:" << QString::fromStdString(structId);
+     
+    emit structureSelected(QString::fromStdString(structId));
+      nameEdit->clear();
     } else {
-        QMessageBox::warning(this, "Creation Failed", "Failed to create structure. Please try again.");
+      QMessageBox::warning(this, "Creation Failed", "Failed to create structure. Please try again.");
     }
 }
 

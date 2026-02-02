@@ -203,7 +203,16 @@ QJsonObject TreeStructure::serialize() const {
  QJsonObject obj;
  obj["type"] = QString::fromStdString(getType());
  
-    // Serialize tree structure
+    // **NEW**: Save root node ID for algorithm execution
+  QJsonValue rootValue;
+    if (root) {
+ rootValue = "tree_0";  // Root is always tree_0 in BFS order
+    } else {
+     rootValue = QJsonValue();  // null
+    }
+    obj["root"] = rootValue;
+    
+    // Serialize tree structure (preorder traversal)
  QJsonArray arr;
  std::function<void(TreeNode*)> preorder = [&](TreeNode* n) {
  if (!n) { arr.append(QJsonValue()); return; }
@@ -214,23 +223,47 @@ QJsonObject TreeStructure::serialize() const {
  preorder(root);
  obj["values"] = arr;
     
-    // **FIX**: Serialize node positions
-    QJsonObject positionsObj;
-    for (const auto& pair : nodePositions) {
-  QJsonObject posObj;
+    // Serialize node ID → value mapping for custom trees
+  // This preserves individual node values when they've been manually edited
+  QJsonObject nodeValuesObj;
+    if (root) {
+        std::queue<const TreeNode*> q;
+ std::unordered_map<const TreeNode*, int> nodeToIndex;
+        
+        q.push(root);
+ int index = 0;
+    while (!q.empty()) {
+            const TreeNode* node = q.front();
+       q.pop();
+        if (node) {
+  nodeToIndex[node] = index;
+std::string nodeId = "tree_" + std::to_string(index);
+  nodeValuesObj[QString::fromStdString(nodeId)] = node->value;
+     index++;
+     if (node->left) q.push(node->left);
+        if (node->right) q.push(node->right);
+   }
+        }
+    }
+    obj["nodeValues"] = nodeValuesObj;
+    
+    // Serialize node positions
+  QJsonObject positionsObj;
+ for (const auto& pair : nodePositions) {
+   QJsonObject posObj;
         posObj["x"] = pair.second.x;
         posObj["y"] = pair.second.y;
-        positionsObj[QString::fromStdString(pair.first)] = posObj;
-    }
+  positionsObj[QString::fromStdString(pair.first)] = posObj;
+  }
     obj["nodePositions"] = positionsObj;
-    
-    // **FIX**: Serialize custom edges
+ 
+    // Serialize custom edges
     QJsonArray customEdgesArray;
     for (const auto& edge : customEdges) {
-        QJsonObject edgeObj;
-        edgeObj["from"] = QString::fromStdString(edge.from);
-        edgeObj["to"] = QString::fromStdString(edge.to);
-      customEdgesArray.append(edgeObj);
+  QJsonObject edgeObj;
+  edgeObj["from"] = QString::fromStdString(edge.from);
+  edgeObj["to"] = QString::fromStdString(edge.to);
+        customEdgesArray.append(edgeObj);
     }
     obj["customEdges"] = customEdgesArray;
     
@@ -241,7 +274,7 @@ void TreeStructure::deserialize(const QJsonObject& obj) {
  clear(root);
  root = nullptr;
     
-    // Deserialize tree structure
+    // Deserialize tree structure (preorder traversal)
  QJsonArray arr = obj["values"].toArray();
  std::function<TreeNode* (int&, TreeNode*)> build = [&](int& idx, TreeNode* parent) -> TreeNode* {
  if (idx >= arr.size() || arr[idx].isNull()) { idx++; return nullptr; }
@@ -252,34 +285,74 @@ void TreeStructure::deserialize(const QJsonObject& obj) {
  n->right = build(idx, n);
  return n;
  };
- int index =0;
+ int index = 0;
  root = build(index, nullptr);
     
- // **FIX**: Deserialize node positions
-    nodePositions.clear();
-    if (obj.contains("nodePositions")) {
-        QJsonObject positionsObj = obj["nodePositions"].toObject();
-        for (auto it = positionsObj.begin(); it != positionsObj.end(); ++it) {
+    // **FIX**: Override node values from saved nodeValues mapping
+    // This restores manually edited node values
+    if (obj.contains("nodeValues") && root) {
+        QJsonObject nodeValuesObj = obj["nodeValues"].toObject();
+        
+      // Build a map: tree_index -> TreeNode*
+      std::map<int, TreeNode*> indexToNode;
+      std::queue<TreeNode*> q;
+        q.push(root);
+        int idx = 0;
+        while (!q.empty()) {
+            TreeNode* node = q.front();
+       q.pop();
+        if (node) {
+             indexToNode[idx] = node;
+                idx++;
+            if (node->left) q.push(node->left);
+                if (node->right) q.push(node->right);
+ }
+      }
+        
+      // Apply saved values to nodes
+        for (auto it = nodeValuesObj.begin(); it != nodeValuesObj.end(); ++it) {
             std::string nodeId = it.key().toStdString();
-   QJsonObject posObj = it.value().toObject();
-   double x = posObj["x"].toDouble();
-double y = posObj["y"].toDouble();
-       nodePositions[nodeId] = DSNodePosition(x, y);
+            int value = it.value().toInt();
+            
+   // Parse tree_X to get index
+      if (nodeId.find("tree_") == 0) {
+          try {
+     int treeIndex = std::stoi(nodeId.substr(5));
+     if (indexToNode.count(treeIndex)) {
+     indexToNode[treeIndex]->value = value;
+           }
+  } catch (...) {
+            // Invalid format, skip
+       }
+  }
         }
     }
     
-    // **FIX**: Deserialize custom edges
+    // Deserialize node positions
+    nodePositions.clear();
+  if (obj.contains("nodePositions")) {
+        QJsonObject positionsObj = obj["nodePositions"].toObject();
+  for (auto it = positionsObj.begin(); it != positionsObj.end(); ++it) {
+     std::string nodeId = it.key().toStdString();
+        QJsonObject posObj = it.value().toObject();
+  double x = posObj["x"].toDouble();
+            double y = posObj["y"].toDouble();
+        nodePositions[nodeId] = DSNodePosition(x, y);
+   }
+    }
+
+    // Deserialize custom edges
     customEdges.clear();
-  if (obj.contains("customEdges")) {
+    if (obj.contains("customEdges")) {
         QJsonArray customEdgesArray = obj["customEdges"].toArray();
         for (const auto& edgeValue : customEdgesArray) {
-     if (edgeValue.isObject()) {
- QJsonObject edgeObj = edgeValue.toObject();
-        std::string from = edgeObj["from"].toString().toStdString();
-      std::string to = edgeObj["to"].toString().toStdString();
+            if (edgeValue.isObject()) {
+      QJsonObject edgeObj = edgeValue.toObject();
+      std::string from = edgeObj["from"].toString().toStdString();
+                std::string to = edgeObj["to"].toString().toStdString();
     customEdges.emplace_back(from, to);
-   }
-        }
   }
+        }
+    }
 }
 std::string TreeStructure::getType() const { return "Tree"; }

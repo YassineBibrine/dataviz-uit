@@ -187,44 +187,44 @@ std::string DataModelManager::createDataStructure(const std::string& type, int s
   }
 
     if (type == "Array") {
-        newStructure = std::make_unique<ArrayStructure>(size);
+      newStructure = std::make_unique<ArrayStructure>(size);
     }
     else if (type == "Graph") {
         auto graph = std::make_unique<GraphStructure>(false);
  // Create a more densely connected graph: aim for about (n * (n-1)) / 4 edges for undirected
-        // This ensures good connectivity without being fully connected
+ // This ensures good connectivity without being fully connected
         int targetEdges = std::max(size * 2, static_cast<int>(size * (size - 1) / 4));
-        graph->generateRandom(size, targetEdges);
+    graph->generateRandom(size, targetEdges);
         newStructure = std::move(graph);
     }
     else if (type == "LinkedList" || type == "List") {
-        auto list = std::make_unique<ListStructure>();
-        list->generateRandom(size);
+  auto list = std::make_unique<ListStructure>();
+      list->generateRandom(size);
    newStructure = std::move(list);
     }
-    else if (type == "Tree" || type == "BinaryTree" || type == "Binary Tree") {
-        auto tree = std::make_unique<TreeStructure>();
+ else if (type == "Tree" || type == "BinaryTree" || type == "Binary Tree") {
+ auto tree = std::make_unique<TreeStructure>();
         tree->generateRandom(size);
         newStructure = std::move(tree);
     }
     else {
-        return "";
+      return "";
  }
 
     if (newStructure) {
-      structures[structId] = std::move(newStructure);
-   metadata[structId] = StructureMetadata(
-            structId,
+   structures[structId] = std::move(newStructure);
+ metadata[structId] = StructureMetadata(
+         structId,
      name.empty() ? type : name,
             type,
-          StructureCreationType::GENERATED
-        );
-        
-        // Make it the current structure as well for legacy support
-        currentStructure = std::make_unique<ArrayStructure>(size); // simplified
-    SessionManager::save(structures[structId].get());
+   StructureCreationType::GENERATED
+  );
+   
+        // **FIXED**: Don't save immediately here
+        // Let the caller decide when to save (MainWindow will handle it)
+   qDebug() << "Structure created:" << QString::fromStdString(structId);
     }
-    
+ 
  return structId;
 }
 

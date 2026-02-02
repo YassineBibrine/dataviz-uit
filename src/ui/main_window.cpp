@@ -281,27 +281,33 @@ void MainWindow::connectSignals() {
 void MainWindow::onStructureSelected(QString structureId) {
     std::string id = structureId.toStdString();
 
-    if (dataModelManager) {
-   // **FIX**: Save current structure state before switching
+  if (dataModelManager) {
+   // **IMPROVED**: Save current structure state before switching
         std::string previousId = dataModelManager->getSelectedStructureId();
 if (!previousId.empty() && previousId != id) {
     // Save the current canvas state to the previous structure
-         auto* interactionMgr = visualizationPane->getInteractionManager();
+   auto* interactionMgr = visualizationPane->getInteractionManager();
         if (interactionMgr && interactionMgr->isSyncEnabled()) {
-            qDebug() << "Saving state of previous structure:" << QString::fromStdString(previousId);
+   qDebug() << "Saving state of previous structure:" << QString::fromStdString(previousId);
             interactionMgr->saveToCurrentStructure();
-          interactionMgr->saveNodePositionsToStructure();
-            }
+       interactionMgr->saveNodePositionsToStructure();
+       }
+    
+         // **NEW**: Immediately save to session after modification
+      if (autoSaveEnabled) {
+   dataModelManager->saveSession();
+          qDebug() << "Session auto-saved after structure switch";
+    }
      }
 
-        dataModelManager->selectStructure(id);
+ dataModelManager->selectStructure(id);
 
         auto structures = dataModelManager->getAllStructures();
         for (const auto& meta : structures) {
    if (meta.id == id) {
-             QString structureType = QString::fromStdString(meta.type);
+   QString structureType = QString::fromStdString(meta.type);
 
-                if (toolboxPanel) {
+        if (toolboxPanel) {
         toolboxPanel->setVisible(true);
         toolboxPanel->updateTools(structureType);
      qDebug() << "Toolbox shown and updated for structure type:" << structureType;
@@ -311,13 +317,13 @@ if (!previousId.empty() && previousId != id) {
       controlPanel->updateAlgorithmList(structureType);
         qDebug() << "Algorithm list updated for structure type:" << structureType;
   }
-                break;
-            }
+         break;
+         }
         }
 
         loadStructureIntoCanvas(id);
-      qDebug() << "Structure selected:" << structureId;
-    }
+qDebug() << "Structure selected:" << structureId;
+}
 }
 
 void MainWindow::onAlgorithmSelected(QString algorithm) {
@@ -588,19 +594,25 @@ void MainWindow::onSamplesCreated() {
     if (dataModelManager) {
         auto structures = dataModelManager->getAllStructures();
         if (!structures.empty()) {
-            std::string firstId = structures[0].id;
+          std::string firstId = structures[0].id;
             dataModelManager->selectStructure(firstId);
 
-            QString structureType = QString::fromStdString(structures[0].type);
+    QString structureType = QString::fromStdString(structures[0].type);
             if (toolboxPanel) {
-                toolboxPanel->setVisible(true);
-                toolboxPanel->updateTools(structureType);
-            }
-            if (controlPanel) {
-                controlPanel->updateAlgorithmList(structureType);
-            }
+       toolboxPanel->setVisible(true);
+        toolboxPanel->updateTools(structureType);
+   }
+        if (controlPanel) {
+         controlPanel->updateAlgorithmList(structureType);
+        }
 
-            loadStructureIntoCanvas(firstId);
+  loadStructureIntoCanvas(firstId);
+
+            // **NEW**: Save session after creating samples
+       if (autoSaveEnabled) {
+          dataModelManager->saveSession();
+       qDebug() << "Session auto-saved after creating samples";
+            }
 
             qDebug() << "Sample structures created, auto-selected:" << QString::fromStdString(firstId);
         }
@@ -618,31 +630,37 @@ void MainWindow::onStructureCreatedFromCode(QString structureId) {
     qDebug() << "Structure created from code:" << structureId;
 
     if (structureSelector) {
-        structureSelector->refreshStructureList();
-    }
+      structureSelector->refreshStructureList();
+  }
 
-    std::string id = structureId.toStdString();
+  std::string id = structureId.toStdString();
     if (dataModelManager) {
-        dataModelManager->selectStructure(id);
+  dataModelManager->selectStructure(id);
 
         auto structures = dataModelManager->getAllStructures();
         for (const auto& meta : structures) {
-            if (meta.id == id) {
-                QString structureType = QString::fromStdString(meta.type);
+   if (meta.id == id) {
+           QString structureType = QString::fromStdString(meta.type);
 
-                if (toolboxPanel) {
-                    toolboxPanel->setVisible(true);
-                    toolboxPanel->updateTools(structureType);
-                }
-
-                if (controlPanel) {
-                    controlPanel->updateAlgorithmList(structureType);
-                }
-                break;
-            }
+      if (toolboxPanel) {
+        toolboxPanel->setVisible(true);
+      toolboxPanel->updateTools(structureType);
         }
 
-        loadStructureIntoCanvas(id);
+     if (controlPanel) {
+     controlPanel->updateAlgorithmList(structureType);
+ }
+          break;
+  }
+        }
+
+  loadStructureIntoCanvas(id);
+        
+      // **NEW**: Save session after creating structure from code
+   if (autoSaveEnabled) {
+        dataModelManager->saveSession();
+ qDebug() << "Session auto-saved after code structure creation";
+      }
     }
 }
 
@@ -753,36 +771,36 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
     auto* interactionMgr = visualizationPane->getInteractionManager();
     if (!interactionMgr) return;
 
+    // **FIX**: Turn off sync FIRST, before any changes
     interactionMgr->setSyncWithBackend(false);
-    interactionMgr->setCurrentStructureId(structureId);
+  interactionMgr->setCurrentStructureId(structureId);
+    
+    // **FIX**: Clear nodes/edges/values BUT preserve canvasToStructureNodeId mapping
+    // We'll rebuild the mapping correctly as we load nodes
     interactionMgr->clearInteractive();
-    interactionMgr->setCurrentStructureId(structureId);
+    interactionMgr->setCurrentStructureId(structureId);  // Set again after clear
 
     visualizationPane->clearNodeValues();
 
     int nodeCount = static_cast<int>(nodes.size());
     if (nodeCount == 0) {
-        visualizationPane->refreshDisplay();
-        interactionMgr->setSyncWithBackend(true);
+  visualizationPane->refreshDisplay();
+ interactionMgr->setSyncWithBackend(true);
         return;
     }
 
-    // --- MODIFICATION HERE : Force ARRAY shape correctly ---
     std::string shape = "CIRCLE";
     if (structureType == "Array") shape = "ARRAY";
     else if (structureType == "List") shape = "RECT";
 
-    std::map<std::string, std::string> oldToNewId;
+ std::map<std::string, std::string> oldToNewId;
 
-    // For trees, ALWAYS use layout (don't use saved positions for generation)
-    // This ensures newly generated trees get the correct hierarchical layout
     bool useSavedPositions = false;
     if (structureType != "Tree" && structureType != "Binary Tree" && structureType != "BinaryTree") {
         useSavedPositions = structure->hasAnyPositions();
     }
     else {
-        // **FIX**: For trees, check if positions exist - if yes, use them!
-     useSavedPositions = structure->hasAnyPositions();
+    useSavedPositions = structure->hasAnyPositions();
     }
 
     std::random_device rd;
@@ -791,151 +809,150 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
     if (structureType == "Array") {
         if (auto* arrayStruct = dynamic_cast<ArrayStructure*>(structure)) {
             const auto& arrayData = arrayStruct->getData();
-            double startX = 200.0;
-            double y = 300.0;
-            // --- MODIFICATION HERE: Reduced spacing ---
-            double spacing = 50.0;
+    double startX = 200.0;
+        double y = 300.0;
+       double spacing = 50.0;
 
-            for (size_t i = 0; i < nodes.size(); ++i) {
-                double x = startX + i * spacing;
+     for (size_t i = 0; i < nodes.size(); ++i) {
+            double x = startX + i * spacing;
 
-                // Check for saved position using original node ID
-                double savedX, savedY;
-                if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-                    x = savedX;
-                    y = savedY;
-                }
+          double savedX, savedY;
+          if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+         x = savedX;
+   y = savedY;
+           }
 
-                // Use addNodeWithMapping to track original node ID
                 std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-                oldToNewId[nodes[i].id] = newId;
+    oldToNewId[nodes[i].id] = newId;
 
-                if (i < arrayData.size()) {
-                    interactionMgr->updateNodeValue(newId, arrayData[i]);
-                }
-            }
+        if (i < arrayData.size()) {
+               interactionMgr->updateNodeValue(newId, arrayData[i]);
+     }
+     }
         }
     }
     else if (structureType == "List") {
-        if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
-            std::vector<int> listValues;
+  if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
+       std::vector<int> listValues;
             const ListNode* current = listStruct->getHead();
             while (current != nullptr) {
-                listValues.push_back(current->value);
-                current = current->next;
-            }
+      listValues.push_back(current->value);
+     current = current->next;
+    }
 
-            double startX = 150.0;
-            double y = 300.0;
+   double startX = 150.0;
+       double y = 300.0;
             double spacing = 100.0;
 
-            std::vector<std::string> newNodeIds;
-            for (size_t i = 0; i < nodes.size(); ++i) {
-                double x = startX + i * spacing;
+   std::vector<std::string> newNodeIds;
+          for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = startX + i * spacing;
 
                 double savedX, savedY;
-                if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-                    x = savedX;
-                    y = savedY;
-                }
+     if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+         x = savedX;
+       y = savedY;
+     }
 
-                std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-                oldToNewId[nodes[i].id] = newId;
-                newNodeIds.push_back(newId);
+  std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+           oldToNewId[nodes[i].id] = newId;
+ newNodeIds.push_back(newId);
 
-                if (i < listValues.size()) {
-                    interactionMgr->updateNodeValue(newId, listValues[i]);
-                }
+     if (i < listValues.size()) {
+         interactionMgr->updateNodeValue(newId, listValues[i]);
+     }
             }
 
             for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
-                interactionMgr->addEdge(newNodeIds[i], newNodeIds[i + 1]);
+    interactionMgr->addEdge(newNodeIds[i], newNodeIds[i + 1]);
             }
         }
     }
     else {
-        // Check if this is a tree structure for hierarchical layout
         if (structureType == "Tree" || structureType == "Binary Tree" || structureType == "BinaryTree") {
-            // Use hierarchical tree layout for visual tree structure
-            if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
-                layoutTreeHierarchically(treeStruct, nodes, edges, oldToNewId, interactionMgr, structure);
-            }
+       if (auto* treeStruct = dynamic_cast<TreeStructure*>(structure)) {
+       layoutTreeHierarchically(treeStruct, nodes, edges, oldToNewId, interactionMgr, structure);
+  }
         }
-        else {
-            // Random layout for graphs with collision detection
-            std::uniform_real_distribution<> xDis(150.0, 650.0);
-            std::uniform_real_distribution<> yDis(100.0, 500.0);
+     else {
+    std::uniform_real_distribution<> xDis(150.0, 650.0);
+      std::uniform_real_distribution<> yDis(100.0, 500.0);
 
-            const double MIN_DISTANCE = 60.0;
-            const int MAX_ATTEMPTS = 50;
+  const double MIN_DISTANCE = 60.0;
+        const int MAX_ATTEMPTS = 50;
 
             for (size_t i = 0; i < nodes.size(); ++i) {
-                double x, y;
-                bool positionFound = false;
-                int attempts = 0;
+           double x, y;
+  bool positionFound = false;
+      int attempts = 0;
 
-                do {
-                    x = xDis(gen);
-                    y = yDis(gen);
+    do {
+         x = xDis(gen);
+        y = yDis(gen);
 
-                    double savedX, savedY;
-                    if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-                        x = savedX;
-                        y = savedY;
-                        positionFound = true;
-                        break;
-                    }
+      double savedX, savedY;
+  if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+     x = savedX;
+y = savedY;
+     positionFound = true;
+           break;
+               }
 
-                    positionFound = true;
-                    for (size_t j = 0; j < i; ++j) {
-                        if (oldToNewId.count(nodes[j].id)) {
-                            std::string prevId = oldToNewId[nodes[j].id];
-                            auto nodePositions = interactionMgr->getAllNodePositions();
-                            for (const auto& np : nodePositions) {
-                                if (np.id == prevId) {
-                                    double dx = x - np.x;
-                                    double dy = y - np.y;
-                                    double dist = std::sqrt(dx * dx + dy * dy);
-                                    if (dist < MIN_DISTANCE) {
-                                        positionFound = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!positionFound) break;
-                        }
-                    }
+      positionFound = true;
+      for (size_t j = 0; j < i; ++j) {
+          if (oldToNewId.count(nodes[j].id)) {
+      std::string prevId = oldToNewId[nodes[j].id];
+auto nodePositions = interactionMgr->getAllNodePositions();
+             for (const auto& np : nodePositions) {
+     if (np.id == prevId) {
+   double dx = x - np.x;
+         double dy = y - np.y;
+    double dist = std::sqrt(dx * dx + dy * dy);
+           if (dist < MIN_DISTANCE) {
+               positionFound = false;
+   break;
+     }
+       }
+    }
+      if (!positionFound) break;
+     }
+  }
 
-                    attempts++;
-                } while (!positionFound && attempts < MAX_ATTEMPTS);
+      attempts++;
+   } while (!positionFound && attempts < MAX_ATTEMPTS);
 
-                std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+  std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
                 oldToNewId[nodes[i].id] = newId;
 
-                try {
-                    int nodeValue = std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value);
-                    interactionMgr->updateNodeValue(newId, nodeValue);
-                }
-                catch (...) {
-                    interactionMgr->updateNodeValue(newId, 0);
+              try {
+    int nodeValue = std::stoi(nodes[i].value.empty() ? "0" : nodes[i].value);
+  interactionMgr->updateNodeValue(newId, nodeValue);
+      }
+        catch (...) {
+          interactionMgr->updateNodeValue(newId, 0);
                 }
             }
 
-            // Add edges using the mapped IDs
-            for (const auto& edge : edges) {
-                if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-                    interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
-                }
+  for (const auto& edge : edges) {
+  if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+ interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+     }
             }
         }
     }
 
-    // Save initial positions if this is a new structure without positions
     if (!useSavedPositions) {
+        // **FIX**: Save positions BEFORE enabling sync
+        // This prevents saveToCurrentStructure from being called during position save
         interactionMgr->saveNodePositionsToStructure();
     }
 
+    // **FIX**: Enable sync LAST, after everything is loaded correctly
+    // At this point, the mapping is complete and consistent
     interactionMgr->setSyncWithBackend(true);
+    
+    qDebug() << "Structure loaded with" << nodes.size() << "nodes and mapping complete";
+    
     visualizationPane->refreshDisplay();
 }
 
@@ -1004,89 +1021,97 @@ void MainWindow::layoutTreeHierarchically(
     bool hasSavedPositions = structure && structure->hasAnyPositions();
   
     if (hasSavedPositions) {
-  qDebug() << "Tree has saved positions - using them instead of recalculating layout";
+        qDebug() << "Tree has saved positions - using them instead of recalculating layout";
   
-        // Use saved positions and create nodes with existing layout
+        // **FIXED**: Use BFS to preserve tree structure, NOT inorder
         std::map<const TreeNode*, std::string> nodePtrToId;
- std::map<std::string, std::pair<std::string, std::string>> edgesMap;
-    
+        std::map<std::string, std::pair<std::string, std::string>> edgesMap;
+        
+        // BFS traversal to assign IDs (preserves tree level order, not value order)
+        std::queue<TreeNode*> bfsQueue;
+        bfsQueue.push(root);
         int counter = 0;
-    std::function<void(TreeNode*, int)> inorder = [&](TreeNode* node, int depth) {
-         if (!node) return;
-            inorder(node->left, depth + 1);
-         std::string id = "tree_" + std::to_string(counter++);
+        
+      while (!bfsQueue.empty()) {
+            TreeNode* node = bfsQueue.front();
+        bfsQueue.pop();
+            if (!node) continue;
+         
+            std::string id = "tree_" + std::to_string(counter++);
             nodePtrToId[node] = id;
-     if (node->left) {
-     edgesMap[id].first = "";
-   }
-   if (node->right) {
-  edgesMap[id].second = "";
-            }
-    inorder(node->right, depth + 1);
-        };
     
-        inorder(root, 0);
- 
-    // Fill left/right ids in edgesMap
-        for (const auto& p : nodePtrToId) {
+      if (node->left) {
+                edgesMap[id].first = "";
+   bfsQueue.push(node->left);
+          }
+            if (node->right) {
+          edgesMap[id].second = "";
+     bfsQueue.push(node->right);
+   }
+        }
+        
+        // Fill left/right ids in edgesMap
+      for (const auto& p : nodePtrToId) {
             const TreeNode* node = p.first;
             std::string id = p.second;
-       if (node->left) {
-   auto it = nodePtrToId.find(node->left);
-     if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
+ if (node->left) {
+      auto it = nodePtrToId.find(node->left);
+        if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
+    }
+        if (node->right) {
+  auto it = nodePtrToId.find(node->right);
+             if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
       }
-            if (node->right) {
-         auto it = nodePtrToId.find(node->right);
-         if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
-         }
-        }
-    
-        // Create nodes using SAVED positions
-      for (const auto& p : nodePtrToId) {
-        const TreeNode* node = p.first;
-            const std::string id = p.second;
-  
-  double savedX, savedY;
+     }
+        
+        // Create nodes using SAVED positions and VALUES from tree nodes
+    for (const auto& p : nodePtrToId) {
+            const TreeNode* node = p.first;
+       const std::string id = p.second;
+        
+            double savedX, savedY;
             if (structure->getNodePosition(id, savedX, savedY)) {
-    // Use saved position
-      std::string newId = interactionMgr->addNodeWithMapping(savedX, savedY, "CIRCLE", id);
-    oldToNewId[id] = newId;
-   try {
-      interactionMgr->updateNodeValue(newId, node->value);
-       }
-       catch (...) {
-                    interactionMgr->updateNodeValue(newId, 0);
+          // Use saved position
+            std::string newId = interactionMgr->addNodeWithMapping(savedX, savedY, "CIRCLE", id);
+oldToNewId[id] = newId;
+         
+       // Use the ACTUAL tree node value (not reordered)
+          try {
+          interactionMgr->updateNodeValue(newId, node->value);
+          }
+             catch (...) {
+        interactionMgr->updateNodeValue(newId, 0);
+  }
             }
-      }
+        }
+      
+ // **FIX**: Restore custom edges if they exist, otherwise use tree structure edges
+      if (structure->hasCustomEdges()) {
+            qDebug() << "Restoring" << structure->getCustomEdges().size() << "custom edges";
+    const auto& customEdges = structure->getCustomEdges();
+         for (const auto& edge : customEdges) {
+         if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
+    interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+             qDebug() << "Restored edge:" << QString::fromStdString(edge.from)
+            << "->" << QString::fromStdString(edge.to);
+  }
+        }
+        }
+        else {
+      // No custom edges - use tree structure edges
+       for (const auto& kv : edgesMap) {
+             const std::string parentId = kv.first;
+     const std::string leftId = kv.second.first;
+     const std::string rightId = kv.second.second;
+  if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
+        interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
+    }
+       if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
+                interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
+   }
+            }
         }
    
- // **FIX**: Restore custom edges if they exist, otherwise use tree structure edges
-        if (structure->hasCustomEdges()) {
-            qDebug() << "Restoring" << structure->getCustomEdges().size() << "custom edges";
-  const auto& customEdges = structure->getCustomEdges();
-    for (const auto& edge : customEdges) {
-            if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-           interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
-         qDebug() << "Restored edge:" << QString::fromStdString(edge.from)
-       << "->" << QString::fromStdString(edge.to);
-        }
-            }
-}
-      else {
-   // No custom edges - use tree structure edges
-         for (const auto& kv : edgesMap) {
-            const std::string parentId = kv.first;
-  const std::string leftId = kv.second.first;
-            const std::string rightId = kv.second.second;
-      if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
-          interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
-        }
-  if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
-     interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
-    }
-            }
-        }
-    
         return; // Done - positions already saved
     }
 
@@ -1094,45 +1119,68 @@ void MainWindow::layoutTreeHierarchically(
     // Layout parameters
     const double HORIZONTAL_SPACING = 90.0;
     const double VERTICAL_SPACING = 120.0;
-const double START_Y = 80.0;
+    const double START_Y = 80.0;
 
-    // We will perform inorder traversal to assign x positions (true binary tree layout)
+    // **FIXED**: Use BFS (level-order) traversal instead of inorder
+    // This preserves tree structure without sorting by value
     std::map<const TreeNode*, std::string> nodePtrToId;
     std::map<std::string, std::pair<double, double>> positions;
     std::map<std::string, std::pair<std::string, std::string>> edgesMap;
 
+    // BFS to assign indices (preserves tree structure)
+    std::queue<std::pair<TreeNode*, int>> bfsQueue;
+  bfsQueue.push({root, 0});
     int counter = 0;
-    // First pass: assign inorder indices and depths
-    std::function<void(TreeNode*, int)> inorder = [&](TreeNode* node, int depth) {
-        if (!node) return;
-     inorder(node->left, depth + 1);
+    std::map<TreeNode*, int> nodeDepths;
+    
+    while (!bfsQueue.empty()) {
+        auto [node, depth] = bfsQueue.front();
+      bfsQueue.pop();
+     if (!node) continue;
+    
     std::string id = "tree_" + std::to_string(counter++);
-      nodePtrToId[node] = id;
-        double x = static_cast<double>(counter - 1) * HORIZONTAL_SPACING;
-        double y = START_Y + depth * VERTICAL_SPACING;
-        positions[id] = { x, y };
+        nodePtrToId[node] = id;
+        nodeDepths[node] = depth;
+        
+        // Track edges
   if (node->left) {
             edgesMap[id].first = "";
+     bfsQueue.push({node->left, depth + 1});
         }
         if (node->right) {
-            edgesMap[id].second = "";
+       edgesMap[id].second = "";
+      bfsQueue.push({node->right, depth + 1});
+   }
     }
-   inorder(node->right, depth + 1);
-    };
 
-    inorder(root, 0);
+    // Now calculate positions using inorder for X-coordinates (visual layout)
+    // but keep the BFS IDs we already assigned
+    counter = 0;
+    std::function<void(TreeNode*, int)> assignPositions = [&](TreeNode* node, int depth) {
+        if (!node) return;
+     assignPositions(node->left, depth + 1);
+        
+        std::string id = nodePtrToId[node];
+ double x = static_cast<double>(counter++) * HORIZONTAL_SPACING;
+        double y = START_Y + depth * VERTICAL_SPACING;
+        positions[id] = { x, y };
+        
+        assignPositions(node->right, depth + 1);
+    };
+    
+    assignPositions(root, 0);
 
     // Fill left/right ids in edgesMap
     for (const auto& p : nodePtrToId) {
-   const TreeNode* node = p.first;
+        const TreeNode* node = p.first;
         std::string id = p.second;
-        if (node->left) {
-        auto it = nodePtrToId.find(node->left);
-            if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
-        }
-        if (node->right) {
-            auto it = nodePtrToId.find(node->right);
-   if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
+   if (node->left) {
+     auto it = nodePtrToId.find(node->left);
+     if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
+      }
+            if (node->right) {
+  auto it = nodePtrToId.find(node->right);
+      if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
         }
     }
 
@@ -1142,67 +1190,85 @@ const double START_Y = 80.0;
     double rootX = positions[rootId].first;
     
     // We want the root to be at a fixed center position (e.g., 400.0)
-  const double TARGET_CENTER_X = 400.0;
+    const double TARGET_CENTER_X = 400.0;
     double shiftX = TARGET_CENTER_X - rootX;
     
- // Shift all nodes so root is centered
+    // Shift all nodes so root is centered
     for (auto& kv : positions) {
         kv.second.first += shiftX;
     }
 
-  // Create nodes on canvas using positions and set values from tree nodes
+    // Create nodes on canvas using positions and set values from tree nodes
     for (const auto& p : nodePtrToId) {
-const TreeNode* node = p.first;
-   const std::string id = p.second;
-     auto posIt = positions.find(id);
+        const TreeNode* node = p.first;
+        const std::string id = p.second;
+        auto posIt = positions.find(id);
         double x = TARGET_CENTER_X;
         double y = START_Y;
         if (posIt != positions.end()) { 
-       x = posIt->second.first; 
-    y = posIt->second.second; 
-        }
+     x = posIt->second.first; 
+            y = posIt->second.second; 
+}
 
         std::string newId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", id);
-   oldToNewId[id] = newId;
+     oldToNewId[id] = newId;
         try {
-            interactionMgr->updateNodeValue(newId, node->value);
-   }
-        catch (...) {
-    interactionMgr->updateNodeValue(newId, 0);
+   interactionMgr->updateNodeValue(newId, node->value);
         }
+        catch (...) {
+ interactionMgr->updateNodeValue(newId, 0);
+ }
     }
 
-    // Add edges according to left/right mapping
-  for (const auto& kv : edgesMap) {
+  // Add edges according to left/right mapping
+    for (const auto& kv : edgesMap) {
         const std::string parentId = kv.first;
- const std::string leftId = kv.second.first;
+  const std::string leftId = kv.second.first;
         const std::string rightId = kv.second.second;
         if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
-       interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
+ interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
         }
-        if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
- interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
+      if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
+    interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
         }
     }
 
     // Save positions into the structure for persistence
     structure->clearNodePositions();
-    for (const auto& kv : positions) {
+  for (const auto& kv : positions) {
         const std::string& treeId = kv.first;
         double x = kv.second.first;
         double y = kv.second.second;
         structure->setNodePosition(treeId, x, y);
     }
+
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-    // Save complete session with all structures (only if auto-save is enabled)
-    if (dataModelManager && autoSaveEnabled) {
+    if (autoSaveEnabled) {
+     // **IMPROVED**: Save current structure before saving session
+    std::string currentId = dataModelManager->getSelectedStructureId();
+  if (!currentId.empty()) {
+     auto* interactionMgr = visualizationPane->getInteractionManager();
+  if (interactionMgr && interactionMgr->isSyncEnabled()) {
+        qDebug() << "Saving current structure before app close:" << QString::fromStdString(currentId);
+  interactionMgr->saveToCurrentStructure();
+   interactionMgr->saveNodePositionsToStructure();
+      }
+   }
+     
+   // Save complete session with all structures
+      if (dataModelManager) {
     dataModelManager->saveSession();
-      qDebug() << "Session saved on exit (auto-save enabled)";
- }
-    else if (!autoSaveEnabled) {
- qDebug() << "Session NOT saved (auto-save disabled)";
+ qDebug() << "Session saved on exit (auto-save enabled)";
+        }
+    }
+    else {
+   // **NEW**: Clear session file when auto-save is disabled
+      if (dataModelManager) {
+   SessionManager::clearSession();
+      qDebug() << "Session cleared on exit (auto-save disabled)";
+    }
     }
 
     event->accept();

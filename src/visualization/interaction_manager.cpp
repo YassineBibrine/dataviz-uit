@@ -106,211 +106,250 @@ bool InteractionManager::saveToCurrentStructure() {
         }
     }
     else if (structureType == "Binary Tree" || structureType == "Tree") {
-        if (auto* tree = dynamic_cast<TreeStructure*>(structure)) {
-            qDebug() << "Syncing tree structure (preserving existing tree)";
+  if (auto* tree = dynamic_cast<TreeStructure*>(structure)) {
+            qDebug() << "Syncing tree structure";
 
       // Get current canvas state
-     auto canvasEdges = edges;
+       auto canvasEdges = edges;
 
-   // **FIX 1**: Build mapping using CANVAS IDs directly, not values
-      // This allows duplicate values in the tree
-            std::map<std::string, TreeNode*> canvasIdToTreeNode;
+         // Build mapping using CANVAS IDs directly, not values
+// This allows duplicate values in the tree
+   std::map<std::string, TreeNode*> canvasIdToTreeNode;
 
-   // Traverse existing tree and match to canvas nodes using STORED MAPPING
-   TreeNode* existingRoot = const_cast<TreeNode*>(tree->getRoot());
+     // Traverse existing tree and match to canvas nodes using STORED MAPPING
+       TreeNode* existingRoot = const_cast<TreeNode*>(tree->getRoot());
 
-    if (existingRoot) {
-     // Tree exists - build TreeNode* -> tree_index mapping first
-    std::map<TreeNode*, int> nodeToIndex;
-     std::queue<TreeNode*> bfsQueue;
-      bfsQueue.push(existingRoot);
-      int index = 0;
+         if (existingRoot) {
+    // Tree exists - build TreeNode* -> tree_index mapping first
+     std::map<TreeNode*, int> nodeToIndex;
+      std::queue<TreeNode*> bfsQueue;
+     bfsQueue.push(existingRoot);
+                int index = 0;
 
-           while (!bfsQueue.empty()) {
-       TreeNode* treeNode = bfsQueue.front();
-        bfsQueue.pop();
+        while (!bfsQueue.empty()) {
+        TreeNode* treeNode = bfsQueue.front();
+      bfsQueue.pop();
          if (treeNode) {
-       nodeToIndex[treeNode] = index++;
-       if (treeNode->left) bfsQueue.push(treeNode->left);
-  if (treeNode->right) bfsQueue.push(treeNode->right);
-    }
-       }
+             nodeToIndex[treeNode] = index++;
+          if (treeNode->left) bfsQueue.push(treeNode->left);
+      if (treeNode->right) bfsQueue.push(treeNode->right);
+  }
+        }
 
-          // Now match canvas nodes to tree nodes using the saved mapping
-                for (const auto& canvasNode : nodes) {
-      auto mappingIt = canvasToStructureNodeId.find(canvasNode.id);
-           if (mappingIt != canvasToStructureNodeId.end()) {
-  // We have a saved mapping - parse tree_X to get index
-            std::string treeNodeId = mappingIt->second;
-    if (treeNodeId.find("tree_") == 0) {
-try {
- int treeIndex = std::stoi(treeNodeId.substr(5));
-  // Find the TreeNode* with this index
-      for (const auto& pair : nodeToIndex) {
-               if (pair.second == treeIndex) {
-               canvasIdToTreeNode[canvasNode.id] = pair.first;
-    break;
-          }
-         }
-            } catch (...) {}
-          }
+       // Now match canvas nodes to tree nodes using the saved mapping
+    for (const auto& canvasNode : nodes) {
+            auto mappingIt = canvasToStructureNodeId.find(canvasNode.id);
+       if (mappingIt != canvasToStructureNodeId.end()) {
+      // We have a saved mapping - parse tree_X to get index
+           std::string treeNodeId = mappingIt->second;
+             if (treeNodeId.find("tree_") == 0) {
+        try {
+          int treeIndex = std::stoi(treeNodeId.substr(5));
+             // Find the TreeNode* with this index
+        for (const auto& pair : nodeToIndex) {
+             if (pair.second == treeIndex) {
+        canvasIdToTreeNode[canvasNode.id] = pair.first;
+          break;
+              }
+   }
+ } catch (...) {}
      }
           }
-            }
-
-            // Check if we have NEW nodes (not yet in tree)
-            std::vector<std::string> newNodeIds;
-            for (const auto& canvasNode : nodes) {
-      if (canvasIdToTreeNode.find(canvasNode.id) == canvasIdToTreeNode.end()) {
-       newNodeIds.push_back(canvasNode.id);
                 }
-      }
-
-  // If there are new nodes OR no existing root, rebuild tree
-            if (!newNodeIds.empty() || !existingRoot) {
-     qDebug() << "New nodes detected or no root - rebuilding tree structure";
-
-    // Clear and rebuild
-  tree->clearTree();
-
-         // Find root (node with no incoming edges)
-     std::set<std::string> hasParent;
-             for (const auto& edge : canvasEdges) {
-        hasParent.insert(edge.target);
-      }
-
-  std::string rootCanvasId;
-   for (const auto& node : nodes) {
-          if (hasParent.find(node.id) == hasParent.end()) {
-          rootCanvasId = node.id;
-          break;
-   }
-        }
-
-       if (rootCanvasId.empty() && !nodes.empty()) rootCanvasId = nodes[0].id;
-
-      if (!rootCanvasId.empty()) {
-        // Build tree structure from canvas
-  std::map<std::string, TreeNode*> newTreeNodes;
-
-       // Create all tree nodes first
-  for (const auto& canvasNode : nodes) {
-             auto valIt = nodeValues.find(canvasNode.id);
-       int value = (valIt != nodeValues.end()) ? valIt->second : 0;
-        newTreeNodes[canvasNode.id] = new TreeNode(value);
-         }
-
-         // Group edges by parent to enforce binary tree constraint
-          std::map<std::string, std::vector<std::string>> parentToChildren;
-      for (const auto& edge : canvasEdges) {
-     parentToChildren[edge.source].push_back(edge.target);
-   }
-
-          // Set up parent-child relationships based on canvas edges
-// BINARY TREE CONSTRAINT: Only first 2 children per parent
-     // TREE CONSTRAINT: Each child can have only ONE parent
-std::set<std::string> alreadyAssignedChildren;
-
-           for (const auto& [parentId, children] : parentToChildren) {
-             if (!newTreeNodes.count(parentId)) continue;
-
-            TreeNode* parent = newTreeNodes[parentId];
-
-     // Binary tree: max 2 children
-        for (size_t i = 0; i < std::min(children.size(), size_t(2)); ++i) {
-      const std::string& childId = children[i];
-        if (!newTreeNodes.count(childId)) continue;
-
-    // Check if this child already has a parent
-     if (alreadyAssignedChildren.count(childId)) {
-            qDebug() << "Warning: Node" << QString::fromStdString(childId)
-          << "already has a parent. Skipping.";
-         continue;
-    }
-
-TreeNode* child = newTreeNodes[childId];
-    child->parent = parent;
-      alreadyAssignedChildren.insert(childId);
-
-            if (parent->left == nullptr) {
-     parent->left = child;
-   }
-     else if (parent->right == nullptr) {
-   parent->right = child;
-           }
-         }
-
-     if (children.size() > 2) {
- qDebug() << "Warning: Node" << QString::fromStdString(parentId)
-    << "has" << children.size() << "children. Max 2 used.";
-       }
-    }
-
-          tree->setRoot(newTreeNodes[rootCanvasId]);
-  canvasIdToTreeNode = newTreeNodes;
-           }
-    }
-         else {
-     qDebug() << "No new nodes - preserving existing tree structure";
-      }
-
-            // **FIX 2**: Rebuild mappings using canvas ID order, not values
-   TreeNode* root = const_cast<TreeNode*>(tree->getRoot());
-        if (root) {
-             // Build BFS index -> TreeNode* mapping
-       std::map<int, TreeNode*> indexToNode;
-           std::map<TreeNode*, int> nodeToIndex;
-
-    std::queue<TreeNode*> bfsQueue;
-        bfsQueue.push(root);
-int index = 0;
-
-     while (!bfsQueue.empty()) {
- TreeNode* node = bfsQueue.front();
-  bfsQueue.pop();
-            if (node) {
-       indexToNode[index] = node;
-               nodeToIndex[node] = index;
-        index++;
-        if (node->left) bfsQueue.push(node->left);
-            if (node->right) bfsQueue.push(node->right);
-   }
-            }
-
-    // Map canvas nodes to tree indices using TreeNode* mapping
-          canvasToStructureNodeId.clear();
- for (const auto& canvasNode : nodes) {
-            auto treeNodeIt = canvasIdToTreeNode.find(canvasNode.id);
-        if (treeNodeIt != canvasIdToTreeNode.end()) {
-  TreeNode* treeNode = treeNodeIt->second;
-          auto indexIt = nodeToIndex.find(treeNode);
-          if (indexIt != nodeToIndex.end()) {
-          std::string treeNodeId = "tree_" + std::to_string(indexIt->second);
-         canvasToStructureNodeId[canvasNode.id] = treeNodeId;
-   qDebug() << "Mapped canvas" << QString::fromStdString(canvasNode.id)
-      << "to tree node" << QString::fromStdString(treeNodeId)
-             << "(value:" << treeNode->value << ")";
+   
+     // **FIX**: Update existing node values WITHOUT rebuilding
+    qDebug() << "Updating existing node values...";
+   for (const auto& canvasNode : nodes) {
+      auto treeNodeIt = canvasIdToTreeNode.find(canvasNode.id);
+ if (treeNodeIt != canvasIdToTreeNode.end()) {
+        TreeNode* treeNode = treeNodeIt->second;
+ auto valIt = nodeValues.find(canvasNode.id);
+ if (valIt != nodeValues.end()) {
+   // Just update the value directly - no rebuild needed!
+            int oldTreeValue = treeNode->value;
+        treeNode->value = valIt->second;
+    qDebug() << "  Canvas node:" << QString::fromStdString(canvasNode.id) 
+       << "→ Tree node value:" << oldTreeValue << "→" << valIt->second;
          }
           }
-                }
+   }
             }
 
-       // **FIX 3**: Save custom edges for manual trees
-     structure->clearCustomEdges();
-          for (const auto& edge : canvasEdges) {
-       auto fromIt = canvasToStructureNodeId.find(edge.source);
-                auto toIt = canvasToStructureNodeId.find(edge.target);
-       
-           if (fromIt != canvasToStructureNodeId.end() && toIt != canvasToStructureNodeId.end()) {
-     structure->addCustomEdge(fromIt->second, toIt->second);
-           qDebug() << "Saved custom edge:" << QString::fromStdString(fromIt->second)
-           << "->" << QString::fromStdString(toIt->second);
+   // Check if we have NEW nodes (not yet in tree)
+  std::vector<std::string> newNodeIds;
+        for (const auto& canvasNode : nodes) {
+                if (canvasIdToTreeNode.find(canvasNode.id) == canvasIdToTreeNode.end()) {
+      newNodeIds.push_back(canvasNode.id);
+      }
+  }
+
+   // **FIX**: Check if edges changed
+ bool edgesChanged = false;
+          if (existingRoot && newNodeIds.empty()) {
+          // Compare current canvas edges with saved structure edges
+  std::set<std::pair<std::string, std::string>> currentEdgesSet;
+           for (const auto& edge : canvasEdges) {
+ auto fromIt = canvasToStructureNodeId.find(edge.source);
+        auto toIt = canvasToStructureNodeId.find(edge.target);
+   if (fromIt != canvasToStructureNodeId.end() && toIt != canvasToStructureNodeId.end()) {
+       currentEdgesSet.insert({fromIt->second, toIt->second});
+}
+         }
+         
+    std::set<std::pair<std::string, std::string>> savedEdgesSet;
+          for (const auto& edge : structure->getCustomEdges()) {
+    savedEdgesSet.insert({edge.from, edge.to});
+      }
+     
+       edgesChanged = (currentEdgesSet != savedEdgesSet);
+            }
+
+          // **FIX**: ONLY rebuild if there are STRUCTURAL changes (new nodes, removed nodes, or edge changes)
+  if (!newNodeIds.empty() || !existingRoot || edgesChanged) {
+             if (edgesChanged) {
+           qDebug() << "Edge structure changed - rebuilding tree";
+         } else if (!newNodeIds.empty()) {
+ qDebug() << "New nodes detected - rebuilding tree structure";
+    } else {
+     qDebug() << "No root - building new tree";
         }
+
+            // Clear and rebuild
+      tree->clearTree();
+
+        // Find root (node with no incoming edges)
+       std::set<std::string> hasParent;
+      for (const auto& edge : canvasEdges) {
+      hasParent.insert(edge.target);
+   }
+
+                std::string rootCanvasId;
+     for (const auto& node : nodes) {
+             if (hasParent.find(node.id) == hasParent.end()) {
+ rootCanvasId = node.id;
+  break;
+             }
+   }
+
+if (rootCanvasId.empty() && !nodes.empty()) rootCanvasId = nodes[0].id;
+
+  if (!rootCanvasId.empty()) {
+        // Build tree structure from canvas
+          std::map<std::string, TreeNode*> newTreeNodes;
+
+      // Create all tree nodes first
+        for (const auto& canvasNode : nodes) {
+      auto valIt = nodeValues.find(canvasNode.id);
+       int value = (valIt != nodeValues.end()) ? valIt->second : 0;
+   newTreeNodes[canvasNode.id] = new TreeNode(value);
+         }
+
+  // Group edges by parent to enforce binary tree constraint
+   std::map<std::string, std::vector<std::string>> parentToChildren;
+            for (const auto& edge : canvasEdges) {
+   parentToChildren[edge.source].push_back(edge.target);
     }
 
-          qDebug() << "saveToCurrentStructure: Tree synced with" << structure->getCustomEdges().size() << "custom edges";
+    // Set up parent-child relationships based on canvas edges
+   // BINARY TREE CONSTRAINT: Only first 2 children per parent
+           // TREE CONSTRAINT: Each child can have only ONE parent
+          std::set<std::string> alreadyAssignedChildren;
+
+         for (const auto& [parentId, children] : parentToChildren) {
+        if (!newTreeNodes.count(parentId)) continue;
+
+   TreeNode* parent = newTreeNodes[parentId];
+
+  // Binary tree: max 2 children
+     for (size_t i = 0; i < std::min(children.size(), size_t(2)); ++i) {
+   const std::string& childId = children[i];
+           if (!newTreeNodes.count(childId)) continue;
+
+       // Check if this child already has a parent
+if (alreadyAssignedChildren.count(childId)) {
+                    qDebug() << "Warning: Node" << QString::fromStdString(childId)
+        << "already has a parent. Skipping.";
+continue;
+          }
+
+    TreeNode* child = newTreeNodes[childId];
+           child->parent = parent;
+            alreadyAssignedChildren.insert(childId);
+
+         if (parent->left == nullptr) {
+         parent->left = child;
+         }
+  else if (parent->right == nullptr) {
+              parent->right = child;
+          }
+                }
+
+           if (children.size() > 2) {
+              qDebug() << "Warning: Node" << QString::fromStdString(parentId)
+  << "has" << children.size() << "children. Max 2 used.";
+    }
+          }
+
+     tree->setRoot(newTreeNodes[rootCanvasId]);
+    canvasIdToTreeNode = newTreeNodes;
+           }
+      }
+            else {
+         qDebug() << "No structural changes - preserved existing tree, only updated values";
+         }
+
+      // Rebuild mappings using canvas ID order
+     TreeNode* root = const_cast<TreeNode*>(tree->getRoot());
+      if (root) {
+    // Build BFS index -> TreeNode* mapping
+         std::map<int, TreeNode*> indexToNode;
+             std::map<TreeNode*, int> nodeToIndex;
+
+  std::queue<TreeNode*> bfsQueue;
+  bfsQueue.push(root);
+     int index = 0;
+
+           while (!bfsQueue.empty()) {
+ TreeNode* node = bfsQueue.front();
+             bfsQueue.pop();
+         if (node) {
+           indexToNode[index] = node;
+  nodeToIndex[node] = index;
+       index++;
+      if (node->left) bfsQueue.push(node->left);
+       if (node->right) bfsQueue.push(node->right);
+        }
+          }
+
+                // Map canvas nodes to tree indices using TreeNode* mapping
+ canvasToStructureNodeId.clear();
+       for (const auto& canvasNode : nodes) {
+  auto treeNodeIt = canvasIdToTreeNode.find(canvasNode.id);
+       if (treeNodeIt != canvasIdToTreeNode.end()) {
+                 TreeNode* treeNode = treeNodeIt->second;
+      auto indexIt = nodeToIndex.find(treeNode);
+if (indexIt != nodeToIndex.end()) {
+          std::string treeNodeId = "tree_" + std::to_string(indexIt->second);
+       canvasToStructureNodeId[canvasNode.id] = treeNodeId;
+       }
+          }
+ }
+      }
+
+   // Save custom edges
+        structure->clearCustomEdges();
+            for (const auto& edge : canvasEdges) {
+                auto fromIt = canvasToStructureNodeId.find(edge.source);
+      auto toIt = canvasToStructureNodeId.find(edge.target);
+      
+       if (fromIt != canvasToStructureNodeId.end() && toIt != canvasToStructureNodeId.end()) {
+       structure->addCustomEdge(fromIt->second, toIt->second);
+   }
+     }
+
+            qDebug() << "saveToCurrentStructure: Tree synced with" << structure->getCustomEdges().size() << "custom edges";
             return true;
-  }
+        }
     }
     else if (structureType == "Graph") {
         if (auto* graphStruct = dynamic_cast<GraphStructure*>(structure)) {
@@ -408,15 +447,15 @@ void InteractionManager::saveNodePositionsToStructure() {
 
 std::string InteractionManager::addNode(double x, double y, const std::string& type) {
     std::string canvasId = "n" + std::to_string(nextId++);
-    nodes.push_back({ canvasId, x, y, type });
+  nodes.push_back({ canvasId, x, y, type });
 
     qDebug() << "addNode: canvasId=" << QString::fromStdString(canvasId)
-        << "syncWithBackend=" << syncWithBackend
+   << "syncWithBackend=" << syncWithBackend
         << "currentStructureId=" << QString::fromStdString(currentStructureId);
 
-    if (syncWithBackend && !currentStructureId.empty()) {
+ if (syncWithBackend && !currentStructureId.empty()) {
         saveToCurrentStructure();
-        saveNodePositionsToStructure();
+  saveNodePositionsToStructure();
     }
 
     return canvasId;
@@ -452,11 +491,26 @@ void InteractionManager::removeNode(const std::string& nodeId) {
 }
 
 void InteractionManager::updateNodeValue(const std::string& nodeId, int value) {
+    // **FIX**: Only update the specific node that was edited
+    qDebug() << "========== updateNodeValue START ==========";
+    qDebug() << "Updating node:" << QString::fromStdString(nodeId) << "to value:" << value;
+    
+    // Store the old value for comparison
+    int oldValue = nodeValues.count(nodeId) ? nodeValues[nodeId] : -999;
+    
     nodeValues[nodeId] = value;
+  
+  qDebug() << "Old value:" << oldValue << "→ New value:" << value;
+    qDebug() << "Total nodes in nodeValues:" << nodeValues.size();
 
-    if (syncWithBackend) {
+ if (syncWithBackend) {
+        qDebug() << "Sync is enabled, calling saveToCurrentStructure...";
         saveToCurrentStructure();
         saveNodePositionsToStructure();
+    qDebug() << "========== updateNodeValue END ==========";
+    } else {
+   qDebug() << "Sync is DISABLED, skipping save";
+ qDebug() << "========== updateNodeValue END ==========";
     }
 }
 
