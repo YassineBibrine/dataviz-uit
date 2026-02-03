@@ -1,7 +1,8 @@
 #ifndef SELECTION_SORT_H
 #define SELECTION_SORT_H
 
-#include "../orchestration/algorithm.h"
+
+#include "algorithm_runner.h"
 #include "../core/data_structure.h"
 #include "../core/array_structure.h"
 #include "../core/list_structure.h"
@@ -10,13 +11,14 @@
 #include <QDebug>
 #include <vector>
 
-class SelectionSort : public Algorithm {
+class SelectionSort : public  AlgorithmRunner {
 private:
   DataStructure* structure;
     
 public:
-    SelectionSort(DataStructure* ds = nullptr) : structure(ds) {}
-~SelectionSort() override = default;
+    SelectionSort();
+    explicit SelectionSort(ArrayStructure* arrayStructure);
+    ~SelectionSort() override = default;
     
     void execute() override {
         if (!structure) {

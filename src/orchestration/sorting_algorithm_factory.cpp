@@ -8,17 +8,25 @@
 #include <memory>
 #include <stdexcept>
 
-std::unique_ptr<Algorithm> SortingAlgorithmFactory::createAlgorithm(const std::string& type) {
+std::unique_ptr<AlgorithmRunner> SortingAlgorithmFactory::createAlgorithm(
+    const std::string& type,
+    ArrayStructure* arrayStructure) {
+
     if (type == "BubbleSort") {
-        return std::make_unique<BubbleSort>();
-    } else if (type == "QuickSort") {
-        return std::make_unique<QuickSort>();
-    } else if (type == "MergeSort") {
-        return std::make_unique<MergeSort>();
-    } else if (type == "InsertionSort") {
-        return std::make_unique<InsertionSort>();
-    } else if (type == "SelectionSort") {
-        return std::make_unique<SelectionSort>();
+        return std::make_unique<BubbleSort>(arrayStructure);
     }
+    else if (type == "QuickSort") {
+        return std::make_unique<QuickSort>(arrayStructure);
+    }
+    else if (type == "MergeSort") {
+        return std::make_unique<MergeSort>(arrayStructure);
+    }
+    else if (type == "InsertionSort") {
+        return std::make_unique<InsertionSort>(arrayStructure);
+    }
+    else if (type == "SelectionSort") {
+        return std::make_unique<SelectionSort>(arrayStructure);
+    }
+
     throw std::invalid_argument("Unknown algorithm: " + type);
 }

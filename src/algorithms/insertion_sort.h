@@ -1,7 +1,7 @@
 #ifndef INSERTION_SORT_H
 #define INSERTION_SORT_H
 
-#include "../orchestration/algorithm.h"
+#include "algorithm_runner.h"
 #include "../core/data_structure.h"
 #include "../core/array_structure.h"
 #include "../core/list_structure.h"
@@ -11,7 +11,7 @@
 #include <QMessageBox>
 #include <vector>
 
-class InsertionSort : public Algorithm {
+class InsertionSort : public AlgorithmRunner {
 private:
     DataStructure* structure;
     

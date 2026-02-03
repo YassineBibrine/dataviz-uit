@@ -2,13 +2,17 @@
 #ifndef SORTING_ALGORITHM_FACTORY_H
 #define SORTING_ALGORITHM_FACTORY_H
 
-#include "algorithm_factory.h"
+#include "../algorithms/algorithm_runner.h"
+#include "../core/array_structure.h"
 #include <memory>
 #include <string>
 
-class SortingAlgorithmFactory : public AlgorithmFactory {
+class SortingAlgorithmFactory {
 public:
-    std::unique_ptr<Algorithm> createAlgorithm(const std::string& type) override;
+    static std::unique_ptr<AlgorithmRunner> createAlgorithm(
+        const std::string& type,
+        ArrayStructure* arrayStructure
+    );
 };
 
 #endif // SORTING_ALGORITHM_FACTORY_H
