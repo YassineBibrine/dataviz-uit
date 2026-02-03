@@ -287,40 +287,6 @@ void DataModelManager::renameStructure(const std::string& structureId, const std
 }
 
 // ----------------------------------------------------
-// Create sample structures
-// ----------------------------------------------------
-std::vector<std::string> DataModelManager::createSampleStructures()
-{
-    std::vector<std::string> createdIds;
-    
-    // Sample Array
-    std::string arrayId = createDataStructure("Array", 8, "Sample Array");
-    if (!arrayId.empty()) {
-        createdIds.push_back(arrayId);
-  }
-    
-    // Sample List
-    std::string listId = createDataStructure("List", 6, "Sample Linked List");
-    if (!listId.empty()) {
-     createdIds.push_back(listId);
-    }
- 
-    // Sample Binary Tree
-    std::string treeId = createDataStructure("Binary Tree", 7, "Sample Binary Tree");
-    if (!treeId.empty()) {
-        createdIds.push_back(treeId);
-    }
-    
-    // Sample Graph
-    std::string graphId = createDataStructure("Graph", 6, "Sample Graph");
-    if (!graphId.empty()) {
-        createdIds.push_back(graphId);
-    }
-    
-    return createdIds;
-}
-
-// ----------------------------------------------------
 // Get selected structure
 // ----------------------------------------------------
 DataStructure* DataModelManager::getSelectedStructure()
@@ -449,12 +415,12 @@ newStructure = std::move(list);
    structures[id] = std::move(newStructure);
    
     // Restore metadata
-            StructureCreationType creationType = StructureCreationType::GENERATED;
+   StructureCreationType creationType = StructureCreationType::GENERATED;
  if (structObj.contains("creationType")) {
 creationType = (structObj["creationType"].toString() == "interactive") ?
            StructureCreationType::INTERACTIVE : StructureCreationType::GENERATED;
-          }
-            
+     }
+   
     metadata[id] = StructureMetadata(id, name, type, creationType);
  restoredIds.push_back(id);
          

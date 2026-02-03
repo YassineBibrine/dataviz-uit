@@ -107,12 +107,6 @@ manageLayout->setSpacing(6);
     actionsLabel->setStyleSheet("font-weight: bold; color: #555;");
     manageLayout->addWidget(actionsLabel);
     
-    QPushButton* createSamplesBtn = new QPushButton("Create Sample Structures", this);
-    createSamplesBtn->setToolTip("Create sample structures for each type");
-    createSamplesBtn->setStyleSheet("background-color: #4CAF50; color: white;");
-    connect(createSamplesBtn, &QPushButton::clicked, this, &StructureSelector::onCreateSamplesClicked);
-    manageLayout->addWidget(createSamplesBtn);
-    
     QHBoxLayout* editButtonsLayout = new QHBoxLayout();
     renameBtn = new QPushButton("Rename", this);
     renameBtn->setToolTip("Rename selected structure");
@@ -125,11 +119,6 @@ removeBtn->setToolTip("Remove selected structure");
     connect(removeBtn, &QPushButton::clicked, this, &StructureSelector::onRemoveClicked);
     editButtonsLayout->addWidget(removeBtn);
     manageLayout->addLayout(editButtonsLayout);
-    
-  clearInteractiveBtn = new QPushButton("Clear Canvas", this);
-    clearInteractiveBtn->setToolTip("Clear all drawn nodes/edges from canvas");
-    connect(clearInteractiveBtn, &QPushButton::clicked, this, &StructureSelector::onClearInteractiveClicked);
-    manageLayout->addWidget(clearInteractiveBtn);
 
     mainLayout->addWidget(manageGroup);
     updateButtonStates();
@@ -231,7 +220,7 @@ void StructureSelector::onRenameClicked() {
     }
     if (!dataManager) return;
     auto structures = dataManager->getAllStructures();
-    std::string currentName;
+  std::string currentName;
     for (const auto& meta : structures) {
         if (meta.id == currentSelectedId) { currentName = meta.name; break; }
     }
@@ -239,33 +228,12 @@ void StructureSelector::onRenameClicked() {
     QString newName = QInputDialog::getText(this, "Rename Structure", "Enter new name:", QLineEdit::Normal, QString::fromStdString(currentName), &ok);
     if (ok && !newName.isEmpty()) {
    dataManager->renameStructure(currentSelectedId, newName.toStdString());
-        refreshStructureList();
+   refreshStructureList();
     }
-}
-
-void StructureSelector::onClearInteractiveClicked() {
-    auto reply = QMessageBox::question(this, "Clear Canvas", "Clear all drawn nodes and edges from the canvas?", QMessageBox::Yes | QMessageBox::No);
-  if (reply == QMessageBox::Yes) emit clearInteractiveRequested();
 }
 
 void StructureSelector::updateButtonStates() {
     bool hasSelection = !currentSelectedId.empty();
     removeBtn->setEnabled(hasSelection);
   renameBtn->setEnabled(hasSelection);
-}
-
-void StructureSelector::onCreateSamplesClicked() {
-    if (!dataManager) {
-        QMessageBox::warning(this, "No Data Manager", "Data manager not initialized.");
-    return;
-    }
-    auto reply = QMessageBox::question(this, "Create Sample Structures",
-        "This will create 4 sample structures:\n- Sample Array\n- Sample Linked List\n- Sample Binary Tree\n- Sample Graph\n\nContinue?",
-        QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::Yes) {
-        std::vector<std::string> createdIds = dataManager->createSampleStructures();
-        refreshStructureList();
-        QMessageBox::information(this, "Samples Created", QString("Successfully created %1 sample structure(s).").arg(createdIds.size()));
-        emit samplesCreated();
-    }
 }

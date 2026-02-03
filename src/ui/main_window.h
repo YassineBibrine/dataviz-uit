@@ -58,16 +58,11 @@ private slots:
     // --- Structure Selector slots ---
     void onStructureSelected(QString structureId);
     void onStructureRemoved(QString structureId);
-    void onClearInteractive();
-    void onSamplesCreated();  // NEW: Handle samples created
     
     // NEW: Code Generator slots
     void onShowCodeGenerator();
     void onStructureCreatedFromCode(QString structureId);
   
-    // NEW: Metrics Panel toggle slot
-    void onToggleMetricsPanel(bool show);
-
     // Tutorial slots
     void onTutorialCompleted();
     void onTutorialSkipped();

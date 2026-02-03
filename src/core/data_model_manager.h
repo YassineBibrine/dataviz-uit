@@ -103,9 +103,6 @@ public:
     void removeStructure(const std::string& structureId);
     void renameStructure(const std::string& structureId, const std::string& newName);
     
-    // Create sample structures
-    std::vector<std::string> createSampleStructures();
-    
     /**
      * @brief Get selected structure (legacy support)
      */

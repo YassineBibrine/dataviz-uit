@@ -188,7 +188,7 @@ void MainWindow::setupTutorial() {
         structureSelector,
         "Welcome to DataViz UIT!",
         "This is the Structure Manager where you can create, select, and manage your data structures.\n\n"
-        "Click 'Create Sample Structures' to get started quickly with pre-built examples!",
+        "Use '+ Create Structure' to build your own custom data structures!",
         "left"
     );
 
@@ -272,10 +272,6 @@ void MainWindow::connectSignals() {
         this, &MainWindow::onStructureSelected);
     connect(structureSelector, &StructureSelector::structureRemoved,
         this, &MainWindow::onStructureRemoved);
-    connect(structureSelector, &StructureSelector::clearInteractiveRequested,
-        this, &MainWindow::onClearInteractive);
-    connect(structureSelector, &StructureSelector::samplesCreated,
-        this, &MainWindow::onSamplesCreated);
 }
 
 void MainWindow::onStructureSelected(QString structureId) {
@@ -571,51 +567,13 @@ void MainWindow::executeAlgorithm(const std::string& algorithm) {
 void MainWindow::onStructureRemoved(QString structureId) {
     qDebug() << "Structure removed:" << structureId;
     if (visualizationPane) {
-        visualizationPane->reset();
+     visualizationPane->reset();
     }
 
     if (dataModelManager && dataModelManager->getAllStructures().empty()) {
         if (toolboxPanel) {
-            toolboxPanel->setVisible(false);
-        }
-    }
-}
-
-void MainWindow::onClearInteractive() {
-    if (visualizationPane && visualizationPane->getInteractionManager()) {
-        visualizationPane->getInteractionManager()->clearInteractive();
-        visualizationPane->clearNodeValues();
-        visualizationPane->refreshDisplay();
-        qDebug() << "Interactive canvas cleared";
-    }
-}
-
-void MainWindow::onSamplesCreated() {
-    if (dataModelManager) {
-        auto structures = dataModelManager->getAllStructures();
-        if (!structures.empty()) {
-          std::string firstId = structures[0].id;
-            dataModelManager->selectStructure(firstId);
-
-    QString structureType = QString::fromStdString(structures[0].type);
-            if (toolboxPanel) {
-       toolboxPanel->setVisible(true);
-        toolboxPanel->updateTools(structureType);
+    toolboxPanel->setVisible(false);
    }
-        if (controlPanel) {
-         controlPanel->updateAlgorithmList(structureType);
-        }
-
-  loadStructureIntoCanvas(firstId);
-
-            // **NEW**: Save session after creating samples
-       if (autoSaveEnabled) {
-          dataModelManager->saveSession();
-       qDebug() << "Session auto-saved after creating samples";
-            }
-
-            qDebug() << "Sample structures created, auto-selected:" << QString::fromStdString(firstId);
-        }
     }
 }
 
@@ -629,7 +587,7 @@ void MainWindow::onShowCodeGenerator() {
 void MainWindow::onStructureCreatedFromCode(QString structureId) {
     qDebug() << "Structure created from code:" << structureId;
 
-    if (structureSelector) {
+  if (structureSelector) {
       structureSelector->refreshStructureList();
   }
 
@@ -637,22 +595,22 @@ void MainWindow::onStructureCreatedFromCode(QString structureId) {
     if (dataModelManager) {
   dataModelManager->selectStructure(id);
 
-        auto structures = dataModelManager->getAllStructures();
-        for (const auto& meta : structures) {
+   auto structures = dataModelManager->getAllStructures();
+     for (const auto& meta : structures) {
    if (meta.id == id) {
-           QString structureType = QString::fromStdString(meta.type);
+   QString structureType = QString::fromStdString(meta.type);
 
-      if (toolboxPanel) {
+  if (toolboxPanel) {
         toolboxPanel->setVisible(true);
-      toolboxPanel->updateTools(structureType);
-        }
+   toolboxPanel->updateTools(structureType);
+    }
 
      if (controlPanel) {
      controlPanel->updateAlgorithmList(structureType);
  }
           break;
   }
-        }
+ }
 
   loadStructureIntoCanvas(id);
         
@@ -661,13 +619,6 @@ void MainWindow::onStructureCreatedFromCode(QString structureId) {
         dataModelManager->saveSession();
  qDebug() << "Session auto-saved after code structure creation";
       }
-    }
-}
-
-void MainWindow::onToggleMetricsPanel(bool show) {
-    if (metricsPanel) {
-        metricsPanel->setVisible(show);
-        qDebug() << "Metrics panel" << (show ? "shown" : "hidden");
     }
 }
 
@@ -715,13 +666,6 @@ void MainWindow::createMenuBar() {
     QAction* codeGenAction = toolsMenu->addAction("Code Generator && Parser...");
     codeGenAction->setToolTip("Generate C++ code from structures or parse code to create structures");
     connect(codeGenAction, &QAction::triggered, this, &MainWindow::onShowCodeGenerator);
-
-    toolsMenu->addSeparator();
-    toggleMetricsAction = toolsMenu->addAction("Show Algorithm Metrics");
-    toggleMetricsAction->setCheckable(true);
-    toggleMetricsAction->setChecked(false);
-    toggleMetricsAction->setToolTip("Toggle algorithm metrics panel visibility");
-    connect(toggleMetricsAction, &QAction::toggled, this, &MainWindow::onToggleMetricsPanel);
 
     QMenu* helpMenu = menuBar()->addMenu("Help");
     showTutorialAction = helpMenu->addAction("Show Tutorial");
@@ -1060,7 +1004,7 @@ void MainWindow::layoutTreeHierarchically(
     }
         if (node->right) {
   auto it = nodePtrToId.find(node->right);
-             if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
+      if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
       }
      }
         
