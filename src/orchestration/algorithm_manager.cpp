@@ -55,8 +55,8 @@ std::vector<std::string> AlgorithmManager::getAlgorithmNames(const std::string& 
     if (category == "Sorting") return { "BubbleSort", "QuickSort", "MergeSort", "InsertionSort", "SelectionSort" };
     if (category == "Filtering") return { "RangeFilter", "RemoveDuplicates" };
     if (category == "Transform") return { "Normalize", "Reverse", "Map" };
-    if (category == "Graph") return { "BFS", "DFS", "Dijkstra", "DetectCycle", "TopologicalSort" };
-    if (category == "Tree") return { "InOrder", "PreOrder", "PostOrder", "LevelOrder", "FindHeight", "FindMin", "FindMax" };
+    if (category == "Graph") return { "BFS", "DFS", "Dijkstra", };
+    if (category == "Tree") return { "InOrder", "PreOrder", "PostOrder" };
     return {};
 }
 

@@ -22,18 +22,12 @@
 #include "../algorithms/tree_inorder.h"
 #include "../algorithms/tree_preorder.h"
 #include "../algorithms/tree_postorder.h"
-#include "../algorithms/tree_levelorder.h"
-#include "../algorithms/tree_find_height.h"
-#include "../algorithms/tree_find_min.h"
-#include "../algorithms/tree_find_max.h"
 #include "../algorithms/insertion_sort.h"
 #include "../algorithms/selection_sort.h"
 #include "../algorithms/remove_duplicates.h"
 #include "../algorithms/reverse.h"
 #include "../algorithms/map_transform.h"
 #include "../algorithms/graph_algorithms.h"
-#include "../algorithms/graph_detect_cycle.h"
-#include "../algorithms/graph_topological_sort.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -462,18 +456,6 @@ void MainWindow::executeAlgorithm(const std::string& algorithm) {
                 else if (algorithm == "PostOrder") {
                     algo = std::make_unique<TreePostOrder>(treeStruct);
                 }
-                else if (algorithm == "LevelOrder") {
-                    algo = std::make_unique<TreeLevelOrder>(treeStruct);
-                }
-                else if (algorithm == "FindHeight") {
-                    algo = std::make_unique<TreeFindHeight>(treeStruct);
-                }
-                else if (algorithm == "FindMin") {
-                    algo = std::make_unique<TreeFindMin>(treeStruct);
-                }
-                else if (algorithm == "FindMax") {
-                    algo = std::make_unique<TreeFindMax>(treeStruct);
-                }
             }
         }
         // For graph algorithms, cast to GraphStructure
@@ -487,12 +469,6 @@ void MainWindow::executeAlgorithm(const std::string& algorithm) {
                 }
                 else if (algorithm == "Dijkstra") {
                     algo = std::make_unique<DijkstraAlgorithm>(graphStruct);
-                }
-                else if (algorithm == "DetectCycle") {
-                    algo = std::make_unique<GraphDetectCycle>(graphStruct);
-                }
-                else if (algorithm == "TopologicalSort") {
-                    algo = std::make_unique<GraphTopologicalSort>(graphStruct);
                 }
             }
         }
