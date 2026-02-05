@@ -26,7 +26,6 @@
 #include "../algorithms/selection_sort.h"
 #include "../algorithms/remove_duplicates.h"
 #include "../algorithms/reverse.h"
-#include "../algorithms/map_transform.h"
 #include "../algorithms/graph_algorithms.h"
 
 #include <QVBoxLayout>
@@ -485,9 +484,6 @@ void MainWindow::executeAlgorithm(const std::string& algorithm) {
             }
             else if (algorithm == "Reverse") {
                 algo = std::make_unique<Reverse>(targetStructure);
-            }
-            else if (algorithm == "Map") {
-                algo = std::make_unique<MapTransform>(targetStructure);
             }
             else {
                 // Fall back to factory creation for other algorithms
