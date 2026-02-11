@@ -142,7 +142,7 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
         std::string type = "CIRCLE";
         if (currentFrame.nodeShapes.count(id)) type = currentFrame.nodeShapes.at(id);
 
-        // Couleur de base
+        // ⭐ FIX: Couleur de base - Always use frame color if specified, otherwise default blue
         QColor fillColor = QColor("#3498db"); // Bleu par défaut
         if (currentFrame.nodeColors.count(id)) {
             QString cName = QString::fromStdString(currentFrame.nodeColors.at(id));
@@ -153,8 +153,15 @@ void VisualizationRenderer::paintEvent(QPaintEvent*) {
             else if (cName == "orange") fillColor = QColor("#e67e22");
             else if (cName == "blue") fillColor = QColor("#3498db");
             else if (cName == "cyan") fillColor = QColor("#1abc9c");
-            else if (cName == "purple") fillColor = QColor("#9b59b6");
+            else if (cName == "purple") fillColor = QColor("#9b59b6");  // ⭐ For root highlighting
             else if (cName == "lightgray") fillColor = QColor("#bdc3c7");
+            // ⭐ Add more color mappings for graph algorithm colors
+            else if (cName == "#4CAF50") fillColor = QColor("#4CAF50"); // Green
+            else if (cName == "#FF9800") fillColor = QColor("#FF9800"); // Orange
+            else if (cName == "#9E9E9E") fillColor = QColor("#9E9E9E"); // Gray
+            else if (cName == "#2196F3") fillColor = QColor("#2196F3"); // Blue
+            else if (cName == "#00FF00") fillColor = QColor("#00FF00"); // Bright Green
+            else if (cName == "#FF6B6B") fillColor = QColor("#FF6B6B"); // Red
         }
 
         // --- DESSIN ARRAY (CARRÉ MÉMOIRE) ---

@@ -41,6 +41,8 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;  // ? NEW: Position color legend on resize
 
 private slots:
     void onPlayClicked();
@@ -54,6 +56,7 @@ private slots:
     
     // NEW: Animation frame handling
     void onFrameReady(const AnimationFrame& frame);
+    void onAnimationComplete();  // ? NEW: Handle animation completion
     
     // --- Structure Selector slots ---
     void onStructureSelected(QString structureId);
@@ -123,5 +126,4 @@ private:
     // Tutorial methods
     void setupTutorial();
     void checkFirstLaunch();
-    void showEvent(QShowEvent* event) override;
 };

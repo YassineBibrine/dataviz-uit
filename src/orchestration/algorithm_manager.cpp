@@ -52,23 +52,26 @@ std::vector<std::string> AlgorithmManager::getCategories() const {
 }
 
 std::vector<std::string> AlgorithmManager::getAlgorithmNames(const std::string& category) const {
-    if (category == "Sorting") return { "InsertionSort", "SelectionSort" };
+    if (category == "Sorting") return { "InsertionSort", "SelectionSort", "BubbleSort" };
     if (category == "Filtering") return { "RemoveDuplicates" };
-    if (category == "Transform") return { "Reverse" };
-    if (category == "Graph") return { "BFS", "DFS", "Dijkstra", };
+    if (category == "Transform") return { "Reverse", "MapTransform" };
+    if (category == "Graph") return { "BFS", "DFS", "Dijkstra" };
     if (category == "Tree") return { "InOrder", "PreOrder", "PostOrder" };
     return {};
 }
 
 std::string AlgorithmManager::getCategoryForAlgorithm(const std::string& algorithm) const {
     // Sorting algorithms
-    if (algorithm == "InsertionSort" || algorithm == "SelectionSort") {
+    if (algorithm == "InsertionSort" || algorithm == "SelectionSort" || algorithm == "BubbleSort") {
         return "Sorting";
     }
     // Transform algorithms
-    if (algorithm == "Normalize" || algorithm == "Transform" ||
-        algorithm == "RemoveDuplicates" || algorithm == "Reverse") {
+    if (algorithm == "Reverse" || algorithm == "MapTransform") {
         return "Transform";
+    }
+    // Filtering algorithms
+    if (algorithm == "RemoveDuplicates") {
+        return "Filtering";
     }
     // Graph algorithms
     if (algorithm == "BFS" || algorithm == "DFS" || algorithm == "Dijkstra") {

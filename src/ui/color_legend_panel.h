@@ -3,9 +3,15 @@
 #include <QWidget>
 #include <QLabel>
 #include <QVBoxLayout>
-#include <QScrollArea>
 #include <string>
+#include <map>
 
+/**
+ * @brief Compact color legend overlay shown on bottom-left of visualization canvas
+ *
+ * Displays a simplified color legend during algorithm animation with just
+ * the essential color meanings in a compact, semi-transparent overlay.
+ */
 class ColorLegendPanel : public QWidget {
     Q_OBJECT
 
@@ -13,27 +19,31 @@ public:
     explicit ColorLegendPanel(QWidget* parent = nullptr);
     ~ColorLegendPanel() override = default;
 
+    /**
+     * @brief Set the algorithm and display its color legend
+     * @param algorithmName Name of the algorithm (e.g., "InsertionSort")
+     */
     void setAlgorithmLegend(const std::string& algorithmName);
+
+    /**
+     * @brief Clear and hide the legend
+     */
     void clearLegend();
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     QVBoxLayout* mainLayout;
-    QScrollArea* scrollArea;
-    QWidget* contentWidget;
     QLabel* titleLabel;
-    QLabel* descriptionLabel;
-    QVBoxLayout* legendLayout;
 
-    void createInsertionSortLegend();
-void createSelectionSortLegend();
-    void createReverseLegend();
-  void createRemoveDuplicatesLegend();
-    void createInOrderLegend();
-    void createPreOrderLegend();
-    void createPostOrderLegend();
+    // Store color meanings for current algorithm
+    std::vector<std::pair<QString, QString>> colorMeanings;  // {color, meaning}
 
-    void clearLegendContent();
-    void addColorRow(const QString& colorCode, const QString& colorName, const QString& meaning);
-    void addDescription(const QString& text);
-void addOperationExample(const QString& example);
+    void setupSortingColors();
+    void setupTreeTraversalColors();
+    void setupGraphColors();
+
+    void addColorMeaning(const QString& colorCode, const QString& meaning);
+    void clearColorMeanings();
 };

@@ -24,8 +24,10 @@
 #include "../algorithms/tree_postorder.h"
 #include "../algorithms/insertion_sort.h"
 #include "../algorithms/selection_sort.h"
+#include "../algorithms/bubble_sort.h"
 #include "../algorithms/remove_duplicates.h"
 #include "../algorithms/reverse.h"
+#include "../algorithms/map_transform.h"
 #include "../algorithms/graph_algorithms.h"
 
 #include <QVBoxLayout>
@@ -80,6 +82,10 @@ MainWindow::MainWindow(QWidget* parent)
     // NEW: Connect playback controller to visualization pane
     connect(playbackController.get(), &PlaybackController::frameReady,
         this, &MainWindow::onFrameReady);
+    
+  // ⭐ NEW: Connect animation completion to restore UI
+    connect(playbackController.get(), &PlaybackController::animationComplete,
+this, &MainWindow::onAnimationComplete);
 
     setupUI();
     connectSignals();
@@ -127,11 +133,16 @@ void MainWindow::setupUI() {
     visualizationPane->setObjectName("borderedPanel");
     contentLayout->addWidget(visualizationPane.get(), 1);
 
+    // ⭐ NEW: Color Legend as overlay on visualization pane (bottom-left)
+    colorLegendPanel = new ColorLegendPanel(visualizationPane.get());
+    colorLegendPanel->hide();
+  // Position will be set dynamically in resizeEvent
+
     // Right: Scrollable Panel
     QScrollArea* rightScrollArea = new QScrollArea(this);
     rightScrollArea->setWidgetResizable(true);
     rightScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    rightScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+rightScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     rightScrollArea->setFrameShape(QFrame::NoFrame);
     rightScrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
 
@@ -140,7 +151,7 @@ void MainWindow::setupUI() {
     rightLayout->setContentsMargins(5, 5, 10, 5);
     rightLayout->setSpacing(15);
 
-    // Structure Selector
+ // Structure Selector
     structureSelector = new StructureSelector(this);
     structureSelector->setDataModelManager(dataModelManager.get());
     structureSelector->setObjectName("borderedPanel");
@@ -150,21 +161,15 @@ void MainWindow::setupUI() {
     controlPanel->setObjectName("borderedPanel");
     rightLayout->addWidget(controlPanel.get());
 
-    // Color Legend Panel - Shows during animation instead of toolbox
-    colorLegendPanel = new ColorLegendPanel(this);
-    colorLegendPanel->setObjectName("borderedPanel");
-    colorLegendPanel->setVisible(false);  // Hidden initially
-    rightLayout->addWidget(colorLegendPanel);
-
     // Metrics Panel - HIDDEN BY DEFAULT
-    metricsPanel->setObjectName("borderedPanel");
+  metricsPanel->setObjectName("borderedPanel");
     metricsPanel->setVisible(false);  // Hidden by default
     rightLayout->addWidget(metricsPanel.get());
     rightLayout->addStretch();
 
     rightScrollArea->setWidget(rightContainer);
     rightScrollArea->setFixedWidth(400);
-    contentLayout->addWidget(rightScrollArea);
+  contentLayout->addWidget(rightScrollArea);
 
     mainLayout->addLayout(contentLayout, 1);
 
@@ -248,6 +253,29 @@ void MainWindow::showEvent(QShowEvent* event) {
         firstLaunchChecked = true;
         // Delay slightly to ensure window is fully visible
         QTimer::singleShot(300, this, &MainWindow::checkFirstLaunch);
+    }
+    
+    // Position color legend overlay
+    if (colorLegendPanel && visualizationPane) {
+        int x = 15;  // 15px from left edge
+      int y = visualizationPane->height() - colorLegendPanel->height() - 15;  // 15px from bottom
+        colorLegendPanel->move(x, y);
+    }
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+    
+    // ⭐ NEW: Reposition color legend overlay when window resizes
+    if (colorLegendPanel && visualizationPane) {
+   QTimer::singleShot(0, this, [this]() {
+       if (colorLegendPanel && visualizationPane) {
+     int x = 15;  // 15px from left edge
+         int y = visualizationPane->height() - colorLegendPanel->height() - 15;  // 15px from bottom
+        colorLegendPanel->move(x, y);
+  colorLegendPanel->raise();  // Ensure it stays on top
+   }
+        });
     }
 }
 
@@ -425,6 +453,20 @@ void MainWindow::onFrameReady(const AnimationFrame& frame) {
     }
 }
 
+// NEW: Handle animation completion
+void MainWindow::onAnimationComplete() {
+    controlPanel->setPlayingState(false);
+    isAnimationPlaying = false;  // Clear animation state on complete
+
+    // Show toolbox and hide color legend after animation
+    if (toolboxPanel) {
+        toolboxPanel->setVisible(true);
+    }
+    if (colorLegendPanel) {
+        colorLegendPanel->setVisible(false);
+    }
+}
+
 void MainWindow::executeAlgorithm(const std::string& algorithm) {
     DataStructure* targetStructure = dataModelManager->getSelectedStructure();
     if (!targetStructure) {
@@ -479,15 +521,21 @@ void MainWindow::executeAlgorithm(const std::string& algorithm) {
             else if (algorithm == "SelectionSort") {
                 algo = std::make_unique<SelectionSort>(targetStructure);
             }
-            else if (algorithm == "RemoveDuplicates") {
+            else if (algorithm == "BubbleSort") {
+                algo = std::make_unique<BubbleSort>(targetStructure);
+     }
+    else if (algorithm == "RemoveDuplicates") {
                 algo = std::make_unique<RemoveDuplicates>(targetStructure);
             }
             else if (algorithm == "Reverse") {
                 algo = std::make_unique<Reverse>(targetStructure);
             }
-            else {
-                // Fall back to factory creation for other algorithms
-                algo = algoManager.createAlgorithm(category, algorithm);
+       else if (algorithm == "MapTransform") {
+        algo = std::make_unique<MapTransform>(targetStructure);
+            }
+    else {
+       // Fall back to factory creation for other algorithms
+    algo = algoManager.createAlgorithm(category, algorithm);
             }
         }
 
@@ -724,64 +772,80 @@ void MainWindow::loadStructureIntoCanvas(const std::string& structureId) {
 
     if (structureType == "Array") {
         if (auto* arrayStruct = dynamic_cast<ArrayStructure*>(structure)) {
-            const auto& arrayData = arrayStruct->getData();
-    double startX = 200.0;
-        double y = 300.0;
-       double spacing = 50.0;
+      const auto& arrayData = arrayStruct->getData();
+            double startX = 200.0;
+  double y = 300.0;
+  double spacing = 50.0;
 
-     for (size_t i = 0; i < nodes.size(); ++i) {
-            double x = startX + i * spacing;
+         qDebug() << "⭐ Loading Array with" << nodes.size() << "nodes";
+   for (size_t i = 0; i < nodes.size(); ++i) {
+      double x = startX + i * spacing;
 
-          double savedX, savedY;
-          if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
-         x = savedX;
-   y = savedY;
-           }
-
-                std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-    oldToNewId[nodes[i].id] = newId;
-
-        if (i < arrayData.size()) {
-               interactionMgr->updateNodeValue(newId, arrayData[i]);
-     }
-     }
-        }
+            double savedX, savedY;
+       if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
+          x = savedX;
+             y = savedY;
+  qDebug() << "  Using saved position for" << QString::fromStdString(nodes[i].id) 
+ << "at" << x << "," << y;
     }
+
+        std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
+      oldToNewId[nodes[i].id] = newId;
+             qDebug() << "  Created canvas node" << QString::fromStdString(newId) 
+         << "mapped to" << QString::fromStdString(nodes[i].id)
+        << "at position" << x << "," << y;
+
+    if (i < arrayData.size()) {
+       interactionMgr->updateNodeValue(newId, arrayData[i]);
+      qDebug() << "  Set value:" << arrayData[i];
+       }
+ }
+        }
+  }
     else if (structureType == "List" || structureType == "LinkedList") {
-        if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
-            std::vector<int> listValues;
+ if (auto* listStruct = dynamic_cast<ListStructure*>(structure)) {
+      std::vector<int> listValues;
             const ListNode* current = listStruct->getHead();
-            while (current != nullptr) {
-      listValues.push_back(current->value);
+    while (current != nullptr) {
+  listValues.push_back(current->value);
      current = current->next;
     }
 
+       qDebug() << "⭐ Loading List with" << nodes.size() << "nodes";
    double startX = 150.0;
        double y = 300.0;
-            double spacing = 100.0;
+         double spacing = 100.0;
 
    std::vector<std::string> newNodeIds;
-          for (size_t i = 0; i < nodes.size(); ++i) {
+  for (size_t i = 0; i < nodes.size(); ++i) {
         double x = startX + i * spacing;
 
-                double savedX, savedY;
+     double savedX, savedY;
      if (structure->getNodePosition(nodes[i].id, savedX, savedY)) {
          x = savedX;
-       y = savedY;
+    y = savedY;
+        qDebug() << "  Using saved position for" << QString::fromStdString(nodes[i].id) 
+       << "at" << x << "," << y;
      }
 
   std::string newId = interactionMgr->addNodeWithMapping(x, y, shape, nodes[i].id);
-           oldToNewId[nodes[i].id] = newId;
+   oldToNewId[nodes[i].id] = newId;
  newNodeIds.push_back(newId);
+       qDebug() << "  Created canvas node" << QString::fromStdString(newId) 
+          << "mapped to" << QString::fromStdString(nodes[i].id)
+      << "at position" << x << "," << y;
 
      if (i < listValues.size()) {
          interactionMgr->updateNodeValue(newId, listValues[i]);
+        qDebug() << "  Set value:" << listValues[i];
      }
-            }
+       }
 
-            for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
+        for (size_t i = 0; i + 1 < newNodeIds.size(); ++i) {
     interactionMgr->addEdge(newNodeIds[i], newNodeIds[i + 1]);
-            }
+   qDebug() << "  Added edge:" << QString::fromStdString(newNodeIds[i]) 
+          << "->" << QString::fromStdString(newNodeIds[i + 1]);
+          }
         }
     }
     else {
@@ -927,9 +991,9 @@ void MainWindow::layoutTreeHierarchically(
 
     if (!treeStruct) return;
     TreeNode* root = treeStruct->getRoot();
-    if (!root) {
-        qDebug() << "layoutTreeHierarchically: NO ROOT!";
-        return;
+if (!root) {
+      qDebug() << "layoutTreeHierarchically: NO ROOT!";
+ return;
     }
 
     // **FIX 1**: Check if structure already has saved positions
@@ -937,96 +1001,121 @@ void MainWindow::layoutTreeHierarchically(
     bool hasSavedPositions = structure && structure->hasAnyPositions();
   
     if (hasSavedPositions) {
-        qDebug() << "Tree has saved positions - using them instead of recalculating layout";
+    qDebug() << "Tree has saved positions - using them instead of recalculating layout";
   
         // **FIXED**: Use BFS to preserve tree structure, NOT inorder
         std::map<const TreeNode*, std::string> nodePtrToId;
         std::map<std::string, std::pair<std::string, std::string>> edgesMap;
         
-        // BFS traversal to assign IDs (preserves tree level order, not value order)
-        std::queue<TreeNode*> bfsQueue;
+        // ⭐ KEY FIX: BFS traversal to assign IDs in SAME ORDER as TreeStructure::collectNodes
+        // This ensures tree_0 (root) → n1, tree_1 → n2, etc.
+   std::queue<TreeNode*> bfsQueue;
         bfsQueue.push(root);
-        int counter = 0;
+   int bfsIndex = 0;
         
-      while (!bfsQueue.empty()) {
-            TreeNode* node = bfsQueue.front();
-        bfsQueue.pop();
-            if (!node) continue;
-         
-            std::string id = "tree_" + std::to_string(counter++);
-            nodePtrToId[node] = id;
-    
-      if (node->left) {
-                edgesMap[id].first = "";
-   bfsQueue.push(node->left);
-          }
-            if (node->right) {
-          edgesMap[id].second = "";
-     bfsQueue.push(node->right);
+        while (!bfsQueue.empty()) {
+     TreeNode* node = bfsQueue.front();
+  bfsQueue.pop();
+
+          if (!node) continue;
+      
+      std::string treeStructureId = "tree_" + std::to_string(bfsIndex);
+            nodePtrToId[node] = treeStructureId;
+            
+        // Add children to queue in LEFT-RIGHT order (same as collectNodes)
+     if (node->left) {
+  edgesMap[treeStructureId].first = "";  // Will fill later
+         bfsQueue.push(node->left);
    }
-        }
-        
-        // Fill left/right ids in edgesMap
-      for (const auto& p : nodePtrToId) {
-            const TreeNode* node = p.first;
-            std::string id = p.second;
- if (node->left) {
-      auto it = nodePtrToId.find(node->left);
-        if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
+            if (node->right) {
+    edgesMap[treeStructureId].second = "";  // Will fill later
+    bfsQueue.push(node->right);
     }
-        if (node->right) {
-  auto it = nodePtrToId.find(node->right);
-      if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
-      }
-     }
-        
-        // Create nodes using SAVED positions and VALUES from tree nodes
-    for (const auto& p : nodePtrToId) {
-            const TreeNode* node = p.first;
-       const std::string id = p.second;
-        
-            double savedX, savedY;
-            if (structure->getNodePosition(id, savedX, savedY)) {
-          // Use saved position
-            std::string newId = interactionMgr->addNodeWithMapping(savedX, savedY, "CIRCLE", id);
-oldToNewId[id] = newId;
-         
-       // Use the ACTUAL tree node value (not reordered)
-          try {
-          interactionMgr->updateNodeValue(newId, node->value);
-          }
-             catch (...) {
-        interactionMgr->updateNodeValue(newId, 0);
-  }
-            }
+            
+    bfsIndex++;
         }
+        
+        // Fill left/right child IDs in edgesMap
+        for (const auto& p : nodePtrToId) {
+     const TreeNode* node = p.first;
+     std::string parentId = p.second;
+            
+ if (node->left) {
+          auto it = nodePtrToId.find(node->left);
+           if (it != nodePtrToId.end()) edgesMap[parentId].first = it->second;
+   }
+  if (node->right) {
+        auto it = nodePtrToId.find(node->right);
+  if (it != nodePtrToId.end()) edgesMap[parentId].second = it->second;
+        }
+        }
+        
+        // ⭐ KEY FIX: Create canvas nodes in BFS ORDER
+  // This ensures n1, n2, n3... match tree_0, tree_1, tree_2... exactly
+  std::vector<std::pair<const TreeNode*, std::string>> nodesInBFSOrder;
+        for (const auto& p : nodePtrToId) {
+            nodesInBFSOrder.push_back(p);
+        }
+        
+        // Sort by tree structure ID to maintain BFS order
+        std::sort(nodesInBFSOrder.begin(), nodesInBFSOrder.end(),
+ [](const auto& a, const auto& b) {
+         // Extract index from "tree_X" and sort by it
+         int idxA = std::stoi(a.second.substr(5));
+              int idxB = std::stoi(b.second.substr(5));
+                return idxA < idxB;
+         });
+        
+   // Create nodes using SAVED positions and VALUES from tree nodes
+        // ⭐ CRITICAL: addNodeWithMapping is called in BFS order!
+        for (const auto& [node, treeId] : nodesInBFSOrder) {
+       double savedX, savedY;
+if (structure->getNodePosition(treeId, savedX, savedY)) {
+       // Use saved position
+          // ⭐ This will assign n1, n2, n3... in the correct BFS order
+            std::string canvasId = interactionMgr->addNodeWithMapping(savedX, savedY, "CIRCLE", treeId);
+   oldToNewId[treeId] = canvasId;
+         
+            // Use the ACTUAL tree node value (not reordered)
+    try {
+        interactionMgr->updateNodeValue(canvasId, node->value);
+      qDebug() << "Loaded tree node:" << QString::fromStdString(treeId) 
+        << "→ canvas:" << QString::fromStdString(canvasId) 
+              << "value:" << node->value;
+    } catch (...) {
+        interactionMgr->updateNodeValue(canvasId, 0);
+        }
+            }
+    }
       
  // **FIX**: Restore custom edges if they exist, otherwise use tree structure edges
-      if (structure->hasCustomEdges()) {
-            qDebug() << "Restoring" << structure->getCustomEdges().size() << "custom edges";
-    const auto& customEdges = structure->getCustomEdges();
-         for (const auto& edge : customEdges) {
+        if (structure->hasCustomEdges()) {
+ qDebug() << "Restoring" << structure->getCustomEdges().size() << "custom edges";
+            const auto& customEdges = structure->getCustomEdges();
+      for (const auto& edge : customEdges) {
          if (oldToNewId.count(edge.from) && oldToNewId.count(edge.to)) {
-    interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
-             qDebug() << "Restored edge:" << QString::fromStdString(edge.from)
-            << "->" << QString::fromStdString(edge.to);
+       interactionMgr->addEdge(oldToNewId[edge.from], oldToNewId[edge.to]);
+        qDebug() << "Restored edge:" << QString::fromStdString(edge.from)
+         << "->" << QString::fromStdString(edge.to);
+         }
   }
-        }
-        }
-        else {
-      // No custom edges - use tree structure edges
-       for (const auto& kv : edgesMap) {
-             const std::string parentId = kv.first;
-     const std::string leftId = kv.second.first;
+        } else {
+     // No custom edges - use tree structure edges
+         for (const auto& kv : edgesMap) {
+                const std::string parentId = kv.first;
+      const std::string leftId = kv.second.first;
      const std::string rightId = kv.second.second;
-  if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
-        interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
-    }
-       if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
-                interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
+   
+          if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
+            interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
+      }
+          if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
+            interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
+             }
    }
-            }
         }
+        
+        qDebug() << "⭐ ROOT (tree_0) should be mapped to: n1";
    
         return; // Done - positions already saved
     }
@@ -1041,69 +1130,73 @@ oldToNewId[id] = newId;
     // This preserves tree structure without sorting by value
     std::map<const TreeNode*, std::string> nodePtrToId;
     std::map<std::string, std::pair<double, double>> positions;
-    std::map<std::string, std::pair<std::string, std::string>> edgesMap;
+  std::map<std::string, std::pair<std::string, std::string>> edgesMap;
 
-    // BFS to assign indices (preserves tree structure)
+    // ⭐ KEY FIX: BFS to assign indices (preserves tree structure)
+    // This MUST match the order used in TreeStructure::collectNodes
     std::queue<std::pair<TreeNode*, int>> bfsQueue;
-  bfsQueue.push({root, 0});
-    int counter = 0;
+    bfsQueue.push({root, 0});
+  int bfsIndex = 0;
     std::map<TreeNode*, int> nodeDepths;
     
     while (!bfsQueue.empty()) {
         auto [node, depth] = bfsQueue.front();
-      bfsQueue.pop();
-     if (!node) continue;
+        bfsQueue.pop();
+        if (!node) continue;
     
-    std::string id = "tree_" + std::to_string(counter++);
-        nodePtrToId[node] = id;
-        nodeDepths[node] = depth;
+     std::string treeStructureId = "tree_" + std::to_string(bfsIndex);
+        nodePtrToId[node] = treeStructureId;
+    nodeDepths[node] = depth;
         
         // Track edges
-  if (node->left) {
-            edgesMap[id].first = "";
-     bfsQueue.push({node->left, depth + 1});
-        }
+      if (node->left) {
+       edgesMap[treeStructureId].first = "";
+      bfsQueue.push({node->left, depth + 1});
+      }
         if (node->right) {
-       edgesMap[id].second = "";
-      bfsQueue.push({node->right, depth + 1});
-   }
-    }
+ edgesMap[treeStructureId].second = "";
+       bfsQueue.push({node->right, depth + 1});
+        }
+        
+      bfsIndex++;
+  }
 
     // Now calculate positions using inorder for X-coordinates (visual layout)
     // but keep the BFS IDs we already assigned
-    counter = 0;
+    int inorderCounter = 0;
     std::function<void(TreeNode*, int)> assignPositions = [&](TreeNode* node, int depth) {
         if (!node) return;
-     assignPositions(node->left, depth + 1);
-        
-        std::string id = nodePtrToId[node];
- double x = static_cast<double>(counter++) * HORIZONTAL_SPACING;
-        double y = START_Y + depth * VERTICAL_SPACING;
-        positions[id] = { x, y };
+        assignPositions(node->left, depth + 1);
+     
+        std::string treeStructureId = nodePtrToId[node];
+        double x = static_cast<double>(inorderCounter++) * HORIZONTAL_SPACING;
+  double y = START_Y + depth * VERTICAL_SPACING;
+        positions[treeStructureId] = { x, y };
         
         assignPositions(node->right, depth + 1);
-    };
+  };
     
     assignPositions(root, 0);
 
     // Fill left/right ids in edgesMap
     for (const auto& p : nodePtrToId) {
-        const TreeNode* node = p.first;
-        std::string id = p.second;
-   if (node->left) {
-     auto it = nodePtrToId.find(node->left);
-     if (it != nodePtrToId.end()) edgesMap[id].first = it->second;
+   const TreeNode* node = p.first;
+        std::string parentId = p.second;
+        
+    if (node->left) {
+         auto it = nodePtrToId.find(node->left);
+       if (it != nodePtrToId.end()) edgesMap[parentId].first = it->second;
       }
-            if (node->right) {
-  auto it = nodePtrToId.find(node->right);
-      if (it != nodePtrToId.end()) edgesMap[id].second = it->second;
+     if (node->right) {
+     auto it = nodePtrToId.find(node->right);
+       if (it != nodePtrToId.end()) edgesMap[parentId].second = it->second;
         }
     }
 
     // **FIX 3**: Center the tree based on ROOT position, not bounding box
     // Find the root node ID and its X position
-    std::string rootId = nodePtrToId[root];
-    double rootX = positions[rootId].first;
+    std::string rootTreeId = nodePtrToId[root];
+    double rootX = positions[rootTreeId].first;
     
     // We want the root to be at a fixed center position (e.g., 400.0)
     const double TARGET_CENTER_X = 400.0;
@@ -1112,79 +1205,100 @@ oldToNewId[id] = newId;
     // Shift all nodes so root is centered
     for (auto& kv : positions) {
         kv.second.first += shiftX;
-    }
-
-    // Create nodes on canvas using positions and set values from tree nodes
-    for (const auto& p : nodePtrToId) {
-        const TreeNode* node = p.first;
-        const std::string id = p.second;
-        auto posIt = positions.find(id);
-        double x = TARGET_CENTER_X;
-        double y = START_Y;
-        if (posIt != positions.end()) { 
-     x = posIt->second.first; 
-            y = posIt->second.second; 
 }
 
-        std::string newId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", id);
-     oldToNewId[id] = newId;
-        try {
-   interactionMgr->updateNodeValue(newId, node->value);
+    // ⭐ KEY FIX: Create nodes in BFS ORDER (sorted by tree_X index)
+    // This ensures canvas IDs n1, n2, n3... match tree_0, tree_1, tree_2...
+    std::vector<std::pair<const TreeNode*, std::string>> nodesInBFSOrder;
+    for (const auto& p : nodePtrToId) {
+        nodesInBFSOrder.push_back(p);
+    }
+    
+// Sort by tree structure ID to maintain BFS order
+    std::sort(nodesInBFSOrder.begin(), nodesInBFSOrder.end(),
+   [](const auto& a, const auto& b) {
+            // Extract index from "tree_X" and sort by it
+          int idxA = std::stoi(a.second.substr(5));
+            int idxB = std::stoi(b.second.substr(5));
+            return idxA < idxB;
+        });
+
+    // Create nodes on canvas using positions and set values from tree nodes
+    // ⭐ CRITICAL: addNodeWithMapping is called in BFS order (tree_0 first)!
+    for (const auto& [node, treeId] : nodesInBFSOrder) {
+        auto posIt = positions.find(treeId);
+        double x = TARGET_CENTER_X;
+  double y = START_Y;
+        if (posIt != positions.end()) { 
+            x = posIt->second.first; 
+     y = posIt->second.second; 
         }
-        catch (...) {
- interactionMgr->updateNodeValue(newId, 0);
- }
+
+   // ⭐ This will assign n1, n2, n3... in BFS order
+        std::string canvasId = interactionMgr->addNodeWithMapping(x, y, "CIRCLE", treeId);
+   oldToNewId[treeId] = canvasId;
+        
+        try {
+         interactionMgr->updateNodeValue(canvasId, node->value);
+       qDebug() << "Created tree node:" << QString::fromStdString(treeId) 
+      << "→ canvas:" << QString::fromStdString(canvasId) 
+  << "value:" << node->value;
+  } catch (...) {
+        interactionMgr->updateNodeValue(canvasId, 0);
+      }
     }
 
-  // Add edges according to left/right mapping
-    for (const auto& kv : edgesMap) {
-        const std::string parentId = kv.first;
-  const std::string leftId = kv.second.first;
-        const std::string rightId = kv.second.second;
+    // Add edges according to left/right mapping
+ for (const auto& kv : edgesMap) {
+     const std::string parentId = kv.first;
+        const std::string leftId = kv.second.first;
+     const std::string rightId = kv.second.second;
+        
         if (!leftId.empty() && oldToNewId.count(parentId) && oldToNewId.count(leftId)) {
- interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
-        }
-      if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
-    interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
+   interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[leftId]);
+  }
+        if (!rightId.empty() && oldToNewId.count(parentId) && oldToNewId.count(rightId)) {
+   interactionMgr->addEdge(oldToNewId[parentId], oldToNewId[rightId]);
         }
     }
 
     // Save positions into the structure for persistence
     structure->clearNodePositions();
-  for (const auto& kv : positions) {
-        const std::string& treeId = kv.first;
+    for (const auto& kv : positions) {
+ const std::string& treeId = kv.first;
         double x = kv.second.first;
         double y = kv.second.second;
-        structure->setNodePosition(treeId, x, y);
+  structure->setNodePosition(treeId, x, y);
     }
-
+    
+    qDebug() << "⭐ ROOT (tree_0) mapped to: n1";
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
     if (autoSaveEnabled) {
-     // **IMPROVED**: Save current structure before saving session
-    std::string currentId = dataModelManager->getSelectedStructureId();
+        // **IMPROVED**: Save current structure before saving session
+        std::string currentId = dataModelManager->getSelectedStructureId();
   if (!currentId.empty()) {
-     auto* interactionMgr = visualizationPane->getInteractionManager();
-  if (interactionMgr && interactionMgr->isSyncEnabled()) {
-        qDebug() << "Saving current structure before app close:" << QString::fromStdString(currentId);
-  interactionMgr->saveToCurrentStructure();
-   interactionMgr->saveNodePositionsToStructure();
-      }
+            auto* interactionMgr = visualizationPane->getInteractionManager();
+            if (interactionMgr && interactionMgr->isSyncEnabled()) {
+     qDebug() << "Saving current structure before app close:" << QString::fromStdString(currentId);
+      interactionMgr->saveToCurrentStructure();
+       interactionMgr->saveNodePositionsToStructure();
    }
-     
-   // Save complete session with all structures
-      if (dataModelManager) {
-    dataModelManager->saveSession();
- qDebug() << "Session saved on exit (auto-save enabled)";
         }
+   
+        // Save complete session with all structures
+        if (dataModelManager) {
+  dataModelManager->saveSession();
+            qDebug() << "Session saved on exit (auto-save enabled)";
+ }
     }
     else {
-   // **NEW**: Clear session file when auto-save is disabled
-      if (dataModelManager) {
-   SessionManager::clearSession();
-      qDebug() << "Session cleared on exit (auto-save disabled)";
-    }
+     // **NEW**: Clear session file when auto-save is disabled
+        if (dataModelManager) {
+  SessionManager::clearSession();
+  qDebug() << "Session cleared on exit (auto-save disabled)";
+        }
     }
 
     event->accept();

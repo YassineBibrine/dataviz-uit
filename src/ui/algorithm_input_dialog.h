@@ -26,6 +26,7 @@ public:
     void addIntInput(const QString& label, int defaultValue = 0, int min = -999999, int max = 999999);
     void addStringInput(const QString& label, const QString& defaultValue = "");
     void addNodeSelection(const QString& label, const std::vector<std::string>& nodeIds);
+    void addNodeSelectionWithValues(const QString& label, const std::vector<std::pair<std::string, std::string>>& nodeData);
     void addDoubleInput(const QString& label, double defaultValue = 0.0, double min = -999999.0, double max = 999999.0);
     
     // Get results

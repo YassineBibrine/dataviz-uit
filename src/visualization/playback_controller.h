@@ -25,6 +25,7 @@ public:
 
 signals:
     void frameReady(const AnimationFrame& frame);
+    void animationComplete();  // ? NEW: Signal when animation finishes
 
 private slots:
     void onTimeout();

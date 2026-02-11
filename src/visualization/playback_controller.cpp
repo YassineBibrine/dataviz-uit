@@ -82,15 +82,19 @@ void PlaybackController::onTimeout()
 {
     if (frames.empty()) return;
 
-    // Simply move to next frame
-    currentFrame = (currentFrame + 1) % static_cast<int>(frames.size());
+    // Move to next frame
+    currentFrame++;
     
-    // Emit the frame (no interpolation for now - direct frame playback)
+    // ? FIX: Check if we've reached the END of frames (not looped to 0)
+    if (currentFrame >= static_cast<int>(frames.size())) {
+        // Animation complete - stop and reset to last frame
+     currentFrame = static_cast<int>(frames.size()) - 1;
+pause();
+     qDebug() << "PlaybackController: Animation complete";
+        emit animationComplete();  // NEW: Emit completion signal
+        return;
+}
+    
+  // Emit the current frame
 emit frameReady(frames[currentFrame]);
-    
-    // When we reach the end, pause automatically
-    if (currentFrame == 0 && frames.size() > 1) {
-        pause();
-        qDebug() << "PlaybackController: Animation complete";
-    }
 }

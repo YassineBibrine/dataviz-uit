@@ -45,7 +45,13 @@ private:
     void dfsVisit(const std::string& node,
         std::set<std::string>& visited,
         Graph* graph,
-        std::ostringstream& oss);
+        std::ostringstream& oss,
+        bool searchMode,
+        int targetValue,
+        bool& found,
+        std::string& foundNode,
+        std::map<std::string, std::string>& parent,
+        int& nodesExplored);
 
 public:
     DFSAlgorithm(GraphStructure* gs = nullptr);

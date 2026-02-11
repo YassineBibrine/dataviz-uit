@@ -119,11 +119,18 @@ void VisualizationPane::updateDisplay() {
     // Get node values from interaction manager
     auto interactionNodeValues = interaction->getNodeValues();
 
+    qDebug() << "=== updateDisplay DEBUG ===";
+    qDebug() << "Canvas nodes:" << positions.size();
+
     for (const auto& np : positions) {
         nodeIds.push_back(np.id);
         nodeTypeMap[np.id] = np.type;
         f.nodePositions[np.id] = { np.x, np.y };
         f.nodeShapes[np.id] = np.type;
+
+        qDebug() << "  Node" << QString::fromStdString(np.id) 
+       << "type:" << QString::fromStdString(np.type) 
+      << "at" << np.x << "," << np.y;
 
         // Priority: local nodeValues > interaction manager values > node id
         if (nodeValues.count(np.id)) {
@@ -138,8 +145,11 @@ void VisualizationPane::updateDisplay() {
     }
 
     auto edges = interaction->getAllEdges();
+    qDebug() << "Edges:" << edges.size();
     for (const auto& e : edges) {
         f.edges.push_back({ e.source, e.target });
+        qDebug() << "  Edge:" << QString::fromStdString(e.source) 
+    << "->" << QString::fromStdString(e.target);
     }
 
     // Heuristic: detect tree when edge count == node count - 1, no node has indegree > 1,
@@ -271,92 +281,117 @@ void VisualizationPane::renderAnimationFrame(const AnimationFrame& frame) {
     // Get current node positions and information from interaction manager
     if (interaction) {
         auto positions = interaction->getAllNodePositions();
-        auto nodeVals = interaction->getNodeValues();
+      auto nodeVals = interaction->getNodeValues();
         auto edges = interaction->getAllEdges();
 
-        // Build a mapping from frame node IDs to actual canvas node IDs
-        // For arrays: the frame uses "node_0", "node_1", etc., which should match canvas nodes
-        std::map<std::string, std::string> frameIdToCanvasId;
+        qDebug() << "=== renderAnimationFrame DEBUG ===";
+        qDebug() << "Canvas nodes:" << positions.size();
+        qDebug() << "Frame colors:" << frame.nodeColors.size();
+      qDebug() << "Frame highlighted:" << frame.highlightedNodes.size();
 
-        // Try to map frame node IDs to actual canvas node IDs
-        // First, check if the nodes are already in the correct format
-        for (size_t idx = 0; idx < positions.size(); ++idx) {
-            std::string expectedFrameId = "node_" + std::to_string(idx);
-            frameIdToCanvasId[expectedFrameId] = positions[idx].id;
+      // ⭐ KEY FIX: Build mapping from structure IDs to canvas IDs
+ // For arrays: arr_0 → n1, arr_1 → n2, etc.
+        // For lists: list_0 → n1, list_1 → n2, etc.
+        // For graphs: Already correct (n0 → n0, etc.)
+        std::map<std::string, std::string> structureToCanvasId;
+      
+        // Get the structure type and build mapping
+        if (interaction->getBackend()) {
+     std::string structId = interaction->getCurrentStructureId();
+     if (!structId.empty()) {
+         DataStructure* structure = interaction->getBackend()->getStructure(structId);
+         if (structure) {
+auto structNodes = structure->getNodes();
+           
+        // Match structure nodes to canvas nodes by position/order
+            if (structNodes.size() == positions.size()) {
+        for (size_t i = 0; i < structNodes.size(); ++i) {
+        if (i < positions.size()) {
+   structureToCanvasId[structNodes[i].id] = positions[i].id;
+              qDebug() << "  Mapping:" << QString::fromStdString(structNodes[i].id)
+            << "→" << QString::fromStdString(positions[i].id);
+          }
+   }
+      }
+                }
+            }
         }
-
+        
         // Add node positions from canvas
         for (const auto& np : positions) {
-            displayFrame.nodePositions[np.id] = { np.x, np.y };
-            displayFrame.nodeShapes[np.id] = np.type;
+     displayFrame.nodePositions[np.id] = { np.x, np.y };
+          displayFrame.nodeShapes[np.id] = np.type;
+  qDebug() << "Canvas node:" << QString::fromStdString(np.id) 
+       << "at" << np.x << "," << np.y;
         }
 
-        // Remap highlighted nodes and colors from frame IDs to canvas IDs
-        std::vector<std::string> remappedHighlights;
-        std::map<std::string, std::string> remappedColors;
-
-        for (const auto& frameNodeId : frame.highlightedNodes) {
-            // Try to find the canvas node ID for this frame node ID
-            if (frameIdToCanvasId.count(frameNodeId)) {
-                std::string canvasNodeId = frameIdToCanvasId[frameNodeId];
-                remappedHighlights.push_back(canvasNodeId);
-
-                // Copy the color if it exists in the original frame
-                if (frame.nodeColors.count(frameNodeId)) {
-                    remappedColors[canvasNodeId] = frame.nodeColors.at(frameNodeId);
-                }
+        // ⭐ FIX: Remap frame colors from structure IDs to canvas IDs
+displayFrame.nodeColors.clear();
+      for (const auto& [structNodeId, color] : frame.nodeColors) {
+     std::string canvasId = structNodeId;
+        
+            // Check if we need to remap (arr_X, list_X, tree_X)
+            if (structureToCanvasId.count(structNodeId)) {
+       canvasId = structureToCanvasId[structNodeId];
+      qDebug() << "  Remapping color:" << QString::fromStdString(structNodeId)
+   << "→" << QString::fromStdString(canvasId)
+     << "color:" << QString::fromStdString(color);
             }
-            else {
-                // If no mapping found, use the frame node ID as-is
-                remappedHighlights.push_back(frameNodeId);
-
-                // Copy the color if it exists in the original frame
-                if (frame.nodeColors.count(frameNodeId)) {
-                    remappedColors[frameNodeId] = frame.nodeColors.at(frameNodeId);
-                }
+  
+     displayFrame.nodeColors[canvasId] = color;
+        }
+  
+        // ⭐ FIX: Remap highlighted nodes from structure IDs to canvas IDs
+        displayFrame.highlightedNodes.clear();
+        for (const auto& structNodeId : frame.highlightedNodes) {
+       std::string canvasId = structNodeId;
+            
+    if (structureToCanvasId.count(structNodeId)) {
+       canvasId = structureToCanvasId[structNodeId];
             }
+     
+ displayFrame.highlightedNodes.push_back(canvasId);
+        }
+      
+        qDebug() << "Final colors in displayFrame:" << displayFrame.nodeColors.size();
+        for (const auto& [nodeId, color] : displayFrame.nodeColors) {
+            qDebug() << "  Node" << QString::fromStdString(nodeId) 
+          << "→" << QString::fromStdString(color);
         }
 
-        displayFrame.highlightedNodes = remappedHighlights;
-        displayFrame.nodeColors = remappedColors;
-
-        // Remap node labels from frame node IDs to canvas node IDs
-        std::map<std::string, std::string> remappedLabels;
-        for (const auto& [frameNodeId, label] : frame.nodeLabels) {
-            if (frameIdToCanvasId.count(frameNodeId)) {
-                std::string canvasNodeId = frameIdToCanvasId[frameNodeId];
-                remappedLabels[canvasNodeId] = label;
-                qDebug() << "Remapped label:" << QString::fromStdString(frameNodeId)
-                    << "→" << QString::fromStdString(canvasNodeId)
-                    << "=" << QString::fromStdString(label);
-            }
-            else {
-                // Use as-is if no mapping
-                remappedLabels[frameNodeId] = label;
-            }
-        }
-        displayFrame.nodeLabels = remappedLabels;
+  // ⭐ FIX: Remap node labels from structure IDs to canvas IDs
+        for (const auto& [structNodeId, label] : frame.nodeLabels) {
+          std::string canvasId = structNodeId;
+            
+            if (structureToCanvasId.count(structNodeId)) {
+                canvasId = structureToCanvasId[structNodeId];
+     }
+            
+            displayFrame.nodeLabels[canvasId] = label;
+      }
 
         // If the frame doesn't have labels for all nodes, use canvas values
         for (const auto& np : positions) {
             if (!displayFrame.nodeLabels.count(np.id)) {
-                // Use value from interaction manager if frame doesn't specify
-                if (nodeVals.count(np.id)) {
-                    displayFrame.nodeLabels[np.id] = std::to_string(nodeVals[np.id]);
-                }
-                else if (nodeValues.count(np.id)) {
-                    displayFrame.nodeLabels[np.id] = nodeValues[np.id];
-                }
-                else {
-                    displayFrame.nodeLabels[np.id] = np.id;
-                }
-            }
+     // Use value from interaction manager if frame doesn't specify
+      if (nodeVals.count(np.id)) {
+        displayFrame.nodeLabels[np.id] = std::to_string(nodeVals[np.id]);
+        }
+           else if (nodeValues.count(np.id)) {
+      displayFrame.nodeLabels[np.id] = nodeValues[np.id];
+         }
+  else {
+        displayFrame.nodeLabels[np.id] = np.id;
+ }
+          }
         }
 
-        // Add edges
-        for (const auto& e : edges) {
+// Add edges
+  for (const auto& e : edges) {
             displayFrame.edges.push_back({ e.source, e.target });
-        }
+   }
+ 
+        qDebug() << "===================================";
     }
 
     // Render the complete frame with animation data

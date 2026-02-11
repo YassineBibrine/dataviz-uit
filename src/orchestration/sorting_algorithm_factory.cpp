@@ -2,6 +2,7 @@
 #include "sorting_algorithm_factory.h"
 #include "../algorithms/insertion_sort.h"
 #include "../algorithms/selection_sort.h"
+#include "../algorithms/bubble_sort.h"
 #include <memory>
 #include <stdexcept>
 std::unique_ptr<Algorithm> SortingAlgorithmFactory::createAlgorithm(const std::string& type) {
@@ -10,6 +11,9 @@ std::unique_ptr<Algorithm> SortingAlgorithmFactory::createAlgorithm(const std::s
     }
     else if (type == "SelectionSort") {
         return std::make_unique<SelectionSort>();
+    }
+    else if (type == "BubbleSort") {
+        return std::make_unique<BubbleSort>();
     }
     throw std::invalid_argument("Unknown algorithm: " + type);
 }

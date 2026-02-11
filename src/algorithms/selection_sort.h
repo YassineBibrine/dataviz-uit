@@ -79,41 +79,48 @@ private:
     
     // NEW: Execute on array with visual animation frames
     std::vector<AnimationFrame> executeOnArrayWithFrames(ArrayStructure* arr) {
-        FrameRecorder recorder;
+ FrameRecorder recorder;
      auto& data = arr->getData();
         int n = data.size();
+        
+        // ? KEY FIX: Get canvas node IDs from the structure
+        auto nodes = structure->getNodes();
+        std::vector<std::string> canvasIds;
+        for (const auto& node : nodes) {
+         canvasIds.push_back(node.id);  // These are arr_0, arr_1, etc.
+     }
         
  // Frame 0: Initial state
   AnimationFrame initialFrame;
       initialFrame.operationType = "Initial State";
-        for (int i = 0; i < n; i++) {
-            std::string nodeId = "node_" + std::to_string(i);
+  for (int i = 0; i < n; i++) {
+    std::string nodeId = canvasIds[i];
      initialFrame.addHighlightedNode(nodeId, "blue");
    initialFrame.nodeLabels[nodeId] = std::to_string(data[i]);
         }
         initialFrame.addAnnotation("Starting Selection Sort on array of " + std::to_string(n) + " elements");
     recorder.recordFrame(initialFrame);
-        
+     
   // Main sorting loop
         for (int i = 0; i < n - 1; i++) {
-            // Frame: Start searching for minimum
-            AnimationFrame searchFrame;
+    // Frame: Start searching for minimum
+       AnimationFrame searchFrame;
   searchFrame.operationType = "Search Minimum";
-            searchFrame.addHighlightedNode("node_" + std::to_string(i), "cyan");
+            searchFrame.addHighlightedNode(canvasIds[i], "cyan");
          
          // Show already sorted portion
      for (int k = 0; k < i; k++) {
-        searchFrame.addHighlightedNode("node_" + std::to_string(k), "green");
-            }
+        searchFrame.addHighlightedNode(canvasIds[k], "green");
+          }
 
-            // Show unsorted portion
-            for (int k = i; k < n; k++) {
-     searchFrame.addHighlightedNode("node_" + std::to_string(k), "yellow");
-            }
+     // Show unsorted portion
+        for (int k = i; k < n; k++) {
+     searchFrame.addHighlightedNode(canvasIds[k], "yellow");
+      }
         
        // Add current array state
      for (int k = 0; k < n; k++) {
-           searchFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+           searchFrame.nodeLabels[canvasIds[k]] = std::to_string(data[k]);
          }
             
          searchFrame.addAnnotation("Iteration " + std::to_string(i) + ": Searching for minimum in unsorted portion");
@@ -125,71 +132,71 @@ private:
  for (int j = i + 1; j < n; j++) {
   // Frame: Comparing
 AnimationFrame compareFrame;
-                compareFrame.operationType = "Compare";
+    compareFrame.operationType = "Compare";
   
                 // Current minimum
- compareFrame.addHighlightedNode("node_" + std::to_string(min_idx), "red");
+ compareFrame.addHighlightedNode(canvasIds[min_idx], "red");
           // Candidate
-    compareFrame.addHighlightedNode("node_" + std::to_string(j), "orange");
+    compareFrame.addHighlightedNode(canvasIds[j], "orange");
   
-                // Sorted portion
-                for (int k = 0; k < i; k++) {
-     compareFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+         // Sorted portion
+         for (int k = 0; k < i; k++) {
+   compareFrame.addHighlightedNode(canvasIds[k], "green");
     }
-                
+         
      // Add current array state
-                for (int k = 0; k < n; k++) {
-                compareFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+       for (int k = 0; k < n; k++) {
+        compareFrame.nodeLabels[canvasIds[k]] = std::to_string(data[k]);
    }
     
   compareFrame.addAnnotation("Comparing: arr[" + std::to_string(min_idx) + "]=" + std::to_string(data[min_idx]) + 
           " vs arr[" + std::to_string(j) + "]=" + std::to_string(data[j]));
    recorder.recordFrame(compareFrame);
     
-          if (data[j] < data[min_idx]) {
-                    min_idx = j;
+        if (data[j] < data[min_idx]) {
+        min_idx = j;
     
-                // Frame: Found new minimum
-           AnimationFrame newMinFrame;
+      // Frame: Found new minimum
+AnimationFrame newMinFrame;
         newMinFrame.operationType = "New Minimum Found";
-           newMinFrame.addHighlightedNode("node_" + std::to_string(min_idx), "magenta");
-           
+           newMinFrame.addHighlightedNode(canvasIds[min_idx], "magenta");
+  
  // Sorted portion
         for (int k = 0; k < i; k++) {
-     newMinFrame.addHighlightedNode("node_" + std::to_string(k), "green");
-        }
+ newMinFrame.addHighlightedNode(canvasIds[k], "green");
+ }
       
             // Add current array state
           for (int k = 0; k < n; k++) {
-      newMinFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+      newMinFrame.nodeLabels[canvasIds[k]] = std::to_string(data[k]);
      }
    
-            newMinFrame.addAnnotation("New minimum found: arr[" + std::to_string(min_idx) + "]=" + std::to_string(data[min_idx]));
+     newMinFrame.addAnnotation("New minimum found: arr[" + std::to_string(min_idx) + "]=" + std::to_string(data[min_idx]));
          recorder.recordFrame(newMinFrame);
       }
       }
-         
+       
      if (min_idx != i) {
            // Frame: Before swap
-         AnimationFrame beforeSwapFrame;
-                beforeSwapFrame.operationType = "Before Swap";
-                beforeSwapFrame.addHighlightedNode("node_" + std::to_string(i), "red");
- beforeSwapFrame.addHighlightedNode("node_" + std::to_string(min_idx), "orange");
+       AnimationFrame beforeSwapFrame;
+           beforeSwapFrame.operationType = "Before Swap";
+         beforeSwapFrame.addHighlightedNode(canvasIds[i], "red");
+ beforeSwapFrame.addHighlightedNode(canvasIds[min_idx], "orange");
      
       // Sorted portion
-            for (int k = 0; k < i; k++) {
-          beforeSwapFrame.addHighlightedNode("node_" + std::to_string(k), "green");
-                }
+      for (int k = 0; k < i; k++) {
+ beforeSwapFrame.addHighlightedNode(canvasIds[k], "green");
+            }
    
  // Add current array state
-                for (int k = 0; k < n; k++) {
-          beforeSwapFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
-            }
+           for (int k = 0; k < n; k++) {
+          beforeSwapFrame.nodeLabels[canvasIds[k]] = std::to_string(data[k]);
+     }
     
           beforeSwapFrame.addAnnotation("Swap positions: arr[" + std::to_string(i) + "] ? arr[" + std::to_string(min_idx) + "]");
-                recorder.recordFrame(beforeSwapFrame);
-                
-                // Perform swap
+             recorder.recordFrame(beforeSwapFrame);
+        
+         // Perform swap
 std::swap(data[i], data[min_idx]);
     
      // Frame: After swap
@@ -198,17 +205,17 @@ std::swap(data[i], data[min_idx]);
         
         // Sorted portion (now includes newly placed element)
        for (int k = 0; k <= i; k++) {
-         afterSwapFrame.addHighlightedNode("node_" + std::to_string(k), "green");
-            }
-          
+         afterSwapFrame.addHighlightedNode(canvasIds[k], "green");
+       }
+     
       // Unsorted portion
                 for (int k = i + 1; k < n; k++) {
-          afterSwapFrame.addHighlightedNode("node_" + std::to_string(k), "lightgray");
-                }
+ afterSwapFrame.addHighlightedNode(canvasIds[k], "lightgray");
+        }
       
     // Add updated array state
     for (int k = 0; k < n; k++) {
-          afterSwapFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
+  afterSwapFrame.nodeLabels[canvasIds[k]] = std::to_string(data[k]);
       }
       
   afterSwapFrame.addAnnotation("Element " + std::to_string(data[i]) + " placed at position " + std::to_string(i));
@@ -217,23 +224,23 @@ std::swap(data[i], data[min_idx]);
         // Frame: Element already in correct position
   AnimationFrame alreadyMinFrame;
  alreadyMinFrame.operationType = "Already Minimum";
-                
+   
     // Sorted portion
        for (int k = 0; k <= i; k++) {
-     alreadyMinFrame.addHighlightedNode("node_" + std::to_string(k), "green");
+     alreadyMinFrame.addHighlightedNode(canvasIds[k], "green");
      }
        
-           // Unsorted portion
-        for (int k = i + 1; k < n; k++) {
-       alreadyMinFrame.addHighlightedNode("node_" + std::to_string(k), "lightgray");
-                }
+       // Unsorted portion
+      for (int k = i + 1; k < n; k++) {
+       alreadyMinFrame.addHighlightedNode(canvasIds[k], "lightgray");
+    }
        
   // Add current array state
-          for (int k = 0; k < n; k++) {
-alreadyMinFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]);
-     }
+ for (int k = 0; k < n; k++) {
+alreadyMinFrame.nodeLabels[canvasIds[k]] = std::to_string(data[k]);
+   }
        
-      alreadyMinFrame.addAnnotation("Element already in correct position");
+    alreadyMinFrame.addAnnotation("Element already in correct position");
      recorder.recordFrame(alreadyMinFrame);
   }
     }
@@ -242,11 +249,11 @@ alreadyMinFrame.nodeLabels["node_" + std::to_string(k)] = std::to_string(data[k]
         AnimationFrame finalFrame;
     finalFrame.operationType = "Complete";
 for (int i = 0; i < n; i++) {
-       finalFrame.addHighlightedNode("node_" + std::to_string(i), "green");
-        finalFrame.nodeLabels["node_" + std::to_string(i)] = std::to_string(data[i]);
+       finalFrame.addHighlightedNode(canvasIds[i], "green");
+        finalFrame.nodeLabels[canvasIds[i]] = std::to_string(data[i]);
         }
         finalFrame.addAnnotation("? Array is completely sorted!");
-        recorder.recordFrame(finalFrame);
+     recorder.recordFrame(finalFrame);
         
    qDebug() << "SelectionSort generated" << recorder.getAllFrames().size() << "animation frames";
         return recorder.getAllFrames();
@@ -256,10 +263,77 @@ for (int i = 0; i < n; i++) {
     std::vector<AnimationFrame> executeOnListWithFrames(ListStructure* list) {
      FrameRecorder recorder;
         
-        // TODO: Implement list-based selection sort with frames
-     qDebug() << "SelectionSort on list (animation not yet implemented)";
-        return {};
+    // ? Get canvas node IDs from the structure (list_0, list_1, etc.)
+        auto nodes = structure->getNodes();
+   std::vector<std::string> canvasIds;
+std::vector<int> values;
+        
+        for (const auto& node : nodes) {
+   canvasIds.push_back(node.id);
+            values.push_back(std::stoi(node.value));
+        }
+        
+        int n = values.size();
+        if (n == 0) return {};
+        
+        // Frame 0: Initial state
+        AnimationFrame initialFrame;
+        initialFrame.operationType = "Initial State";
+        for (int i = 0; i < n; i++) {
+            initialFrame.addHighlightedNode(canvasIds[i], "blue");
+       initialFrame.nodeLabels[canvasIds[i]] = std::to_string(values[i]);
+        }
+        initialFrame.addAnnotation("Starting Selection Sort on list of " + std::to_string(n) + " elements");
+        recorder.recordFrame(initialFrame);
+     
+        // Perform selection sort on values array and generate frames
+        for (int i = 0; i < n - 1; i++) {
+   int min_idx = i;
+            
+        for (int j = i + 1; j < n; j++) {
+    if (values[j] < values[min_idx]) {
+         min_idx = j;
+        }
+     }
+ 
+     if (min_idx != i) {
+   std::swap(values[i], values[min_idx]);
+      
+     AnimationFrame afterSwapFrame;
+    afterSwapFrame.operationType = "After Swap";
+  for (int k = 0; k <= i; k++) {
+        afterSwapFrame.addHighlightedNode(canvasIds[k], "green");
+     }
+        for (int k = i + 1; k < n; k++) {
+  afterSwapFrame.addHighlightedNode(canvasIds[k], "lightgray");
+ }
+         for (int k = 0; k < n; k++) {
+         afterSwapFrame.nodeLabels[canvasIds[k]] = std::to_string(values[k]);
+         }
+     afterSwapFrame.addAnnotation("Element " + std::to_string(values[i]) + " placed at position " + std::to_string(i));
+  recorder.recordFrame(afterSwapFrame);
+            }
     }
+        
+      // Apply sorted values to the actual list
+        list->clearList();
+        for (int val : values) {
+         list->append(val);
+        }
+     
+        // Final frame
+        AnimationFrame finalFrame;
+        finalFrame.operationType = "Complete";
+        for (int i = 0; i < n; i++) {
+            finalFrame.addHighlightedNode(canvasIds[i], "green");
+      finalFrame.nodeLabels[canvasIds[i]] = std::to_string(values[i]);
+        }
+        finalFrame.addAnnotation("? List is completely sorted!");
+     recorder.recordFrame(finalFrame);
+        
+   qDebug() << "SelectionSort generated" << recorder.getAllFrames().size() << "animation frames for list";
+  return recorder.getAllFrames();
+  }
 };
 
 #endif // SELECTION_SORT_H

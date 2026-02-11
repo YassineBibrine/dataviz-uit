@@ -179,36 +179,33 @@ void ControlPanel::updateAlgorithmList(const QString& structureType) {
 
     QString type = structureType;
 
-  if (type == "Graph") {
+    if (type == "Graph") {
         for (const auto& algo : manager.getAlgorithmNames("Graph")) {
-    algorithmCombo->addItem(QString::fromStdString(algo));
+            algorithmCombo->addItem(QString::fromStdString(algo));
         }
-}
+    }
     else if (type == "Binary Tree" || type == "Tree") {
         for (const auto& algo : manager.getAlgorithmNames("Tree")) {
-            algorithmCombo->addItem(QString::fromStdString(algo));
-      }
+         algorithmCombo->addItem(QString::fromStdString(algo));
+        }
         // Also add graph algorithms as fallback if tree category is empty
-        if (algorithmCombo->count() == 0) {
-    for (const auto& algo : manager.getAlgorithmNames("Graph")) {
-       algorithmCombo->addItem(QString::fromStdString(algo));
-  }
-        }
-    }
-    else if (type == "List") {
-        for (const auto& algo : manager.getAlgorithmNames("Sorting")) {
-        algorithmCombo->addItem(QString::fromStdString(algo));
-        }
-   for (const auto& algo : manager.getAlgorithmNames("Filtering")) {
-     algorithmCombo->addItem(QString::fromStdString(algo));
-        }
-    }
-    else if (type == "Array") {
-        for (const auto& category : { "Sorting", "Filtering", "Transform" }) {
-          for (const auto& algo : manager.getAlgorithmNames(category)) {
-            algorithmCombo->addItem(QString::fromStdString(algo));
+if (algorithmCombo->count() == 0) {
+     for (const auto& algo : manager.getAlgorithmNames("Graph")) {
+           algorithmCombo->addItem(QString::fromStdString(algo));
             }
         }
+    }
+  else if (type == "List" || type == "LinkedList") {
+    // Show 3 sorting algorithms for lists
+        algorithmCombo->addItem("InsertionSort");
+        algorithmCombo->addItem("SelectionSort");
+        algorithmCombo->addItem("BubbleSort");  // ? Added third algorithm
+ }
+    else if (type == "Array") {
+        // Only show 3 sorting algorithms for arrays
+        algorithmCombo->addItem("InsertionSort");
+        algorithmCombo->addItem("SelectionSort");
+        algorithmCombo->addItem("BubbleSort");
     }
 }
 

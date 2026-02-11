@@ -54,6 +54,20 @@ void AlgorithmInputDialog::addNodeSelection(const QString& label, const std::vec
     inputTypes.push_back("combo");
 }
 
+// NEW: Add node selection with values displayed
+void AlgorithmInputDialog::addNodeSelectionWithValues(const QString& label,
+      const std::vector<std::pair<std::string, std::string>>& nodeData) {
+    QComboBox* comboBox = new QComboBox(this);
+    for (const auto& [nodeId, nodeValue] : nodeData) {
+        QString displayText = QString::fromStdString(nodeId) + " (value: " + QString::fromStdString(nodeValue) + ")";
+    comboBox->addItem(displayText, QString::fromStdString(nodeId));  // Store nodeId as user data
+    }
+    comboBox->setMinimumWidth(250);
+    formLayout->addRow(label + ":", comboBox);
+    inputWidgets.push_back(comboBox);
+    inputTypes.push_back("combo");
+}
+
 void AlgorithmInputDialog::addDoubleInput(const QString& label, double defaultValue, double min, double max) {
     QDoubleSpinBox* spinBox = new QDoubleSpinBox(this);
     spinBox->setRange(min, max);
@@ -75,10 +89,16 @@ int AlgorithmInputDialog::getIntValue(int index) const {
 QString AlgorithmInputDialog::getStringValue(int index) const {
     if (index >= 0 && index < static_cast<int>(inputWidgets.size())) {
         if (inputTypes[index] == "string") {
-     return static_cast<QLineEdit*>(inputWidgets[index])->text();
-      } else if (inputTypes[index] == "combo") {
-            return static_cast<QComboBox*>(inputWidgets[index])->currentText();
- }
+      return static_cast<QLineEdit*>(inputWidgets[index])->text();
+    } else if (inputTypes[index] == "combo") {
+    QComboBox* combo = static_cast<QComboBox*>(inputWidgets[index]);
+            // ? Check if we stored nodeId as user data (for node selection with values)
+            QVariant userData = combo->currentData();
+  if (userData.isValid()) {
+         return userData.toString();  // Return the nodeId, not the display text
+    }
+       return combo->currentText();  // Fallback to text for old-style combos
+        }
     }
     return "";
 }
