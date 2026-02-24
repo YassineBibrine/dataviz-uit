@@ -4,7 +4,10 @@
 
 /**
  * @class AlgorithmInfo
- * @brief Stores metadata about an algorithm
+ * @brief Simple container for algorithm metadata used by the UI and help panels.
+ *
+ * Stores a human-friendly name, a short description and complexity strings
+ * that can be displayed in an algorithm reference or tooltip.
  */
 class AlgorithmInfo {
 private:
@@ -27,6 +30,7 @@ const std::string& s)
     const std::string& getTimeComplexity() const { return timeComplexity; }
     const std::string& getSpaceComplexity() const { return spaceComplexity; }
     
+    // Return a formatted complexity string for display
     std::string getComplexity() const {
      return "Time: " + timeComplexity + ", Space: " + spaceComplexity;
     }

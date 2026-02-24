@@ -1,6 +1,11 @@
 #include "graph.h"
 #include <algorithm>
 
+// Basic Graph implementation: maintain nodes, edges and adjacency list.
+// Supports directed or undirected graphs; for undirected graphs we add
+// symmetric edges to the internal edges vector so algorithms that iterate
+// edges see both directions.
+
 Graph::Graph(bool directed) : directed(directed) {}
 
 Graph::~Graph() {
@@ -9,7 +14,7 @@ Graph::~Graph() {
 
 void Graph::addNode(const std::string& id, const std::map<std::string, std::string>& properties) {
  if (nodes.find(id) != nodes.end()) {
- return;
+ return; // Node already exists
  }
  
  Node node(id);
@@ -21,7 +26,7 @@ void Graph::addNode(const std::string& id, const std::map<std::string, std::stri
 void Graph::addEdge(const std::string& from, const std::string& to, double weight,
  const std::map<std::string, std::string>& properties) {
  if (!hasNode(from) || !hasNode(to)) {
- return;
+ return; // ignore edges referencing unknown nodes
  }
  
  // Prevent duplicate logical edges. For undirected graphs treat (a,b) and (b,a) as the same.
@@ -38,8 +43,7 @@ void Graph::addEdge(const std::string& from, const std::string& to, double weigh
  
  adjacencyList[from].push_back(to);
  if (!directed) {
- // For undirected graphs, also add the reverse edge so algorithms that iterate
- // over the edges list will see both directions.
+ // For undirected graphs also add the reverse logical edge so both directions appear
  Edge rev(to, from, weight);
  rev.properties = properties;
  edges.push_back(rev);
@@ -54,7 +58,7 @@ void Graph::addEdge(const std::string& from, const std::string& to, double weigh
 void Graph::removeNode(const std::string& id) {
  auto it = nodes.find(id);
  if (it == nodes.end()) {
- return;
+ return; // not present
  }
  
  // Remove all edges connected to this node

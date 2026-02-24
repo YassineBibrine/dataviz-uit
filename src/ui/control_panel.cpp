@@ -1,3 +1,11 @@
+// control_panel.cpp
+// UI implementation for the playback and algorithm control panel.
+//
+// Responsibilities:
+// - Build and layout playback controls (play/pause/step/reset)
+// - Provide algorithm selection UI and speed control
+// - Protect controls from accidental wheel events via custom widgets
+
 #include "control_panel.h"
 #include "../orchestration/algorithm_manager.h"
 #include <QVBoxLayout>
@@ -60,6 +68,9 @@ void wheelEvent(QWheelEvent* event) override {
         }
     }
 };
+
+// The remainder of the file constructs the UI, connects signals and populates
+// the algorithm list depending on the selected structure type.
 
 ControlPanel::ControlPanel(QWidget* parent)
     : QWidget(parent),

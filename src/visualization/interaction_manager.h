@@ -17,6 +17,16 @@ struct EdgeDisplay {
     std::string target;
 };
 
+/**
+ * @class InteractionManager
+ * @brief Manages user interactions on the visualization canvas.
+ *
+ * Responsibilities:
+ * - Maintain an interactive set of canvas nodes/edges (temporary, before finalizing)
+ * - Track per-node positions, types and user-entered values
+ * - Provide utilities to map canvas nodes to backend structure node IDs
+ * - Sync canvas changes back to DataModelManager when requested
+ */
 class InteractionManager {
 public:
     InteractionManager();
@@ -48,7 +58,7 @@ public:
     std::string getCurrentStructureId() const { return currentStructureId; }
     
     /**
-     * @brief Get the type of the current structure
+     * @brief Get the type of the current structure (e.g. "Array", "Graph", "Tree")
      */
     std::string getStructureType() const;
  
@@ -65,7 +75,7 @@ public:
 
     /**
      * @brief Add a node and optionally track its original structure ID
-*/
+     */
     std::string addNode(double x, double y, const std::string& type);
     
     /**
@@ -73,7 +83,7 @@ public:
      */
     std::string addNodeWithMapping(double x, double y, const std::string& type, const std::string& originalNodeId);
     
-  void removeNode(const std::string& nodeId);
+    void removeNode(const std::string& nodeId);
     void updateNodeValue(const std::string& nodeId, int value);
     
     /**
@@ -117,7 +127,7 @@ public:
     
     /**
      * @brief Check if there are any interactive nodes/edges
-   */
+     */
     bool hasInteractiveData() const { return !nodes.empty(); }
     
     /**

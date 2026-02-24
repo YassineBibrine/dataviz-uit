@@ -14,12 +14,13 @@
 #include <map>
 #include <limits>
 
-// BFS Implementation
+// Breadth-first search algorithm implementation that emits animation frames.
 class BFSAlgorithm : public Algorithm {
 private:
     GraphStructure* graphStruct;
     std::vector<AnimationFrame> frames;
 
+    // Helper: construct and append a frame describing 'operation'.
     void createFrame(const std::string& operation,
         const std::vector<std::string>& highlighted,
         const std::map<std::string, std::string>& colors,
@@ -31,17 +32,20 @@ public:
     std::vector<AnimationFrame> executeWithFrames() override;
 };
 
-// DFS Implementation
+// Depth-first search algorithm implementation that emits frames and supports
+// optional search/trace reporting.
 class DFSAlgorithm : public Algorithm {
 private:
     GraphStructure* graphStruct;
     std::vector<AnimationFrame> frames;
 
+    // Helper to build a frame from provided parameters.
     void createFrame(const std::string& operation,
         const std::vector<std::string>& highlighted,
         const std::map<std::string, std::string>& colors,
         const std::string& annotation);
 
+    // Internal recursive visit routine used by DFS.
     void dfsVisit(const std::string& node,
         std::set<std::string>& visited,
         Graph* graph,
@@ -59,12 +63,13 @@ public:
     std::vector<AnimationFrame> executeWithFrames() override;
 };
 
-// Dijkstra Implementation
+// Dijkstra's shortest path algorithm implementation producing frames.
 class DijkstraAlgorithm : public Algorithm {
 private:
     GraphStructure* graphStruct;
     std::vector<AnimationFrame> frames;
 
+    // Helper to create a descriptive frame for the algorithm steps.
     void createFrame(const std::string& operation,
         const std::vector<std::string>& highlighted,
         const std::map<std::string, std::string>& colors,

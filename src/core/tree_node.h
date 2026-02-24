@@ -2,7 +2,10 @@
 
 /**
  * @struct TreeNode
- * @brief Binary search tree node
+ * @brief Binary tree node used by TreeStructure.
+ *
+ * Fields include pointers to left/right children and parent as well as
+ * auxiliary data for balancing/layout algorithms (height, balanceFactor).
  */
 struct TreeNode {
   int value;

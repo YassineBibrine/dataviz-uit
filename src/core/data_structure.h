@@ -8,7 +8,9 @@
 
 /**
  * @struct DSNode
- * @brief Represents a node in a data structure visualization
+ * @brief Represents a visual node in a data structure.
+ *
+ * Contains an identifier and a display value used by the renderer.
  */
 struct DSNode {
     std::string id;
@@ -23,7 +25,7 @@ struct DSNode {
 
 /**
  * @struct DSEdge
- * @brief Represents an edge between two nodes
+ * @brief Represents a directed edge between two visual nodes.
  */
 struct DSEdge {
     std::string from;
@@ -37,7 +39,7 @@ struct DSEdge {
 
 /**
  * @struct DSNodePosition
- * @brief Stores the visual position of a node
+ * @brief Stores the x/y screen or canvas position for a node.
  */
 struct DSNodePosition {
     double x = 0.0;
@@ -49,28 +51,37 @@ struct DSNodePosition {
 
 /**
  * @interface DataStructure
- * @brief Base interface for all data structures in the system
+ * @brief Abstract base class for all visualizable data structures.
+ *
+ * Implementations provide node/edge lists, serialization for DOT and
+ * session persistence, and a way to expose runtime data to algorithm
+ * runners.
  */
 class DataStructure {
 public:
     virtual ~DataStructure() = default;
 
-    // ===== Visualisation =====
+    // ===== Visualization =====
+    // Return the nodes/edges that the renderer will draw.
     virtual std::vector<DSNode> getNodes() const = 0;
     virtual std::vector<DSEdge> getEdges() const = 0;
 
-    // ===== Export =====
+    // ===== Export/Debug =====
+    // Export a DOT representation suitable for graph tools or debugging.
     virtual std::string serializeToDOT() const = 0;
 
-    // ===== Algorithm runner =====
+    // ===== Algorithm runner integration =====
+    // Returns a pointer to internal data used by algorithm runner code.
     virtual void* getDataForRunner() = 0;
 
     // ===== Session persistence (CRITICAL) =====
+    // Identify structure type and provide JSON serialize/deserialize.
     virtual std::string getType() const = 0;
     virtual QJsonObject serialize() const = 0;
     virtual void deserialize(const QJsonObject& obj) = 0;
 
     // ===== Node positions =====
+    // Store and query per-node canvas positions used by the visualization.
     void setNodePosition(const std::string& nodeId, double x, double y) {
         nodePositions[nodeId] = DSNodePosition(x, y);
     }
@@ -101,7 +112,8 @@ public:
         return !nodePositions.empty();
     }
 
-    // ===== Custom Edge Storage =====
+    // ===== Custom edges =====
+    // Manage user-added edges that supplement the structure's topology.
     void addCustomEdge(const std::string& from, const std::string& to) {
         for (const auto& edge : customEdges) {
             if (edge.from == from && edge.to == to)
