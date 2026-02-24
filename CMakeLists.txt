@@ -257,14 +257,10 @@ endif()
 # ===================================================================
 # Copy compile_commands.json to source root for IDE IntelliSense
 # ===================================================================
-if(CMAKE_EXPORT_COMPILE_COMMANDS)
-    add_custom_target(copy_compile_commands ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_BINARY_DIR}/compile_commands.json"
-            "${CMAKE_SOURCE_DIR}/compile_commands.json"
-        COMMENT "Copying compile_commands.json to source root"
-        DEPENDS "${CMAKE_BINARY_DIR}/compile_commands.json"
-    )
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT MSVC)
+    if(EXISTS "${CMAKE_BINARY_DIR}/compile_commands.json")
+        file(COPY "${CMAKE_BINARY_DIR}/compile_commands.json" DESTINATION "${CMAKE_SOURCE_DIR}")
+    endif()
 endif()
 
 # ===================================================================

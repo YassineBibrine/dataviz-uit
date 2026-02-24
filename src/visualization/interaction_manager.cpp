@@ -244,6 +244,12 @@ if (rootCanvasId.empty() && !nodes.empty()) rootCanvasId = nodes[0].id;
    newTreeNodes[canvasNode.id] = new TreeNode(value);
          }
 
+      // Build quick lookup of canvas positions to choose left/right by x coordinate
+      std::map<std::string, std::pair<double,double>> canvasPositions;
+      for (const auto& n : nodes) {
+          canvasPositions[n.id] = { n.x, n.y };
+      }
+
   // Group edges by parent to enforce binary tree constraint
    std::map<std::string, std::vector<std::string>> parentToChildren;
             for (const auto& edge : canvasEdges) {
@@ -260,29 +266,59 @@ if (rootCanvasId.empty() && !nodes.empty()) rootCanvasId = nodes[0].id;
 
    TreeNode* parent = newTreeNodes[parentId];
 
-  // Binary tree: max 2 children
-     for (size_t i = 0; i < std::min(children.size(), size_t(2)); ++i) {
-   const std::string& childId = children[i];
-           if (!newTreeNodes.count(childId)) continue;
+   // Collect up to two valid children (exist and not already assigned)
+   std::vector<std::string> validChildren;
+   for (const auto& childId : children) {
+       if (!newTreeNodes.count(childId)) continue;
+       if (alreadyAssignedChildren.count(childId)) {
+           qDebug() << "Warning: Node" << QString::fromStdString(childId)
+               << "already has a parent. Skipping.";
+           continue;
+       }
+       validChildren.push_back(childId);
+       if (validChildren.size() == 2) break;
+   }
 
-       // Check if this child already has a parent
-if (alreadyAssignedChildren.count(childId)) {
-                    qDebug() << "Warning: Node" << QString::fromStdString(childId)
-        << "already has a parent. Skipping.";
-continue;
-          }
+   if (validChildren.empty()) {
+       continue;
+   }
 
-    TreeNode* child = newTreeNodes[childId];
-           child->parent = parent;
-            alreadyAssignedChildren.insert(childId);
+   if (validChildren.size() == 1) {
+       const std::string& childId = validChildren[0];
+       TreeNode* child = newTreeNodes[childId];
+       child->parent = parent;
+       alreadyAssignedChildren.insert(childId);
 
-         if (parent->left == nullptr) {
-         parent->left = child;
-         }
-  else if (parent->right == nullptr) {
-              parent->right = child;
-          }
-                }
+       // Decide left/right based on X position relative to parent
+       double parentX = canvasPositions.count(parentId) ? canvasPositions[parentId].first : 0.0;
+       double childX = canvasPositions.count(childId) ? canvasPositions[childId].first : 0.0;
+       if (childX < parentX) {
+           parent->left = child;
+       } else {
+           parent->right = child;
+       }
+   } else {
+       // Two children -> assign left to the one with smaller X (visual left)
+       const std::string& c0 = validChildren[0];
+       const std::string& c1 = validChildren[1];
+       double x0 = canvasPositions.count(c0) ? canvasPositions[c0].first : 0.0;
+       double x1 = canvasPositions.count(c1) ? canvasPositions[c1].first : 0.0;
+
+       std::string leftId = (x0 <= x1) ? c0 : c1;
+       std::string rightId = (x0 <= x1) ? c1 : c0;
+
+       TreeNode* leftChild = newTreeNodes[leftId];
+       TreeNode* rightChild = newTreeNodes[rightId];
+
+       leftChild->parent = parent;
+       rightChild->parent = parent;
+
+       parent->left = leftChild;
+       parent->right = rightChild;
+
+       alreadyAssignedChildren.insert(leftId);
+       alreadyAssignedChildren.insert(rightId);
+   }
 
            if (children.size() > 2) {
               qDebug() << "Warning: Node" << QString::fromStdString(parentId)
